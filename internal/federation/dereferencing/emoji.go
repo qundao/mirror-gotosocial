@@ -51,6 +51,7 @@ func (d *Dereferencer) GetEmoji(
 	remoteURL string,
 	info media.AdditionalEmojiInfo,
 	refresh bool,
+	async bool,
 ) (
 	*gtsmodel.Emoji,
 	error,
@@ -66,7 +67,7 @@ func (d *Dereferencer) GetEmoji(
 
 	if emoji != nil {
 		// This was an existing emoji, pass to refresh func.
-		return d.RefreshEmoji(ctx, emoji, info, refresh)
+		return d.RefreshEmoji(ctx, emoji, info, refresh, async)
 	}
 
 	if domain == "" {
@@ -112,6 +113,7 @@ func (d *Dereferencer) GetEmoji(
 				info,
 			)
 		},
+		async,
 	)
 }
 
@@ -130,6 +132,7 @@ func (d *Dereferencer) RefreshEmoji(
 	emoji *gtsmodel.Emoji,
 	info media.AdditionalEmojiInfo,
 	force bool,
+	async bool,
 ) (
 	*gtsmodel.Emoji,
 	error,
@@ -162,7 +165,7 @@ func (d *Dereferencer) RefreshEmoji(
 		// We still want to make sure
 		// the emoji is cached. Simply
 		// check whether emoji is cached.
-		return d.RecacheEmoji(ctx, emoji)
+		return d.RecacheEmoji(ctx, emoji, async)
 	}
 
 	// Can't refresh local.
@@ -207,6 +210,7 @@ func (d *Dereferencer) RefreshEmoji(
 				info,
 			)
 		},
+		async,
 	)
 }
 
@@ -222,6 +226,7 @@ func (d *Dereferencer) RefreshEmoji(
 func (d *Dereferencer) RecacheEmoji(
 	ctx context.Context,
 	emoji *gtsmodel.Emoji,
+	async bool,
 ) (
 	*gtsmodel.Emoji,
 	error,
@@ -272,23 +277,24 @@ func (d *Dereferencer) RecacheEmoji(
 				data,
 			)
 		},
+		async,
 	)
-
 }
 
 // processingEmojiSafely provides concurrency-safe processing of
 // an emoji with given shortcode+domain. if a copy of the emoji is
 // not already being processed, the given 'process' callback will
-// be used to generate new *media.ProcessingEmoji{} instance.
+// be used to generate new *media.ProcessingEmoji{} instance. async
+// determines whether to load it immediately, or in the background.
 func (d *Dereferencer) processEmojiSafely(
 	ctx context.Context,
 	shortcodeDomain string,
 	process func() (*media.ProcessingEmoji, error),
+	async bool,
 ) (
 	emoji *gtsmodel.Emoji,
 	err error,
 ) {
-
 	// Acquire map lock.
 	d.derefEmojisMu.Lock()
 
@@ -309,25 +315,34 @@ func (d *Dereferencer) processEmojiSafely(
 
 		// Add processing emoji media to hash map.
 		d.derefEmojis[shortcodeDomain] = processing
+	}
 
+	// Unlock map.
+	unlock()
+
+	if async {
+		emoji = processing.LoadAsync(func() {
+			// Remove on finish.
+			d.derefEmojisMu.Lock()
+			delete(d.derefEmojis, shortcodeDomain)
+			d.derefEmojisMu.Unlock()
+		})
+	} else {
 		defer func() {
 			// Remove on finish.
 			d.derefEmojisMu.Lock()
 			delete(d.derefEmojis, shortcodeDomain)
 			d.derefEmojisMu.Unlock()
 		}()
-	}
 
-	// Unlock map.
-	unlock()
+		// Perform emoji load operation.
+		emoji, err = processing.Load(ctx)
+		if err != nil {
+			err = gtserror.Newf("error loading emoji %s: %w", shortcodeDomain, err)
 
-	// Perform emoji load operation.
-	emoji, err = processing.Load(ctx)
-	if err != nil {
-		err = gtserror.Newf("error loading emoji %s: %w", shortcodeDomain, err)
-
-		// TODO: in time we should return checkable flags by gtserror.Is___()
-		// which can determine if loading error should allow remaining placeholder.
+			// TODO: in time we should return checkable flags by gtserror.Is___()
+			// which can determine if loading error should allow remaining placeholder.
+		}
 	}
 
 	return
@@ -364,7 +379,7 @@ func (d *Dereferencer) fetchEmojis(
 				URI:                  &placeholder.URI,
 				ImageRemoteURL:       &placeholder.ImageRemoteURL,
 				ImageStaticRemoteURL: &placeholder.ImageStaticRemoteURL,
-			}, force)
+			}, force, true)
 			if err != nil {
 				log.Errorf(ctx, "error refreshing emoji: %v", err)
 
@@ -396,6 +411,7 @@ func (d *Dereferencer) fetchEmojis(
 				ImageStaticRemoteURL: &placeholder.ImageStaticRemoteURL,
 			},
 			false,
+			true,
 		)
 		if err != nil {
 			if emoji == nil {

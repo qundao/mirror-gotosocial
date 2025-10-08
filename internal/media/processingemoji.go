@@ -44,11 +44,6 @@ type ProcessingEmoji struct {
 	mgr       *Manager          // mgr instance (access to db / storage)
 }
 
-// ID returns the ID of the underlying emoji.
-func (p *ProcessingEmoji) ID() string {
-	return p.emoji.ID // immutable, safe outside mutex.
-}
-
 // LoadEmoji blocks until the static and fullsize image has been processed, and then returns the completed emoji.
 func (p *ProcessingEmoji) Load(ctx context.Context) (*gtsmodel.Emoji, error) {
 	emoji, done, err := p.load(ctx)
@@ -61,6 +56,33 @@ func (p *ProcessingEmoji) Load(ctx context.Context) (*gtsmodel.Emoji, error) {
 		})
 	}
 	return emoji, err
+}
+
+func (p *ProcessingEmoji) LoadAsync(deferred func()) *gtsmodel.Emoji {
+	p.mgr.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
+		if deferred != nil {
+			defer deferred()
+		}
+
+		if _, _, err := p.load(ctx); err != nil {
+			log.Errorf(ctx, "error loading emoji: %v", err)
+		}
+	})
+
+	// Placeholder returns a copy of internally stored processing placeholder,
+	// returning only the fields that may be known *before* completion,
+	// and as such all fields which are safe to concurrently read.
+	placeholder := new(gtsmodel.Emoji)
+	placeholder.ID = p.emoji.ID
+	placeholder.Shortcode = p.emoji.Shortcode
+	placeholder.Domain = p.emoji.Domain
+	placeholder.Cached = new(bool)
+	placeholder.ImageRemoteURL = p.emoji.ImageRemoteURL
+	placeholder.ImageStaticRemoteURL = p.emoji.ImageStaticRemoteURL
+	placeholder.Disabled = p.emoji.Disabled
+	placeholder.VisibleInPicker = p.emoji.VisibleInPicker
+	placeholder.CategoryID = p.emoji.CategoryID
+	return placeholder
 }
 
 // load is the package private form of load() that is wrapped to catch context canceled.

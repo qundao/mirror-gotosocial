@@ -54,6 +54,7 @@ func (suite *EmojiTestSuite) TestDereferenceEmojiBlocking() {
 			VisibleInPicker:      &emojiVisibleInPicker,
 		},
 		false,
+		false,
 	)
 	suite.NoError(err)
 	suite.NotNil(emoji)
