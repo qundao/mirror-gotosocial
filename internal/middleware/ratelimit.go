@@ -88,7 +88,7 @@ func RateLimit(limit int, except []netip.Prefix) gin.HandlerFunc {
 				c.Request.Context(),
 				"cannot do rate limiting for this request as client IP %s could not be parsed;"+
 					" your upstream reverse proxy may be misconfigured: %v",
-				err,
+				clientIP, err,
 			)
 			c.Next()
 			return
