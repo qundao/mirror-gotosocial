@@ -17,8 +17,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// Algorithm specifies a cryptography secure algorithm for signing HTTP requests
-// and responses.
+// Algorithm specifies a cryptography secure
+// algorithm for signing HTTP requests and responses.
 type Algorithm string
 
 const (
@@ -42,20 +42,24 @@ const (
 	BLAKE2B_256      Algorithm = blake2b_256String
 	BLAKE2B_384      Algorithm = blake2b_384String
 	BLAKE2B_512      Algorithm = blake2b_512String
+
 	// RSA-based algorithms.
 	RSA_SHA1   Algorithm = rsaPrefix + "-" + sha1String
 	RSA_SHA224 Algorithm = rsaPrefix + "-" + sha224String
+
 	// RSA_SHA256 is the default algorithm.
 	RSA_SHA256    Algorithm = rsaPrefix + "-" + sha256String
 	RSA_SHA384    Algorithm = rsaPrefix + "-" + sha384String
 	RSA_SHA512    Algorithm = rsaPrefix + "-" + sha512String
 	RSA_RIPEMD160 Algorithm = rsaPrefix + "-" + ripemd160String
+
 	// ECDSA algorithms
 	ECDSA_SHA224    Algorithm = ecdsaPrefix + "-" + sha224String
 	ECDSA_SHA256    Algorithm = ecdsaPrefix + "-" + sha256String
 	ECDSA_SHA384    Algorithm = ecdsaPrefix + "-" + sha384String
 	ECDSA_SHA512    Algorithm = ecdsaPrefix + "-" + sha512String
 	ECDSA_RIPEMD160 Algorithm = ecdsaPrefix + "-" + ripemd160String
+
 	// ED25519 algorithms
 	// can only be SHA512
 	ED25519 Algorithm = ed25519Prefix
@@ -74,16 +78,17 @@ const (
 	rsa_BLAKE2B_512 Algorithm = rsaPrefix + "-" + blake2b_512String
 )
 
-// HTTP Signatures can be applied to different HTTP headers, depending on the
-// expected application behavior.
+// HTTP Signatures can be applied to different HTTP headers,
+// depending on the expected application behavior.
 type SignatureScheme string
 
 const (
-	// Signature will place the HTTP Signature into the 'Signature' HTTP
-	// header.
+	// Signature will place the HTTP Signature
+	// into the 'Signature' HTTP header.
 	Signature SignatureScheme = "Signature"
-	// Authorization will place the HTTP Signature into the 'Authorization'
-	// HTTP header.
+
+	// Authorization will place the HTTP Signature
+	// into the 'Authorization' HTTP header.
 	Authorization SignatureScheme = "Authorization"
 )
 
@@ -123,6 +128,7 @@ type SignatureOption struct {
 // Note that signatures do set the deprecated 'algorithm' parameter for
 // backwards compatibility.
 type Signer interface {
+
 	// SignRequest signs the request using a private key. The public key id
 	// is used by the HTTP server to identify which key to use to verify the
 	// signature.
@@ -139,6 +145,7 @@ type Signer interface {
 	// HTTP Signature will then ensure both the Digest and body are not both
 	// modified to maliciously represent different content.
 	SignRequest(pKey crypto.PrivateKey, pubKeyId string, r *http.Request, body []byte) error
+
 	// SignResponse signs the response using a private key. The public key
 	// id is used by the HTTP client to identify which key to use to verify
 	// the signature.
@@ -176,6 +183,7 @@ type SignerWithOptions interface {
 	// HTTP Signature will then ensure both the Digest and body are not both
 	// modified to maliciously represent different content.
 	SignRequestWithOptions(pKey crypto.PrivateKey, pubKeyId string, r *http.Request, body []byte, opts SignatureOption) error
+
 	// SignResponseWithOptions signs the response using a private key. The public key
 	// id is used by the HTTP client to identify which key to use to verify
 	// the signature.
@@ -228,6 +236,7 @@ func NewSigner(prefs []Algorithm, dAlgo DigestAlgorithm, headers []string, schem
 // Note that signatures do set the deprecated 'algorithm' parameter for
 // backwards compatibility.
 type SSHSigner interface {
+
 	// SignRequest signs the request using ssh.Signer.
 	// The public key id is used by the HTTP server to identify which key to use
 	// to verify the signature.
@@ -239,6 +248,7 @@ type SSHSigner interface {
 	// HTTP Signature will then ensure both the Digest and body are not both
 	// modified to maliciously represent different content.
 	SignRequest(pubKeyId string, r *http.Request, body []byte) error
+
 	// SignResponse signs the response using ssh.Signer. The public key
 	// id is used by the HTTP client to identify which key to use to verify
 	// the signature.
@@ -295,11 +305,13 @@ func getSSHAlgorithm(pkType string) Algorithm {
 //
 // Note that verification ignores the deprecated 'algorithm' parameter.
 type Verifier interface {
+
 	// KeyId gets the public key id that the signature is signed with.
 	//
 	// Note that the application is expected to determine the algorithm
 	// used based on metadata or out-of-band information for this key id.
 	KeyId() string
+
 	// Verify accepts the public key specified by KeyId and returns an
 	// error if verification fails or if the signature is malformed. The
 	// algorithm must be the one used to create the signature in order to
@@ -360,7 +372,7 @@ func newSSHSigner(sshSigner ssh.Signer, algo Algorithm, dAlgo DigestAlgorithm, h
 		return nil, fmt.Errorf("no crypto implementation available for ssh algo %q: %s", algo, err)
 	}
 
-	a := &asymmSSHSigner{
+	return &asymmSSHSigner{
 		asymmSigner: &asymmSigner{
 			s:            s,
 			dAlgo:        dAlgo,
@@ -370,13 +382,10 @@ func newSSHSigner(sshSigner ssh.Signer, algo Algorithm, dAlgo DigestAlgorithm, h
 			created:      created,
 			expires:      expires,
 		},
-	}
-
-	return a, nil
+	}, nil
 }
 
 func newSigner(algo Algorithm, dAlgo DigestAlgorithm, headers []string, scheme SignatureScheme, expiresIn int64) (SignerWithOptions, error) {
-
 	var expires, created int64 = 0, 0
 	if expiresIn != 0 {
 		created = time.Now().Unix()
@@ -396,11 +405,13 @@ func newSigner(algo Algorithm, dAlgo DigestAlgorithm, headers []string, scheme S
 		}
 		return a, nil
 	}
+
 	m, err := macerFromString(string(algo))
 	if err != nil {
 		return nil, fmt.Errorf("no crypto implementation available for %q: %s", algo, err)
 	}
-	c := &macSigner{
+
+	return &macSigner{
 		m:            m,
 		dAlgo:        dAlgo,
 		headers:      headers,
@@ -408,6 +419,5 @@ func newSigner(algo Algorithm, dAlgo DigestAlgorithm, headers []string, scheme S
 		prefix:       scheme.authScheme(),
 		created:      created,
 		expires:      expires,
-	}
-	return c, nil
+	}, nil
 }

@@ -14,32 +14,38 @@ type DigestAlgorithm string
 
 const (
 	DigestSha256 DigestAlgorithm = "SHA-256"
-	DigestSha512                 = "SHA-512"
+	DigestSha512 DigestAlgorithm = "SHA-512"
 )
 
-var digestToDef = map[DigestAlgorithm]crypto.Hash{
-	DigestSha256: crypto.SHA256,
-	DigestSha512: crypto.SHA512,
+// hashForDigest returns a hash algorithm for digest algorithm string.
+func hashForDigest(algo DigestAlgorithm) crypto.Hash {
+	switch algo {
+	case DigestSha256:
+		return crypto.SHA256
+	case DigestSha512:
+		return crypto.SHA512
+	default:
+		return 0
+	}
 }
 
 // IsSupportedDigestAlgorithm returns true if hte string is supported by this
 // library, is not a hash known to be weak, and is supported by the hardware.
 func IsSupportedDigestAlgorithm(algo string) bool {
 	uc := DigestAlgorithm(strings.ToUpper(algo))
-	c, ok := digestToDef[uc]
-	return ok && c.Available()
+	return hashForDigest(uc).Available()
 }
 
-func getHash(alg DigestAlgorithm) (h hash.Hash, toUse DigestAlgorithm, err error) {
-	upper := DigestAlgorithm(strings.ToUpper(string(alg)))
-	c, ok := digestToDef[upper]
-	if !ok {
-		err = fmt.Errorf("unknown or unsupported Digest algorithm: %s", alg)
+func getHash(algo DigestAlgorithm) (h hash.Hash, toUse DigestAlgorithm, err error) {
+	uc := DigestAlgorithm(strings.ToUpper(string(algo)))
+	c := hashForDigest(uc)
+	if c == 0 {
+		err = fmt.Errorf("unknown or unsupported Digest algorithm: %s", algo)
 	} else if !c.Available() {
-		err = fmt.Errorf("unavailable Digest algorithm: %s", alg)
+		err = fmt.Errorf("unavailable Digest algorithm: %s", algo)
 	} else {
 		h = c.New()
-		toUse = upper
+		toUse = uc
 	}
 	return
 }
@@ -56,18 +62,16 @@ func addDigest(r *http.Request, algo DigestAlgorithm, b []byte) (err error) {
 		return
 	}
 	var h hash.Hash
-	var a DigestAlgorithm
-	h, a, err = getHash(algo)
+	h, algo, err = getHash(algo)
 	if err != nil {
 		return
 	}
 	h.Write(b)
 	sum := h.Sum(nil)
 	r.Header.Add(digestHeader,
-		fmt.Sprintf("%s%s%s",
-			a,
-			digestDelim,
-			base64.StdEncoding.EncodeToString(sum[:])))
+		string(algo)+
+			digestDelim+
+			base64.StdEncoding.EncodeToString(sum[:]))
 	return
 }
 
@@ -78,18 +82,16 @@ func addDigestResponse(r http.ResponseWriter, algo DigestAlgorithm, b []byte) (e
 		return
 	}
 	var h hash.Hash
-	var a DigestAlgorithm
-	h, a, err = getHash(algo)
+	h, algo, err = getHash(algo)
 	if err != nil {
 		return
 	}
 	h.Write(b)
 	sum := h.Sum(nil)
 	r.Header().Add(digestHeader,
-		fmt.Sprintf("%s%s%s",
-			a,
-			digestDelim,
-			base64.StdEncoding.EncodeToString(sum[:])))
+		string(algo)+
+			digestDelim+
+			base64.StdEncoding.EncodeToString(sum[:]))
 	return
 }
 

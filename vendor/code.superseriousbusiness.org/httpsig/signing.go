@@ -23,6 +23,7 @@ const (
 	parameterValueDelimiter   = "\""
 	parameterSeparater        = ","
 	headerParameterValueDelim = " "
+
 	// RequestTarget specifies to include the http request method and
 	// entire URI in the signature. Pass it as a header to NewSigner.
 	RequestTarget = "(request-target)"

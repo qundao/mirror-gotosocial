@@ -11,7 +11,7 @@ replace modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.39.1-concurre
 require (
 	code.superseriousbusiness.org/activity v1.17.0
 	code.superseriousbusiness.org/exif-terminator v0.11.0
-	code.superseriousbusiness.org/httpsig v1.4.0
+	code.superseriousbusiness.org/httpsig v1.5.0
 	code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384
 	codeberg.org/gruf/go-bytesize v1.0.4
 	codeberg.org/gruf/go-byteutil v1.3.0

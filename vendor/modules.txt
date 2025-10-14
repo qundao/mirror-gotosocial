@@ -210,7 +210,7 @@ code.superseriousbusiness.org/go-jpeg-image-structure/v2
 # code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0
 ## explicit; go 1.12
 code.superseriousbusiness.org/go-png-image-structure/v2
-# code.superseriousbusiness.org/httpsig v1.4.0
+# code.superseriousbusiness.org/httpsig v1.5.0
 ## explicit; go 1.21
 code.superseriousbusiness.org/httpsig
 # code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384
@@ -1179,7 +1179,6 @@ golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/pbkdf2
-golang.org/x/crypto/ripemd160
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/sha3
 golang.org/x/crypto/ssh

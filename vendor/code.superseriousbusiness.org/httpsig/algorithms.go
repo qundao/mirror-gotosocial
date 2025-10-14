@@ -20,7 +20,6 @@ import (
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/blake2s"
 	"golang.org/x/crypto/ed25519"
-	"golang.org/x/crypto/ripemd160"
 	"golang.org/x/crypto/sha3"
 	"golang.org/x/crypto/ssh"
 )
@@ -52,14 +51,7 @@ const (
 	blake2b_512String = "blake2b-512"
 )
 
-var blake2Algorithms = map[crypto.Hash]bool{
-	crypto.BLAKE2s_256: true,
-	crypto.BLAKE2b_256: true,
-	crypto.BLAKE2b_384: true,
-	crypto.BLAKE2b_512: true,
-}
-
-var hashToDef = map[crypto.Hash]struct {
+var hashToDef = [...]struct {
 	name string
 	new  func(key []byte) (hash.Hash, error) // Only MACers will accept a key
 }{
@@ -68,29 +60,29 @@ var hashToDef = map[crypto.Hash]struct {
 	// http://www.iana.org/assignments/signature-algorithms
 	//
 	// Note that the forbidden hashes have an invalid 'new' function.
-	crypto.MD4: {md4String, func(key []byte) (hash.Hash, error) { return nil, nil }},
-	crypto.MD5: {md5String, func(key []byte) (hash.Hash, error) { return nil, nil }},
+	crypto.MD4:       {md4String, nil},
+	crypto.MD5:       {md5String, nil},
+	crypto.RIPEMD160: {ripemd160String, nil},
+	crypto.MD5SHA1:   {md5sha1String, nil}, // shorthand for crypto/tls, not actually implemented
+
 	// Temporarily enable SHA1 because of issue https://github.com/golang/go/issues/37278
+	// Still cryptographically secure:
 	crypto.SHA1:        {sha1String, func(key []byte) (hash.Hash, error) { return sha1.New(), nil }},
 	crypto.SHA224:      {sha224String, func(key []byte) (hash.Hash, error) { return sha256.New224(), nil }},
 	crypto.SHA256:      {sha256String, func(key []byte) (hash.Hash, error) { return sha256.New(), nil }},
 	crypto.SHA384:      {sha384String, func(key []byte) (hash.Hash, error) { return sha512.New384(), nil }},
 	crypto.SHA512:      {sha512String, func(key []byte) (hash.Hash, error) { return sha512.New(), nil }},
-	crypto.MD5SHA1:     {md5sha1String, func(key []byte) (hash.Hash, error) { return nil, nil }},
-	crypto.RIPEMD160:   {ripemd160String, func(key []byte) (hash.Hash, error) { return ripemd160.New(), nil }},
 	crypto.SHA3_224:    {sha3_224String, func(key []byte) (hash.Hash, error) { return sha3.New224(), nil }},
 	crypto.SHA3_256:    {sha3_256String, func(key []byte) (hash.Hash, error) { return sha3.New256(), nil }},
 	crypto.SHA3_384:    {sha3_384String, func(key []byte) (hash.Hash, error) { return sha3.New384(), nil }},
 	crypto.SHA3_512:    {sha3_512String, func(key []byte) (hash.Hash, error) { return sha3.New512(), nil }},
 	crypto.SHA512_224:  {sha512_224String, func(key []byte) (hash.Hash, error) { return sha512.New512_224(), nil }},
 	crypto.SHA512_256:  {sha512_256String, func(key []byte) (hash.Hash, error) { return sha512.New512_256(), nil }},
-	crypto.BLAKE2s_256: {blake2s_256String, func(key []byte) (hash.Hash, error) { return blake2s.New256(key) }},
-	crypto.BLAKE2b_256: {blake2b_256String, func(key []byte) (hash.Hash, error) { return blake2b.New256(key) }},
-	crypto.BLAKE2b_384: {blake2b_384String, func(key []byte) (hash.Hash, error) { return blake2b.New384(key) }},
-	crypto.BLAKE2b_512: {blake2b_512String, func(key []byte) (hash.Hash, error) { return blake2b.New512(key) }},
+	crypto.BLAKE2s_256: {blake2s_256String, blake2s.New256},
+	crypto.BLAKE2b_256: {blake2b_256String, blake2b.New256},
+	crypto.BLAKE2b_384: {blake2b_384String, blake2b.New384},
+	crypto.BLAKE2b_512: {blake2b_512String, blake2b.New512},
 }
-
-var stringToHash map[string]crypto.Hash
 
 const (
 	defaultAlgorithm        = RSA_SHA256
@@ -98,10 +90,6 @@ const (
 )
 
 func init() {
-	stringToHash = make(map[string]crypto.Hash, len(hashToDef))
-	for k, v := range hashToDef {
-		stringToHash[v.name] = k
-	}
 	// This should guarantee that at runtime the defaultAlgorithm will not
 	// result in errors when fetching a macer or signer (see algorithms.go)
 	if ok, err := isAvailable(string(defaultAlgorithmHashing)); err != nil {
@@ -112,17 +100,7 @@ func init() {
 }
 
 func isForbiddenHash(h crypto.Hash) bool {
-	switch h {
-	// Not actually cryptographically secure
-	case crypto.MD4:
-		fallthrough
-	case crypto.MD5:
-		fallthrough
-	case crypto.MD5SHA1: // shorthand for crypto/tls, not actually implemented
-		return true
-	}
-	// Still cryptographically secure
-	return false
+	return int(h) >= len(hashToDef) || hashToDef[h].new == nil
 }
 
 // signer is an internally public type.
@@ -148,6 +126,9 @@ type hmacAlgorithm struct {
 
 func (h *hmacAlgorithm) Sign(sig, key []byte) ([]byte, error) {
 	hs, err := h.fn(key)
+	if err != nil {
+		return nil, err
+	}
 	if err = setSig(hs, sig); err != nil {
 		return nil, err
 	}
@@ -169,7 +150,7 @@ func (h *hmacAlgorithm) Equal(sig, actualMAC, key []byte) (bool, error) {
 }
 
 func (h *hmacAlgorithm) String() string {
-	return fmt.Sprintf("%s-%s", hmacPrefix, hashToDef[h.kind].name)
+	return hmacPrefix + "-" + hashToDef[h.kind].name
 }
 
 var _ signer = &rsaAlgorithm{}
@@ -226,7 +207,7 @@ func (r *rsaAlgorithm) Verify(pub crypto.PublicKey, toHash, signature []byte) er
 }
 
 func (r *rsaAlgorithm) String() string {
-	return fmt.Sprintf("%s-%s", rsaPrefix, hashToDef[r.kind].name)
+	return rsaPrefix + "-" + hashToDef[r.kind].name
 }
 
 var _ signer = &ed25519Algorithm{}
@@ -265,7 +246,7 @@ func (r *ed25519Algorithm) Verify(pub crypto.PublicKey, toHash, signature []byte
 }
 
 func (r *ed25519Algorithm) String() string {
-	return fmt.Sprintf("%s", ed25519Prefix)
+	return ed25519Prefix
 }
 
 var _ signer = &ecdsaAlgorithm{}
@@ -335,7 +316,7 @@ func (r *ecdsaAlgorithm) Verify(pub crypto.PublicKey, toHash, signature []byte) 
 }
 
 func (r *ecdsaAlgorithm) String() string {
-	return fmt.Sprintf("%s-%s", ecdsaPrefix, hashToDef[r.kind].name)
+	return ecdsaPrefix + "-" + hashToDef[r.kind].name
 }
 
 var _ macer = &blakeMacAlgorithm{}
@@ -371,7 +352,7 @@ func (r *blakeMacAlgorithm) Equal(sig, actualMAC, key []byte) (bool, error) {
 }
 
 func (r *blakeMacAlgorithm) String() string {
-	return fmt.Sprintf("%s", hashToDef[r.kind].name)
+	return hashToDef[r.kind].name
 }
 
 func setSig(a hash.Hash, b []byte) error {
@@ -395,8 +376,8 @@ func IsSupportedHttpSigAlgorithm(algo string) bool {
 
 // isAvailable is an internally public function
 func isAvailable(algo string) (bool, error) {
-	c, ok := stringToHash[algo]
-	if !ok {
+	c := stringToHash(algo)
+	if c == 0 {
 		return false, fmt.Errorf("no match for %q", algo)
 	}
 	if isForbiddenHash(c) {
@@ -406,9 +387,8 @@ func isAvailable(algo string) (bool, error) {
 }
 
 func newAlgorithmConstructor(algo string) (fn func(k []byte) (hash.Hash, error), c crypto.Hash, e error) {
-	ok := false
-	c, ok = stringToHash[algo]
-	if !ok {
+	c = stringToHash(algo)
+	if c == 0 {
 		e = fmt.Errorf("no match for %q", algo)
 		return
 	}
@@ -416,18 +396,12 @@ func newAlgorithmConstructor(algo string) (fn func(k []byte) (hash.Hash, error),
 		e = fmt.Errorf("forbidden hash type in %q", algo)
 		return
 	}
-	algoDef, ok := hashToDef[c]
-	if !ok {
+	if int(c) > len(hashToDef) {
 		e = fmt.Errorf("have crypto.Hash %v but no definition", c)
 		return
 	}
-	fn = func(key []byte) (hash.Hash, error) {
-		h, err := algoDef.new(key)
-		if err != nil {
-			return nil, err
-		}
-		return h, nil
-	}
+	algoDef := hashToDef[c]
+	fn = algoDef.new
 	return
 }
 
@@ -517,7 +491,7 @@ func macerFromString(s string) (macer, error) {
 			},
 			kind: cHash,
 		}, nil
-	} else if bl, ok := stringToHash[s]; ok && blake2Algorithms[bl] {
+	} else if bl := stringToHash(s); bl != 0 && isBlake2(bl) {
 		hashFn, cHash, err := newAlgorithmConstructor(s)
 		if err != nil {
 			return nil, err
@@ -528,5 +502,20 @@ func macerFromString(s string) (macer, error) {
 		}, nil
 	} else {
 		return nil, fmt.Errorf("no MACer matching %q", s)
+	}
+}
+
+func isBlake2(h crypto.Hash) bool {
+	switch h {
+	case crypto.BLAKE2s_256:
+		return true
+	case crypto.BLAKE2b_256:
+		return true
+	case crypto.BLAKE2b_384:
+		return true
+	case crypto.BLAKE2b_512:
+		return true
+	default:
+		return false
 	}
 }

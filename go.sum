@@ -6,8 +6,8 @@ code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0 h1:r9uq8StaSHYKJ
 code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0/go.mod h1:IK1OlR6APjVB3E9tuYGvf0qXMrwP+TrzcHS5rf4wffQ=
 code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0 h1:I512jiIeXDC4//2BeSPrRM2ZS4wpBKUaPeTPxakMNGA=
 code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0/go.mod h1:SNHomXNW88o1pFfLHpD4KsCZLfcr4z5dm+xcX5SV10A=
-code.superseriousbusiness.org/httpsig v1.4.0 h1:g9+KQMoTG0oR0II5gYb5pVVdNjbc7CiiuqK8vcZjeQg=
-code.superseriousbusiness.org/httpsig v1.4.0/go.mod h1:i2AKpj/WbA/o/UTvia9TAREzt0jP1AH3T1Uxjyhdzlw=
+code.superseriousbusiness.org/httpsig v1.5.0 h1:jw/qc//yYWSoOYytTZXHvW7yh8kceCipNIBfUeXQghA=
+code.superseriousbusiness.org/httpsig v1.5.0/go.mod h1:i2AKpj/WbA/o/UTvia9TAREzt0jP1AH3T1Uxjyhdzlw=
 code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384 h1:eJzULGUyhHGk2DdQxX/jbH9FKZOyoIF90p3dzukCfLA=
 code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384/go.mod h1:4x61i4C725jkXOpnUPFNfmiEthF6FZc/byADbalp+F8=
 codeberg.org/gruf/go-bytesize v1.0.4 h1:LEojK46lUoE748Om7yldx6kLe6jCCuiytz5IZ8vH35g=
