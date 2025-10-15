@@ -31,6 +31,7 @@ import (
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
+	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
@@ -160,6 +161,31 @@ func (f *federatingActor) PostInboxScheme(ctx context.Context, w http.ResponseWr
 	if !authenticated {
 		const text = "not authenticated"
 		return false, gtserror.NewErrorUnauthorized(errors.New(text), text)
+	}
+
+	// Ensure requester is not suspended.
+	requester := gtscontext.RequestingAccount(ctx)
+	switch {
+	case !requester.IsSuspended():
+		// Account in good standing.
+		// Allow request to continue.
+
+	case requester.DeletedSelf():
+		// Looks like pub key owner deleted their own account.
+		// Likely their instance is still sending out deletes,
+		// but we'll have already deleted everything of theirs.
+		// Don't do any further processing of the request.
+		log.Debugf(ctx,
+			"requesting account %s self deleted, ignoring inbox post",
+			requester.UsernameDomain(),
+		)
+		return true, nil
+
+	default:
+		// Likely suspended by an admin or
+		// defed action on *this* instance.
+		const text = "requesting account suspended"
+		return false, gtserror.NewErrorForbidden(errors.New(text), text)
 	}
 
 	/*
