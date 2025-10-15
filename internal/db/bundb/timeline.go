@@ -252,24 +252,28 @@ func (t *timelineDB) GetListTimeline(ctx context.Context, listID string, page *p
 		// of any paging parameters, it selects by list entries.
 		func(q *bun.SelectQuery) (*bun.SelectQuery, error) {
 
-			// Fetch all follow IDs contained in list from DB.
-			followIDs, err := t.state.DB.GetFollowIDsInList(
+			// Get IDs of all accounts in the list.
+			accountIDs, err := t.state.DB.GetAccountIDsInList(
 				ctx, listID, nil,
 			)
 			if err != nil {
-				return nil, gtserror.Newf("error getting follows in list: %w", err)
+				return nil, gtserror.Newf("error getting account IDs in list: %w", err)
 			}
 
-			// Select target account
-			// IDs from list follows.
-			subQ := t.db.NewSelect().
-				Table("follows").
-				Column("follows.target_account_id").
-				Where("? IN (?)", bun.Ident("follows.id"), bun.In(followIDs))
-			q = q.Where("? IN (?)", bun.Ident("statuses.account_id"), subQ)
+			// Provide account IDs as common table expression values.
+			values := make([]accountIDValue, 0, len(accountIDs))
+			for _, accountID := range accountIDs {
+				values = append(values, accountIDValue{accountID})
+			}
 
-			// Only include statuses that aren't pending approval.
-			q = q.Where("NOT ? = ?", bun.Ident("pending_approval"), true)
+			// "Join" on the CTE values to select only
+			// statuses belonging to those account IDs.
+			q = q.
+				With("_data", t.db.NewValues(&values)).
+				Table("_data").
+				Where("? = ?", bun.Ident("statuses.account_id"), bun.Ident("_data.account_id")).
+				// Only include statuses that aren't pending approval.
+				Where("NOT ? = ?", bun.Ident("pending_approval"), true)
 
 			return q, nil
 		},
