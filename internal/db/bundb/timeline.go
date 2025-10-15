@@ -47,75 +47,18 @@ func (t *timelineDB) GetHomeTimeline(ctx context.Context, accountID string, page
 		// of any paging parameters that selects by followings.
 		func(q *bun.SelectQuery) (*bun.SelectQuery, error) {
 
-			// As this is the home timeline, it should be
-			// populated by statuses from accounts followed
-			// by accountID, and posts from accountID itself.
-			//
-			// So, begin by seeing who accountID follows.
-			// It should be a little cheaper to do this in
-			// a separate query like this, rather than using
-			// a join, since followIDs are cached in memory.
-			follows, err := t.state.DB.GetAccountFollows(
-				gtscontext.SetBarebones(ctx),
-				accountID,
-				nil, // select all
-			)
-			if err != nil && !errors.Is(err, db.ErrNoEntries) {
-				return nil, gtserror.Newf("db error getting follows for account %s: %w", accountID, err)
+			// Get account IDs that should be in this home timeline.
+			accountIDs, err := t.getHomeAccountIDs(ctx, accountID)
+			if err != nil {
+				return nil, gtserror.Newf("error getting home account ids: %w", err)
 			}
-
-			// To take account of exclusive lists, get all of
-			// this account's lists, so we can filter out follows
-			// that are in contained in exclusive lists.
-			lists, err := t.state.DB.GetListsByAccountID(ctx, accountID)
-			if err != nil && !errors.Is(err, db.ErrNoEntries) {
-				return nil, gtserror.Newf("db error getting lists for account %s: %w", accountID, err)
-			}
-
-			// Index all follow IDs that fall in exclusive lists.
-			ignoreFollowIDs := make(map[string]struct{})
-			for _, list := range lists {
-				if !*list.Exclusive {
-					// Not exclusive,
-					// we don't care.
-					continue
-				}
-
-				// Fetch all follow IDs of the entries ccontained in this list.
-				listFollowIDs, err := t.state.DB.GetFollowIDsInList(ctx, list.ID, nil)
-				if err != nil && !errors.Is(err, db.ErrNoEntries) {
-					return nil, gtserror.Newf("db error getting list entry follow ids: %w", err)
-				}
-
-				// Exclusive list, index all its follow IDs.
-				for _, followID := range listFollowIDs {
-					ignoreFollowIDs[followID] = struct{}{}
-				}
-			}
-
-			// Extract just the accountID from each follow,
-			// ignoring follows that are in exclusive lists.
-			targetAccountIDs := make([]string, 0, len(follows)+1)
-			for _, f := range follows {
-				_, ignore := ignoreFollowIDs[f.ID]
-				if !ignore {
-					targetAccountIDs = append(
-						targetAccountIDs,
-						f.TargetAccountID,
-					)
-				}
-			}
-
-			// Add accountID itself as a pseudo follow so that
-			// accountID can see its own posts in the timeline.
-			targetAccountIDs = append(targetAccountIDs, accountID)
 
 			// Select only statuses authored by
 			// accounts with IDs in the slice.
 			q = q.Where(
 				"? IN (?)",
 				bun.Ident("account_id"),
-				bun.In(targetAccountIDs),
+				bun.In(accountIDs),
 			)
 
 			// Only include statuses that aren't pending approval.
@@ -307,6 +250,69 @@ func (t *timelineDB) GetTagTimeline(ctx context.Context, tagID string, page *pag
 			return q, nil
 		},
 	)
+}
+
+func (t *timelineDB) getHomeAccountIDs(ctx context.Context, accountID string) ([]string, error) {
+	return t.state.Caches.DB.HomeAccountIDs.Load(accountID, func() ([]string, error) {
+		// As this is the home timeline, it should be
+		// populated by statuses from accounts followed
+		// by accountID, and posts from accountID itself.
+		// So, begin by seeing who accountID follows.
+		follows, err := t.state.DB.GetAccountFollows(
+			gtscontext.SetBarebones(ctx),
+			accountID,
+			nil, // select all
+		)
+		if err != nil && !errors.Is(err, db.ErrNoEntries) {
+			return nil, gtserror.Newf("db error getting follows for account %s: %w", accountID, err)
+		}
+
+		// To take account of exclusive lists, get all of this account's
+		// lists, so we can filter out follows that are in exclusive lists.
+		lists, err := t.state.DB.GetListsByAccountID(ctx, accountID)
+		if err != nil && !errors.Is(err, db.ErrNoEntries) {
+			return nil, gtserror.Newf("db error getting lists for account %s: %w", accountID, err)
+		}
+
+		// Index all follow IDs that fall in exclusive lists.
+		ignoreFollowIDs := make(map[string]struct{})
+		for _, list := range lists {
+			if !*list.Exclusive {
+				// Not exclusive,
+				// we don't care.
+				continue
+			}
+
+			// Fetch all follow IDs of the entries ccontained in this list.
+			listFollowIDs, err := t.state.DB.GetFollowIDsInList(ctx, list.ID, nil)
+			if err != nil && !errors.Is(err, db.ErrNoEntries) {
+				return nil, gtserror.Newf("db error getting list entry follow ids: %w", err)
+			}
+
+			// Exclusive list, index all its follow IDs.
+			for _, followID := range listFollowIDs {
+				ignoreFollowIDs[followID] = struct{}{}
+			}
+		}
+
+		// Extract just the accountID from each follow,
+		// ignoring follows that are in exclusive lists.
+		targetAccountIDs := make([]string, 0, len(follows)+1)
+		for _, f := range follows {
+			_, ignore := ignoreFollowIDs[f.ID]
+			if !ignore {
+				targetAccountIDs = append(
+					targetAccountIDs,
+					f.TargetAccountID,
+				)
+			}
+		}
+
+		// Add accountID itself as a pseudo follow so that
+		// accountID can see its own posts in the timeline.
+		targetAccountIDs = append(targetAccountIDs, accountID)
+		return targetAccountIDs, nil
+	})
 }
 
 func loadStatusTimelinePage(
