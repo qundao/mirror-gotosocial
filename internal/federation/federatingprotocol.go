@@ -227,12 +227,13 @@ func (f *Federator) AuthenticatePostInbox(ctx context.Context, w http.ResponseWr
 	pubKeyAuth, errWithCode := f.AuthenticateFederatedRequest(ctx, receiver.Username)
 	if errWithCode != nil {
 
-		// Check if we got an error code from a remote
+		// Check if we got code 410 Gone from a remote
 		// instance while trying to dereference the pub
-		// key owner who's trying to post to this inbox.
+		// key owner who's trying to post to this inbox,
+		// or if we already had a tombstone stored for them.
 		if gtserror.StatusCode(errWithCode) == http.StatusGone {
-			// If the pub key owner's key/account has gone
-			// (410) then likely inbox post was a Delete.
+			// If the pub key owner's key/account has
+			// gone, then inbox post was likely a Delete.
 			//
 			// If so, we can just write 202 and leave, as
 			// either we'll have already processed any Deletes

@@ -145,22 +145,43 @@ func (f *federatingActor) PostInboxScheme(ctx context.Context, w http.ResponseWr
 	// the gts codebase use errors to pass-back non-200 status codes,
 	// so we specifically have to check for already wrapped with code.
 	//
-	ctx, authenticated, err := f.sideEffectActor.AuthenticatePostInbox(ctx, w, r)
-	if errorsv2.AsV2[gtserror.WithCode](err) != nil {
-		// If it was already wrapped with an
-		// HTTP code then don't bother rewrapping
-		// it, just return it as-is for caller to
-		// handle. AuthenticatePostInbox already
-		// calls WriteHeader() in some situations.
+	ctx, didAuthentication, err := f.sideEffectActor.AuthenticatePostInbox(ctx, w, r)
+	switch {
+
+	// If error was already wrapped with an
+	// HTTP code then don't bother rewrapping
+	// it, just return it as-is for caller to
+	// handle. AuthenticatePostInbox already
+	// calls WriteHeader() in some situations.
+	//
+	// In most cases, the returned error will be
+	// 401 Unauthorized, to indicate that the
+	// signature on the request was invalid.
+	case errorsv2.AsV2[gtserror.WithCode](err) != nil:
 		return false, err
-	} else if err != nil {
+
+	// If error was returned but wasn't wrapped,
+	// wrap it into a 500 Internal Server Error.
+	case err != nil:
 		err := gtserror.Newf("error authenticating post inbox: %w", err)
 		return false, gtserror.NewErrorInternalError(err)
-	}
 
-	if !authenticated {
-		const text = "not authenticated"
-		return false, gtserror.NewErrorUnauthorized(errors.New(text), text)
+	// If we got no error but we didn't do auth,
+	// this means we were either still handshaking
+	// during auth (very rare) or more likely the
+	// remote account was marked as gone/deleted
+	// so we couldn't even get their key to verify.
+	//
+	// If this is so, we know we've already handled any
+	// necessary deletes, and AuthenticatePostInbox
+	// will have written 202 Accepted, so we can bail.
+	case !didAuthentication:
+		log.Debug(ctx, "requesting account is gone or we're still handshaking with it, ignoring inbox post")
+		return true, nil
+
+	// No problem.
+	default:
+		log.Trace(ctx, "AuthenticatePostInbox was successful, continuing with request")
 	}
 
 	// Ensure requester is not suspended.
