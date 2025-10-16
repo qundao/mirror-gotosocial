@@ -75,18 +75,16 @@ func (d *Dereferencer) GetEmoji(
 		return nil, gtserror.SetUnretrievable(err)
 	}
 
-	// Generate shortcode domain for locks + logging.
-	shortcodeDomain := shortcode + "@" + domain
-
 	// Pass along for safe processing.
 	return d.processEmojiSafely(ctx,
-		shortcodeDomain,
+		shortcode,
+		domain,
 		func() (*media.ProcessingEmoji, error) {
 
 			// Ensure we have a valid remote URL.
 			url, err := url.Parse(remoteURL)
 			if err != nil {
-				err := gtserror.Newf("invalid image remote url %s for emoji %s: %w", remoteURL, shortcodeDomain, err)
+				err := gtserror.Newf("invalid image remote url %s for emoji %s@%s: %w", remoteURL, shortcode, domain, err)
 				return nil, err
 			}
 
@@ -113,6 +111,7 @@ func (d *Dereferencer) GetEmoji(
 				info,
 			)
 		},
+		false, // refresh
 		async,
 	)
 }
@@ -173,19 +172,17 @@ func (d *Dereferencer) RefreshEmoji(
 		return emoji, nil
 	}
 
-	// Get shortcode domain for locks + logging.
-	shortcodeDomain := emoji.ShortcodeDomain()
-
 	// Ensure we have a valid image remote URL.
 	url, err := url.Parse(emoji.ImageRemoteURL)
 	if err != nil {
-		err := gtserror.Newf("invalid image remote url %s for emoji %s: %w", emoji.ImageRemoteURL, shortcodeDomain, err)
+		err := gtserror.Newf("invalid image remote url %s for emoji %s@%s: %w", emoji.ImageRemoteURL, emoji.Shortcode, emoji.Domain, err)
 		return nil, err
 	}
 
 	// Pass along for safe processing.
 	return d.processEmojiSafely(ctx,
-		shortcodeDomain,
+		emoji.Shortcode,
+		emoji.Domain,
 		func() (*media.ProcessingEmoji, error) {
 
 			// Acquire new instance account transport for emoji dereferencing.
@@ -210,6 +207,7 @@ func (d *Dereferencer) RefreshEmoji(
 				info,
 			)
 		},
+		true, // refresh
 		async,
 	)
 }
@@ -241,19 +239,17 @@ func (d *Dereferencer) RecacheEmoji(
 		return emoji, nil
 	}
 
-	// Get shortcode domain for locks + logging.
-	shortcodeDomain := emoji.ShortcodeDomain()
-
 	// Ensure we have a valid image remote URL.
 	url, err := url.Parse(emoji.ImageRemoteURL)
 	if err != nil {
-		err := gtserror.Newf("invalid image remote url %s for emoji %s: %w", emoji.ImageRemoteURL, shortcodeDomain, err)
+		err := gtserror.Newf("invalid image remote url %s for emoji %s@%s: %w", emoji.ImageRemoteURL, emoji.Shortcode, emoji.Domain, err)
 		return nil, err
 	}
 
 	// Pass along for safe processing.
 	return d.processEmojiSafely(ctx,
-		shortcodeDomain,
+		emoji.Shortcode,
+		emoji.Domain,
 		func() (*media.ProcessingEmoji, error) {
 
 			// Acquire new instance account transport for emoji dereferencing.
@@ -277,6 +273,7 @@ func (d *Dereferencer) RecacheEmoji(
 				data,
 			)
 		},
+		false, // refresh
 		async,
 	)
 }
@@ -288,13 +285,18 @@ func (d *Dereferencer) RecacheEmoji(
 // determines whether to load it immediately, or in the background.
 func (d *Dereferencer) processEmojiSafely(
 	ctx context.Context,
-	shortcodeDomain string,
+	shortcode string,
+	domain string,
 	process func() (*media.ProcessingEmoji, error),
+	refresh bool,
 	async bool,
 ) (
 	emoji *gtsmodel.Emoji,
 	err error,
 ) {
+	// Generate shortcode@domain for locks + logging.
+	shortcodeDomain := shortcode + "@" + domain
+
 	// Acquire map lock.
 	d.derefEmojisMu.Lock()
 
@@ -307,6 +309,23 @@ func (d *Dereferencer) processEmojiSafely(
 	processing, ok := d.derefEmojis[shortcodeDomain]
 
 	if !ok {
+		if !refresh {
+			// Before starting processing, ensure the information
+			// we have about emoji (i.e. getting here) is up-to-date.
+			emoji, err := d.state.DB.GetEmojiByShortcodeDomain(ctx,
+				shortcode,
+				domain,
+			)
+			if err != nil && !errors.Is(err, db.ErrNoEntries) {
+				return nil, gtserror.Newf("error fetching emoji from db: %w", err)
+			}
+
+			// If just been cached, use this!
+			if emoji != nil && *emoji.Cached {
+				return emoji, nil
+			}
+		}
+
 		// Start new processing emoji.
 		processing, err = process()
 		if err != nil {
