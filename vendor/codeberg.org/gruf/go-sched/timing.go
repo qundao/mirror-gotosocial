@@ -5,11 +5,13 @@ import (
 )
 
 var (
-	// zerotime is zero time.Time (unix epoch).
-	zerotime = time.Time{}
+	// zerotime is zero
+	// time.Time (unix epoch).
+	zerotime time.Time
 
-	// emptytiming is a global timingempty to check against.
-	emptytiming = timingempty{}
+	// emptytiming is a global
+	// timingempty to check against.
+	emptytiming timingempty
 )
 
 // Timing provides scheduling for a Job, determining the next time
@@ -20,14 +22,16 @@ type Timing interface {
 	Next(time.Time) time.Time
 }
 
-// timingempty is a 'zero' Timing implementation that always returns zero time.
+// timingempty is a 'zero' Timing implementation
+// that always returns zero time.
 type timingempty struct{}
 
 func (timingempty) Next(time.Time) time.Time {
 	return zerotime
 }
 
-// Once implements Timing to provide a run-once Job execution.
+// Once implements Timing to
+// provide a run-once Job execution.
 type Once time.Time
 
 func (o *Once) Next(time.Time) time.Time {
@@ -36,14 +40,16 @@ func (o *Once) Next(time.Time) time.Time {
 	return ret
 }
 
-// Periodic implements Timing to provide a recurring Job execution.
+// Periodic implements Timing to
+// provide a recurring Job execution.
 type Periodic time.Duration
 
 func (p Periodic) Next(now time.Time) time.Time {
 	return now.Add(time.Duration(p))
 }
 
-// PeriodicAt implements Timing to provide a recurring Job execution starting at 'Once' time.
+// PeriodicAt implements Timing to provide a
+// recurring Job execution starting at 'Once' time.
 type PeriodicAt struct {
 	Once   Once
 	Period Periodic
@@ -56,7 +62,8 @@ func (p *PeriodicAt) Next(now time.Time) time.Time {
 	return p.Period.Next(now)
 }
 
-// TimingWrap allows combining two different Timing implementations.
+// TimingWrap allows combining two
+// different Timing implementations.
 type TimingWrap struct {
 	Outer Timing
 	Inner Timing

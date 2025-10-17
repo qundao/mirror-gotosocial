@@ -14,10 +14,9 @@ import (
 // holding onto a next execution time safely in a concurrent environment.
 type Job struct {
 	id     uint64
-	next   unsafe.Pointer // *time.Time
+	next   atomic_time
 	timing Timing
 	call   func(time.Time)
-	panic  func(interface{})
 }
 
 // NewJob returns a new Job to run given function.
@@ -30,28 +29,31 @@ func NewJob(fn func(now time.Time)) *Job {
 	j := &Job{ // set defaults
 		timing: emptytiming, // i.e. fire immediately
 		call:   fn,
-		panic:  func(i interface{}) { panic(i) },
 	}
 
 	return j
 }
 
-// At sets this Job to execute at time, by passing (*sched.Once)(&at) to .With(). See .With() for details.
+// At sets this Job to execute at time, by passing
+// (*sched.Once)(&at) to .With(). See .With() for details.
 func (job *Job) At(at time.Time) *Job {
 	return job.With((*Once)(&at))
 }
 
-// Every sets this Job to execute every period, by passing sched.Period(period) to .With(). See .With() for details.
+// Every sets this Job to execute every period, by passing
+// sched.Period(period) to .With(). See .With() for details.
 func (job *Job) Every(period time.Duration) *Job {
 	return job.With(Periodic(period))
 }
 
-// EveryAt sets this Job to execute every period starting at time, by passing &PeriodicAt{once: Once(at), period: Periodic(period)} to .With(). See .With() for details.
+// EveryAt sets this Job to execute every period starting at time, by passing
+// &PeriodicAt{once: Once(at), period: Periodic(period)} to .With(). See .With() for details.
 func (job *Job) EveryAt(at time.Time, period time.Duration) *Job {
 	return job.With(&PeriodicAt{Once: Once(at), Period: Periodic(period)})
 }
 
-// With sets this Job's timing to given implementation, or if already set will wrap existing using sched.TimingWrap{}.
+// With sets this Job's timing to given implementation, or
+// if already set will wrap existing using sched.TimingWrap{}.
 func (job *Job) With(t Timing) *Job {
 	if t == nil {
 		// Ensure a timing
@@ -78,44 +80,16 @@ func (job *Job) With(t Timing) *Job {
 	return job
 }
 
-// OnPanic specifies how this job handles panics, default is an actual panic.
-func (job *Job) OnPanic(fn func(interface{})) *Job {
-	if fn == nil {
-		// Ensure a function
-		panic("nil func")
-	}
-
-	if job.id != 0 {
-		// Cannot update scheduled job
-		panic("job already scheduled")
-	}
-
-	job.panic = fn
-	return job
-}
-
 // Next returns the next time this Job is expected to run.
 func (job *Job) Next() time.Time {
-	return loadTime(&job.next)
+	return job.next.Load()
 }
 
 // Run will execute this Job and pass through given now time.
-func (job *Job) Run(now time.Time) {
-	defer func() {
-		switch r := recover(); {
-		case r == nil:
-			// no panic
-		case job != nil &&
-			job.panic != nil:
-			job.panic(r)
-		default:
-			panic(r)
-		}
-	}()
-	job.call(now)
-}
+func (job *Job) Run(now time.Time) { job.call(now) }
 
-// String provides a debuggable string representation of Job including ID, next time and Timing type.
+// String provides a debuggable string representation
+// of Job including ID, next time and Timing type.
 func (job *Job) String() string {
 	var buf strings.Builder
 	buf.WriteByte('{')
@@ -123,7 +97,7 @@ func (job *Job) String() string {
 	buf.WriteString(strconv.FormatUint(job.id, 10))
 	buf.WriteByte(' ')
 	buf.WriteString("next=")
-	buf.WriteString(loadTime(&job.next).Format(time.StampMicro))
+	buf.WriteString(job.next.Load().Format(time.StampMicro))
 	buf.WriteByte(' ')
 	buf.WriteString("timing=")
 	buf.WriteString(reflect.TypeOf(job.timing).String())
@@ -131,13 +105,15 @@ func (job *Job) String() string {
 	return buf.String()
 }
 
-func loadTime(p *unsafe.Pointer) time.Time {
-	if p := atomic.LoadPointer(p); p != nil {
+type atomic_time struct{ p unsafe.Pointer }
+
+func (t *atomic_time) Load() time.Time {
+	if p := atomic.LoadPointer(&t.p); p != nil {
 		return *(*time.Time)(p)
 	}
 	return zerotime
 }
 
-func storeTime(p *unsafe.Pointer, t time.Time) {
-	atomic.StorePointer(p, unsafe.Pointer(&t))
+func (t *atomic_time) Store(v time.Time) {
+	atomic.StorePointer(&t.p, unsafe.Pointer(&v))
 }

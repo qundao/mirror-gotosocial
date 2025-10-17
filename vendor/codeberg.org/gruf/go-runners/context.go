@@ -2,6 +2,7 @@ package runners
 
 import (
 	"context"
+	"sync/atomic"
 	"time"
 )
 
@@ -19,9 +20,13 @@ func Closed() context.Context {
 
 // CtxWithCancel returns a new context.Context impl with cancel.
 func CtxWithCancel() (context.Context, context.CancelFunc) {
+	var once atomic.Uint32
 	ctx := make(chan struct{})
-	cncl := func() { close(ctx) }
-	return CancelCtx(ctx), cncl
+	return CancelCtx(ctx), func() {
+		if once.CompareAndSwap(0, 1) {
+			close(ctx)
+		}
+	}
 }
 
 // CancelCtx is the simplest possible cancellable context.
