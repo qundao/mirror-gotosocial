@@ -14,7 +14,7 @@ var scheduler sched.Scheduler
 func schedule(sweep func(time.Time), freq time.Duration) func() {
 	if !scheduler.Running() {
 		// ensure sched running
-		_ = scheduler.Start(nil)
+		_ = scheduler.Start()
 	}
 	return scheduler.Schedule(sched.NewJob(sweep).Every(freq))
 }

@@ -15,7 +15,7 @@ require (
 	code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384
 	codeberg.org/gruf/go-bytesize v1.0.4
 	codeberg.org/gruf/go-byteutil v1.3.0
-	codeberg.org/gruf/go-cache/v3 v3.6.1
+	codeberg.org/gruf/go-cache/v3 v3.6.2
 	codeberg.org/gruf/go-caller v0.0.0-20250806133437-db8d0b1f71cf
 	codeberg.org/gruf/go-debug v1.3.0
 	codeberg.org/gruf/go-errors/v2 v2.3.2
@@ -27,8 +27,8 @@ require (
 	codeberg.org/gruf/go-list v0.0.0-20240425093752-494db03d641f
 	codeberg.org/gruf/go-mempool v0.0.0-20251003110531-b54adae66253
 	codeberg.org/gruf/go-mutexes v1.5.8
-	codeberg.org/gruf/go-runners v1.6.3
-	codeberg.org/gruf/go-sched v1.2.4
+	codeberg.org/gruf/go-runners v1.7.0
+	codeberg.org/gruf/go-sched v1.3.0
 	codeberg.org/gruf/go-split v1.2.0
 	codeberg.org/gruf/go-storage v0.3.1
 	codeberg.org/gruf/go-structr v0.9.13
@@ -62,7 +62,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	github.com/tdewolff/minify/v2 v2.24.3
+	github.com/tdewolff/minify/v2 v2.24.4
 	github.com/temoto/robotstxt v1.1.2
 	github.com/tetratelabs/wazero v1.9.0
 	github.com/tomnomnom/linkheader v0.0.0-20250811210735-e5fe3b51442e
@@ -201,7 +201,7 @@ require (
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/tdewolff/parse/v2 v2.8.3 // indirect
+	github.com/tdewolff/parse/v2 v2.8.4 // indirect
 	github.com/tinylib/msgp v1.3.0 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/toqueteos/webbrowser v1.2.0 // indirect

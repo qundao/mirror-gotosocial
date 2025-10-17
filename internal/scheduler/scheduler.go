@@ -37,7 +37,7 @@ type Scheduler struct {
 
 // Start attempts to start the scheduler. Returns false if already running.
 func (sch *Scheduler) Start() bool {
-	if sch.sch.Start(nil) {
+	if sch.sch.Start() {
 		sch.ts = make(map[string]*task)
 		return true
 	}
@@ -89,7 +89,7 @@ func (sch *Scheduler) schedule(id string, fn func(context.Context, time.Time), t
 		panic("nil function")
 	}
 
-	// Perform within lock.
+	// Acquire lock.
 	sch.mu.Lock()
 	defer sch.mu.Unlock()
 
@@ -99,16 +99,14 @@ func (sch *Scheduler) schedule(id string, fn func(context.Context, time.Time), t
 		return false
 	}
 
-	// Extract current sched context.
-	doneCh := sch.sch.Done()
-	ctx := runners.CancelCtx(doneCh)
+	// Extract current scheduler context.
+	ctx := runners.CancelCtx(sch.sch.Done())
 
 	// Create a new job to hold task function with
 	// timing, passing in the current sched context.
 	job := sched.NewJob(func(now time.Time) {
 		fn(ctx, now)
-	})
-	job.With(t)
+	}).With(t)
 
 	// Queue job with the scheduler,
 	// and store a new encompassing task.
