@@ -369,11 +369,6 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		// Don't return, just continue as normal.
 	}
 
-	// Update stats for the remote account.
-	if err := p.utils.incrementStatusesCount(ctx, fMsg.Requesting, status); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
 	if err := p.surface.timelineAndNotifyStatus(ctx, status); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
@@ -481,11 +476,6 @@ func (p *fediAPI) CreateReplyRequest(ctx context.Context, fMsg *messages.FromFed
 	// Send out the accept.
 	if err := p.federate.AcceptInteraction(ctx, req); err != nil {
 		log.Errorf(ctx, "error federating accept: %v", err)
-	}
-
-	// Update stats for the replying account.
-	if err := p.utils.incrementStatusesCount(ctx, fMsg.Requesting, reply); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	// Timeline the reply + notify recipient(s).
@@ -597,11 +587,6 @@ func (p *fediAPI) CreateFollowReq(ctx context.Context, fMsg *messages.FromFediAP
 			log.Errorf(ctx, "error notifying follow request: %v", err)
 		}
 
-		// And update stats for the local account.
-		if err := p.utils.incrementFollowRequestsCount(ctx, fMsg.Receiving); err != nil {
-			log.Errorf(ctx, "error updating account stats: %v", err)
-		}
-
 		return nil
 	}
 
@@ -615,16 +600,6 @@ func (p *fediAPI) CreateFollowReq(ctx context.Context, fMsg *messages.FromFediAP
 	)
 	if err != nil {
 		return gtserror.Newf("error accepting follow request: %w", err)
-	}
-
-	// Update stats for the local account.
-	if err := p.utils.incrementFollowersCount(ctx, fMsg.Receiving); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
-	// Update stats for the remote account.
-	if err := p.utils.incrementFollowingCount(ctx, fMsg.Requesting); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	if err := p.federate.AcceptFollow(ctx, follow); err != nil {
@@ -913,11 +888,6 @@ func (p *fediAPI) CreateAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 		// Don't return, just continue as normal.
 	}
 
-	// Update stats for the remote account.
-	if err := p.utils.incrementStatusesCount(ctx, fMsg.Requesting, boost); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
 	// Timeline and notify the announce.
 	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
@@ -1012,11 +982,6 @@ func (p *fediAPI) CreateAnnounceRequest(ctx context.Context, fMsg *messages.From
 	// Send out the accept.
 	if err := p.federate.AcceptInteraction(ctx, req); err != nil {
 		log.Errorf(ctx, "error federating accept: %v", err)
-	}
-
-	// Update stats for the boosting account.
-	if err := p.utils.incrementStatusesCount(ctx, fMsg.Requesting, boost); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	// Timeline the boost + notify recipient(s).
@@ -1141,20 +1106,6 @@ func (p *fediAPI) UpdateAccount(ctx context.Context, fMsg *messages.FromFediAPI)
 }
 
 func (p *fediAPI) AcceptFollow(ctx context.Context, fMsg *messages.FromFediAPI) error {
-	// Update stats for the remote account.
-	if err := p.utils.decrementFollowRequestsCount(ctx, fMsg.Requesting); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
-	if err := p.utils.incrementFollowersCount(ctx, fMsg.Requesting); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
-	// Update stats for the local account.
-	if err := p.utils.incrementFollowingCount(ctx, fMsg.Receiving); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
 	return nil
 }
 
@@ -1168,11 +1119,6 @@ func (p *fediAPI) AcceptReply(ctx context.Context, fMsg *messages.FromFediAPI) e
 	reply, ok := fMsg.GTSModel.(*gtsmodel.Status)
 	if !ok {
 		return gtserror.Newf("%T not parseable as *gtsmodel.Status", fMsg.GTSModel)
-	}
-
-	// Update stats for the actor account.
-	if err := p.utils.incrementStatusesCount(ctx, reply.Account, reply); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	// Timeline and notify the status.
@@ -1274,11 +1220,6 @@ func (p *fediAPI) AcceptPoliteReplyRequest(ctx context.Context, fMsg *messages.F
 		return gtserror.Newf("error populating status: %w", err)
 	}
 
-	// Update stats for the actor account.
-	if err := p.utils.incrementStatusesCount(ctx, reply.Account, reply); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
 	// Timeline and notify the status.
 	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
@@ -1300,11 +1241,6 @@ func (p *fediAPI) AcceptAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 	boost, ok := fMsg.GTSModel.(*gtsmodel.Status)
 	if !ok {
 		return gtserror.Newf("%T not parseable as *gtsmodel.Status", fMsg.GTSModel)
-	}
-
-	// Update stats for the actor account.
-	if err := p.utils.incrementStatusesCount(ctx, boost.Account, boost); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	// Timeline and notify the boost wrapper status.
@@ -1453,11 +1389,6 @@ func (p *fediAPI) DeleteStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		copyToSinBin,
 	); err != nil {
 		log.Errorf(ctx, "error wiping status: %v", err)
-	}
-
-	// Update stats for the remote account.
-	if err := p.utils.decrementStatusesCount(ctx, fMsg.Requesting, status); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	if status.InReplyToID != "" {
@@ -1659,11 +1590,6 @@ func (p *fediAPI) UndoAnnounce(
 	// Delete the boost wrapper itself.
 	if err := p.state.DB.DeleteStatusByID(ctx, boost.ID); err != nil {
 		return gtserror.Newf("db error deleting boost: %w", err)
-	}
-
-	// Update statuses count for the requesting account.
-	if err := p.utils.decrementStatusesCount(ctx, fMsg.Requesting, boost); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	// Remove the boost wrapper from all timelines.

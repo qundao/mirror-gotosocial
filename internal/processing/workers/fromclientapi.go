@@ -351,11 +351,6 @@ func (p *clientAPI) CreateStatus(ctx context.Context, cMsg *messages.FromClientA
 		// Don't return, just continue as normal.
 	}
 
-	// Update stats for the actor account.
-	if err := p.utils.incrementStatusesCount(ctx, cMsg.Origin, status); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
 	// We specifically do not timeline
 	// or notify for backfilled statuses,
 	// as these are more for archival than
@@ -449,11 +444,6 @@ func (p *clientAPI) CreateFollowReq(ctx context.Context, cMsg *messages.FromClie
 			Origin:         cMsg.Origin,
 			Target:         cMsg.Target,
 		})
-	}
-
-	// Update stats for the target account.
-	if err := p.utils.incrementFollowRequestsCount(ctx, cMsg.Target); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	if err := p.surface.notifyFollowRequest(ctx, followRequest); err != nil {
@@ -659,11 +649,6 @@ func (p *clientAPI) CreateAnnounce(ctx context.Context, cMsg *messages.FromClien
 		// Don't return, just continue as normal.
 	}
 
-	// Update stats for the actor account.
-	if err := p.utils.incrementStatusesCount(ctx, cMsg.Origin, boost); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
 	// Timeline and notify the boost wrapper status.
 	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
@@ -840,20 +825,6 @@ func (p *clientAPI) AcceptFollow(ctx context.Context, cMsg *messages.FromClientA
 		return gtserror.Newf("%T not parseable as *gtsmodel.Follow", cMsg.GTSModel)
 	}
 
-	// Update stats for the target account.
-	if err := p.utils.decrementFollowRequestsCount(ctx, cMsg.Target); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
-	if err := p.utils.incrementFollowersCount(ctx, cMsg.Target); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
-	// Update stats for the origin account.
-	if err := p.utils.incrementFollowingCount(ctx, cMsg.Origin); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
 	if err := p.surface.notifyFollow(ctx, follow); err != nil {
 		log.Errorf(ctx, "error notifying follow: %v", err)
 	}
@@ -871,13 +842,7 @@ func (p *clientAPI) RejectFollowRequest(ctx context.Context, cMsg *messages.From
 		return gtserror.Newf("%T not parseable as *gtsmodel.FollowRequest", cMsg.GTSModel)
 	}
 
-	// Update stats for the target account.
-	if err := p.utils.decrementFollowRequestsCount(ctx, cMsg.Target); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
-	if err := p.federate.RejectFollow(
-		ctx,
+	if err := p.federate.RejectFollow(ctx,
 		p.converter.FollowRequestToFollow(ctx, followReq),
 	); err != nil {
 		log.Errorf(ctx, "error federating follow reject: %v", err)
@@ -890,16 +855,6 @@ func (p *clientAPI) UndoFollow(ctx context.Context, cMsg *messages.FromClientAPI
 	follow, ok := cMsg.GTSModel.(*gtsmodel.Follow)
 	if !ok {
 		return gtserror.Newf("%T not parseable as *gtsmodel.Follow", cMsg.GTSModel)
-	}
-
-	// Update stats for the origin account.
-	if err := p.utils.decrementFollowingCount(ctx, cMsg.Origin); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
-	// Update stats for the target account.
-	if err := p.utils.decrementFollowersCount(ctx, cMsg.Target); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	if follow.Account.IsLocal() {
@@ -965,11 +920,6 @@ func (p *clientAPI) UndoAnnounce(ctx context.Context, cMsg *messages.FromClientA
 		return gtserror.Newf("db error deleting status: %w", err)
 	}
 
-	// Update stats for the origin account.
-	if err := p.utils.decrementStatusesCount(ctx, cMsg.Origin, status); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
-
 	// Delete the boost wrapper status from timelines.
 	p.surface.deleteStatusFromTimelines(ctx, status.ID)
 
@@ -1028,11 +978,6 @@ func (p *clientAPI) DeleteStatus(ctx context.Context, cMsg *messages.FromClientA
 		copyToSinBin,
 	); err != nil {
 		log.Errorf(ctx, "error wiping status: %v", err)
-	}
-
-	// Update stats for the origin account.
-	if err := p.utils.decrementStatusesCount(ctx, cMsg.Origin, status); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
 	}
 
 	if err := p.federate.DeleteStatus(ctx, status); err != nil {
@@ -1258,15 +1203,7 @@ func (p *clientAPI) AcceptReply(ctx context.Context, cMsg *messages.FromClientAP
 		return gtserror.Newf("%T not parseable as *gtsmodel.InteractionRequest", cMsg.GTSModel)
 	}
 
-	var (
-		interactingAcct = req.InteractingAccount
-		reply           = req.Reply
-	)
-
-	// Update stats for the reply author account.
-	if err := p.utils.incrementStatusesCount(ctx, interactingAcct, reply); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
+	reply := req.Reply
 
 	// Timeline the reply + notify relevant accounts.
 	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
@@ -1291,15 +1228,7 @@ func (p *clientAPI) AcceptAnnounce(ctx context.Context, cMsg *messages.FromClien
 		return gtserror.Newf("%T not parseable as *gtsmodel.InteractionRequest", cMsg.GTSModel)
 	}
 
-	var (
-		interactingAcct = req.InteractingAccount
-		boost           = req.Announce
-	)
-
-	// Update stats for the boost author account.
-	if err := p.utils.incrementStatusesCount(ctx, interactingAcct, boost); err != nil {
-		log.Errorf(ctx, "error updating account stats: %v", err)
-	}
+	boost := req.Announce
 
 	// Timeline and notify the announce.
 	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {

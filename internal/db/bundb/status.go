@@ -579,10 +579,21 @@ func insertStatus(ctx context.Context, tx bun.Tx, status *gtsmodel.Status) error
 		return gtserror.Newf("error inserting status: %w", err)
 	}
 
-	return nil
+	// Increment status author statistics.
+	return incrementAccountStats(ctx, tx,
+		"statuses_count",
+		status.AccountID,
+	)
 }
 
 func (s *statusDB) UpdateStatus(ctx context.Context, status *gtsmodel.Status, columns ...string) error {
+	var isPinning bool
+	for _, col := range columns {
+		if col == "pinned_at" {
+			isPinning = true
+			break
+		}
+	}
 	return s.state.Caches.DB.Status.Store(status, func() error {
 		// It is safe to run this database transaction within cache.Store
 		// as the cache does not attempt a mutex lock until AFTER hook.
@@ -634,12 +645,33 @@ func (s *statusDB) UpdateStatus(ctx context.Context, status *gtsmodel.Status, co
 			}
 
 			// Finally, update the status
-			_, err := tx.NewUpdate().
+			if _, err := tx.NewUpdate().
 				Model(status).
 				Column(columns...).
 				Where("? = ?", bun.Ident("status.id"), status.ID).
-				Exec(ctx)
-			return err
+				Exec(ctx); err != nil {
+				return err
+			}
+
+			switch {
+			case !isPinning:
+				// nothing
+				return nil
+
+			case !status.PinnedAt.IsZero():
+				// Increment author pinned statistics.
+				return decrementAccountStats(ctx, tx,
+					"statuses_pinned_count",
+					status.AccountID,
+				)
+
+			default:
+				// Decrement author pinned statistics.
+				return decrementAccountStats(ctx, tx,
+					"statuses_pinned_count",
+					status.AccountID,
+				)
+			}
 		})
 	})
 }
@@ -653,10 +685,30 @@ func (s *statusDB) DeleteStatusByID(ctx context.Context, id string) error {
 	// Delete status from database and any related links in a transaction.
 	if err := s.db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 
+		// delete the status itself
+		if _, err := tx.NewDelete().
+			Model(&deleted).
+			Where("? = ?", bun.Ident("id"), id).
+			Returning("?, ?, ?, ?, ?, ?",
+				bun.Ident("account_id"),
+				bun.Ident("boost_of_id"),
+				bun.Ident("in_reply_to_id"),
+				bun.Ident("attachments"),
+				bun.Ident("poll_id"),
+				bun.Ident("pinned_at"),
+			).
+			Exec(ctx); err != nil {
+
+			// the RETURNING here will cause an ErrNoRows
+			// to be returned on DELETE, which is caught
+			// outside this RunInTx() func, and ensures we
+			// return early here to *not* update statistics.
+			return err
+		}
+
 		// delete links between this
 		// status and any emojis it uses
-		if _, err := tx.
-			NewDelete().
+		if _, err := tx.NewDelete().
 			TableExpr("? AS ?", bun.Ident("status_to_emojis"), bun.Ident("status_to_emoji")).
 			Where("? = ?", bun.Ident("status_to_emoji.status_id"), id).
 			Exec(ctx); err != nil {
@@ -665,33 +717,33 @@ func (s *statusDB) DeleteStatusByID(ctx context.Context, id string) error {
 
 		// delete links between this
 		// status and any tags it uses
-		if _, err := tx.
-			NewDelete().
+		if _, err := tx.NewDelete().
 			TableExpr("? AS ?", bun.Ident("status_to_tags"), bun.Ident("status_to_tag")).
 			Where("? = ?", bun.Ident("status_to_tag.status_id"), id).
 			Exec(ctx); err != nil {
 			return err
 		}
 
-		// delete the status itself
-		if _, err := tx.
-			NewDelete().
-			Model(&deleted).
-			Where("? = ?", bun.Ident("id"), id).
-			Returning("?, ?, ?, ?, ?",
-				bun.Ident("account_id"),
-				bun.Ident("boost_of_id"),
-				bun.Ident("in_reply_to_id"),
-				bun.Ident("attachments"),
-				bun.Ident("poll_id"),
-			).
-			Exec(ctx); err != nil &&
-			!errors.Is(err, db.ErrNoEntries) {
+		// decrement status author statistics.
+		if err := decrementAccountStats(ctx, tx,
+			"statuses_count",
+			deleted.AccountID,
+		); err != nil {
 			return err
 		}
 
+		if !deleted.PinnedAt.IsZero() {
+			// decrement author pinned statistics.
+			if err := decrementAccountStats(ctx, tx,
+				"statuses_pinned_count",
+				deleted.AccountID,
+			); err != nil {
+				return err
+			}
+		}
+
 		return nil
-	}); err != nil {
+	}); err != nil && !errors.Is(err, db.ErrNoEntries) {
 		return err
 	}
 
@@ -788,7 +840,8 @@ func (s *statusDB) getStatusReplyIDs(ctx context.Context, statusID string) ([]st
 	return s.state.Caches.DB.InReplyToIDs.Load(statusID, func() ([]string, error) {
 		var statusIDs []string
 
-		// Status reply IDs not in cache, perform DB query!
+		// Status reply IDs not in
+		// cache, perform DB query!
 		if err := s.db.
 			NewSelect().
 			Table("statuses").
@@ -832,7 +885,8 @@ func (s *statusDB) getStatusBoostIDs(ctx context.Context, statusID string) ([]st
 	return s.state.Caches.DB.BoostOfIDs.Load(statusID, func() ([]string, error) {
 		var statusIDs []string
 
-		// Status boost IDs not in cache, perform DB query!
+		// Status boost IDs not in
+		// cache, perform DB query!
 		if err := s.db.
 			NewSelect().
 			Table("statuses").
@@ -966,10 +1020,7 @@ func (s *statusDB) GetStatusInteractions(
 	return interactions, nil
 }
 
-func (s *statusDB) GetStatusByEditID(
-	ctx context.Context,
-	editID string,
-) (*gtsmodel.Status, error) {
+func (s *statusDB) GetStatusByEditID(ctx context.Context, editID string) (*gtsmodel.Status, error) {
 	edit, err := s.state.DB.GetStatusEditByID(
 		gtscontext.SetBarebones(ctx),
 		editID,
@@ -977,6 +1028,5 @@ func (s *statusDB) GetStatusByEditID(
 	if err != nil {
 		return nil, err
 	}
-
 	return s.GetStatusByID(ctx, edit.StatusID)
 }

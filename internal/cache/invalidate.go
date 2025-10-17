@@ -138,15 +138,20 @@ func (c *Caches) OnInvalidateFilterStatus(filterStatus *gtsmodel.FilterStatus) {
 }
 
 func (c *Caches) OnInvalidateFollow(follow *gtsmodel.Follow) {
+	bothAccountIDs := []string{
+		follow.TargetAccountID,
+		follow.AccountID,
+	}
+
 	// Invalidate follow request with this same ID.
 	c.DB.FollowRequest.Invalidate("ID", follow.ID)
 
+	// Invalidate both follow origin and target account stats.
+	c.DB.AccountStats.InvalidateIDs("AccountID", bothAccountIDs)
+
 	// Invalidate both follow origin and target as
 	// possible lookup targets for visibility results.
-	c.Visibility.InvalidateIDs("ItemID", []string{
-		follow.TargetAccountID,
-		follow.AccountID,
-	})
+	c.Visibility.InvalidateIDs("ItemID", bothAccountIDs)
 
 	// Track which of follow / target are local.
 	localAccountIDs := make([]string, 0, 2)
@@ -216,6 +221,10 @@ func (c *Caches) OnInvalidateFollow(follow *gtsmodel.Follow) {
 func (c *Caches) OnInvalidateFollowRequest(followReq *gtsmodel.FollowRequest) {
 	// Invalidate follow with this same ID.
 	c.DB.Follow.Invalidate("ID", followReq.ID)
+
+	// Invalidate follow target account stats.
+	c.DB.AccountStats.Invalidate("AccountID",
+		followReq.TargetAccountID)
 
 	// Invalidate ID slice cache.
 	c.DB.FollowRequestIDs.Invalidate(

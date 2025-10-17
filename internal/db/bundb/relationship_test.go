@@ -194,7 +194,7 @@ func (suite *RelationshipTestSuite) TestGetFollowBy() {
 
 			// Attempt to place the follow in database (if not already).
 			if err := suite.db.PutFollow(ctx, follow); err != nil {
-				if err != db.ErrAlreadyExists {
+				if !errors.Is(err, db.ErrAlreadyExists) {
 					// Unrecoverable database error.
 					t.Fatalf("error creating follow: %v", err)
 				}
@@ -306,7 +306,7 @@ func (suite *RelationshipTestSuite) TestGetFollowRequestBy() {
 
 			// Attempt to place the follow in database (if not already).
 			if err := suite.db.PutFollowRequest(ctx, followReq); err != nil {
-				if err != db.ErrAlreadyExists {
+				if !errors.Is(err, db.ErrAlreadyExists) {
 					// Unrecoverable database error.
 					t.Fatalf("error creating follow request: %v", err)
 				}
