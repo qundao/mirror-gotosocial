@@ -300,7 +300,7 @@ func formatNotificationTitle(
 	case gtsmodel.NotificationFollow:
 		return displayNameOrAcct + " followed you"
 	case gtsmodel.NotificationFollowRequest:
-		return displayNameOrAcct + " requested to followed you"
+		return displayNameOrAcct + " requested to follow you"
 	case gtsmodel.NotificationMention:
 		return displayNameOrAcct + " mentioned you"
 	case gtsmodel.NotificationReblog:
