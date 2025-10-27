@@ -15,17 +15,18 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//go:build nopostgres
+
 package bundb
 
 import (
+	"context"
 	"database/sql"
+	"errors"
 
-	"code.superseriousbusiness.org/gotosocial/internal/db/postgres"
-	"code.superseriousbusiness.org/gotosocial/internal/db/sqlite"
+	"github.com/uptrace/bun/schema"
 )
 
-func init() {
-	// register our SQL driver implementations.
-	sql.Register("pgx-gts", &postgres.Driver{})
-	sql.Register("sqlite-gts", &sqlite.Driver{})
+func pgConn(ctx context.Context) (*sql.DB, func() schema.Dialect, error) {
+	return nil, nil, errors.New("gotosocial was compiled without postgres support")
 }
