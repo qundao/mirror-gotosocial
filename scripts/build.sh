@@ -21,9 +21,10 @@ GO_GCFLAGS=${GO_GCFLAGS-}
 # - nootel:         disables compiling-in otel support                             (reduced binary size)
 # - nosqlite:       disables compiling-in sqlite support                           (reduced binary size)
 # - nopostgres:     disables compiling-in postgres support                         (reduced binary size)
+# - nos3:           disables compiling-in S3 storage support                       (reduced binary size)
 # - noerrcaller:    disables caller function prefix in errors                      (slightly better performance, at cost of err readability)
-# - debug:          enables /debug/pprof endpoint                                  (adds debug, at performance cost)
-# - debugenv:       enables /debug/pprof endpoint if DEBUG=1 env during runtime    (adds debug, at performance cost)
+# - debug:          enables /debug/pprof endpoint                                  (adds debug, at mild performance cost)
+# - debugenv:       enables /debug/pprof endpoint if DEBUG=1 env during runtime    (adds debug, at mild performance cost)
 # - moderncsqlite3: reverts to using the C-to-Go transpiled SQLite driver          (disables the WASM-based SQLite driver)
 #
 # - nowasmffmpeg: [UNSUPPORTED] removes WebAssembly ffmpeg, ffprobe, relying instead on host-installed ffmpeg, ffprobe binaries.
