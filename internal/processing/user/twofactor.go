@@ -132,8 +132,8 @@ func (p *Processor) TwoFactorQRCodeURIGet(
 		RawQuery: encodeQuery(url.Values{
 			"secret":    {user.TwoFactorSecret},
 			"issuer":    {issuer},
-			"period":    {"30s"}, // 30s totp validity.
-			"digits":    {"6"},   // 6-digit totp.
+			"period":    {"30"}, // 30 seconds totp validity.
+			"digits":    {"6"},  // 6-digit totp.
 			"algorithm": {"SHA1"},
 		}),
 	}, nil
