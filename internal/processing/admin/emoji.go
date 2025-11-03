@@ -32,6 +32,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/internal/media"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"codeberg.org/gruf/go-iotools"
 )
@@ -262,11 +263,7 @@ func (p *Processor) EmojiCategoriesGet(
 
 	apiCategories := make([]*apimodel.EmojiCategory, 0, len(categories))
 	for _, category := range categories {
-		apiCategory, err := p.converter.EmojiCategoryToAPIEmojiCategory(ctx, category)
-		if err != nil {
-			err := gtserror.Newf("error converting emoji category to api emoji category: %w", err)
-			return nil, gtserror.NewErrorInternalError(err)
-		}
+		apiCategory := typeutils.EmojiCategoryToAPIEmojiCategory(category)
 		apiCategories = append(apiCategories, apiCategory)
 	}
 

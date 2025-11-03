@@ -24,8 +24,8 @@ import (
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/paging"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
@@ -53,14 +53,10 @@ func (p *Processor) Followed(
 	lo := tags[count-1].ID
 	hi := tags[0].ID
 
-	items := make([]interface{}, 0, count)
 	following := util.Ptr(true)
+	items := make([]interface{}, 0, count)
 	for _, tag := range tags {
-		apiTag, err := p.converter.TagToAPITag(ctx, tag, true, following)
-		if err != nil {
-			log.Errorf(ctx, "error converting tag %s to API representation: %v", tag.ID, err)
-			continue
-		}
+		apiTag := typeutils.TagToAPITag(tag, true, following)
 		items = append(items, apiTag)
 	}
 

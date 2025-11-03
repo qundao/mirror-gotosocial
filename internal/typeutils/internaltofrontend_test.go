@@ -27,6 +27,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
@@ -1684,8 +1685,7 @@ func (suite *InternalToFrontendTestSuite) TestStatusToAPIStatusPendingApproval()
 
 func (suite *InternalToFrontendTestSuite) TestVideoAttachmentToFrontend() {
 	testAttachment := suite.testAttachments["local_account_1_status_4_attachment_2"]
-	apiAttachment, err := suite.typeconverter.AttachmentToAPIAttachment(suite.T().Context(), testAttachment)
-	suite.NoError(err)
+	apiAttachment := typeutils.AttachmentToAPIAttachment(testAttachment)
 
 	b, err := json.MarshalIndent(apiAttachment, "", "  ")
 	suite.NoError(err)

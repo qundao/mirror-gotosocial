@@ -26,6 +26,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
 func (p *Processor) Get(ctx context.Context, account *gtsmodel.Account, mediaAttachmentID string) (*apimodel.Attachment, gtserror.WithCode) {
@@ -42,10 +43,6 @@ func (p *Processor) Get(ctx context.Context, account *gtsmodel.Account, mediaAtt
 		return nil, gtserror.NewErrorNotFound(errors.New("attachment not owned by requesting account"))
 	}
 
-	a, err := p.converter.AttachmentToAPIAttachment(ctx, attachment)
-	if err != nil {
-		return nil, gtserror.NewErrorNotFound(fmt.Errorf("error converting attachment: %s", err))
-	}
-
+	a := typeutils.AttachmentToAPIAttachment(attachment)
 	return &a, nil
 }

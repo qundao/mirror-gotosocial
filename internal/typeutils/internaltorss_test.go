@@ -45,14 +45,10 @@ func (suite *InternalToRSSTestSuite) TestStatusToRSSItem1() {
 	suite.Equal("", item.Source.Length)
 	suite.Equal("", item.Source.Rel)
 	suite.Equal("", item.Source.Type)
-	suite.Equal("", item.Author.Email)
-	suite.Equal("@the_mighty_zork@localhost:8080", item.Author.Name)
 	suite.Equal("@the_mighty_zork@localhost:8080 made a new post: \"hello everyone!\"", item.Description)
 	suite.Equal("http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY", item.Id)
 	suite.EqualValues(1634726437, item.Created.Unix())
-	suite.Equal("", item.Enclosure.Length)
-	suite.Equal("", item.Enclosure.Type)
-	suite.Equal("", item.Enclosure.Url)
+	suite.Nil(item.Enclosure)
 	suite.Equal("<p>hello everyone!</p>", item.Content)
 }
 
@@ -70,8 +66,6 @@ func (suite *InternalToRSSTestSuite) TestStatusToRSSItem2() {
 	suite.Equal("", item.Source.Length)
 	suite.Equal("", item.Source.Rel)
 	suite.Equal("", item.Source.Type)
-	suite.Equal("", item.Author.Email)
-	suite.Equal("@admin@localhost:8080", item.Author.Name)
 	suite.Equal("@admin@localhost:8080 posted 1 attachment: \"hello world! #welcome ! first post on the instance :rainbow: !\"", item.Description)
 	suite.Equal("http://localhost:8080/@admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R", item.Id)
 	suite.EqualValues(1634729805, item.Created.Unix())
@@ -118,20 +112,11 @@ func (suite *InternalToRSSTestSuite) TestStatusToRSSItem3() {
     <Type></Type>
     <Length></Length>
   </Source>
-  <Author>
-    <Name>@admin@localhost:8080</Name>
-    <Email></Email>
-  </Author>
   <Description>@admin@localhost:8080 made a new post</Description>
   <Id>http://localhost:8080/@admin/statuses/01H7G0VW1ACBZTRHN6RSA4JWVH</Id>
   <IsPermaLink>true</IsPermaLink>
   <Updated>0001-01-01T00:00:00Z</Updated>
   <Created>0001-01-01T00:00:00Z</Created>
-  <Enclosure>
-    <Url></Url>
-    <Length></Length>
-    <Type></Type>
-  </Enclosure>
   <Content>这是另一段，只是为了确保这篇文章足够长。 通过前肢上长而弯曲的爪子的数量可以轻松识别不同的树懒类别。 顾名思义，二趾树懒的前肢上有两个爪子，而三趾树懒的四个肢上都有三个爪子。 二趾树懒也比三趾树懒稍大，并且都属于不同的分类科。 美洲共有六种树懒，主要分布在中美洲和南美洲的热带雨林中。&#xA;&#xA;&#xA;&#xA;&#x9;霍夫曼二趾树懒 (Choloepus hoffmanni)&#xA;&#xA;&#x9;林奈二趾树懒 (Choloepus didactylus)&#xA;&#xA;&#x9;侏儒三趾树懒 (Bradypus pygmaeus)&#xA;&#xA;&#x9;鬃三趾树懒 (Bradypus torquatus)&#xA;&#xA;&#x9;棕喉树懒 (Bradypus variegatus)&#xA;&#xA;&#x9;浅喉树懒 (Bradypus tridactylus)&#xA;&#xA;&#xA;&#xA;目前，有 4 种树懒被 IUCN 濒危物种红色名录列为最不受关注的物种。 鬃毛三趾树懒很脆弱，而侏儒三趾树懒则极度濒危，树懒物种面临最大的灭绝风险。</Content>
 </Item>`, string(data))
 }

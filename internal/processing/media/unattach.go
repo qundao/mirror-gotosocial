@@ -26,6 +26,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
 // Unattach unattaches the media attachment with the given ID from any statuses it was attached to, making it available
@@ -49,10 +50,6 @@ func (p *Processor) Unattach(ctx context.Context, account *gtsmodel.Account, med
 		return nil, gtserror.NewErrorNotFound(fmt.Errorf("db error updating attachment: %s", err))
 	}
 
-	a, err := p.converter.AttachmentToAPIAttachment(ctx, attachment)
-	if err != nil {
-		return nil, gtserror.NewErrorNotFound(fmt.Errorf("error converting attachment: %s", err))
-	}
-
+	a := typeutils.AttachmentToAPIAttachment(attachment)
 	return &a, nil
 }

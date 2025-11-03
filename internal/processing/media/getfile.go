@@ -247,7 +247,7 @@ func (p *Processor) getEmojiContent(
 	emoji, err = p.federator.RecacheEmoji(
 		ctx,
 		emoji,
-		false,
+		false, // async
 	)
 	if err != nil {
 		err := gtserror.Newf("error recaching emoji: %w", err)

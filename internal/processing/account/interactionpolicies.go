@@ -89,10 +89,10 @@ func (p *Processor) DefaultInteractionPoliciesGet(
 	}
 
 	return &apimodel.DefaultPolicies{
-		Direct:   *directAPI,
-		Private:  *privateAPI,
-		Unlisted: *unlistedAPI,
-		Public:   *publicAPI,
+		Direct:   directAPI,
+		Private:  privateAPI,
+		Unlisted: unlistedAPI,
+		Public:   publicAPI,
 	}, nil
 }
 

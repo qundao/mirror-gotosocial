@@ -76,16 +76,44 @@ func (p *Processor) GetRSSFeedForUsername(ctx context.Context, username string, 
 	lastPostAt := account.Stats.LastStatusAt
 
 	return func() (*feeds.Feed, gtserror.WithCode) {
-		// Assemble author namestring once only.
-		author := "@" + account.Username + "@" + config.GetAccountDomain()
+		var image *feeds.Image
 
-		// Derive image/thumbnail for this account (may be nil if no media).
-		image, errWithCode := p.rssImageForAccount(ctx, account, author)
-		if errWithCode != nil {
-			return nil, errWithCode
+		// Assemble author namestring.
+		author := "@" + account.Username +
+			"@" + config.GetAccountDomain()
+
+		// Check if account has an avatar media attachment.
+		if id := account.AvatarMediaAttachmentID; id != "" {
+			if account.AvatarMediaAttachment == nil {
+				var err error
+
+				// Populate the account's avatar media attachment from database by its ID.
+				account.AvatarMediaAttachment, err = p.state.DB.GetAttachmentByID(ctx, id)
+				if err != nil && !errors.Is(err, db.ErrNoEntries) {
+					err := gtserror.Newf("db error getting account avatar: %w", err)
+					return nil, gtserror.NewErrorInternalError(err)
+				}
+			}
+
+			// If avatar is found, use as feed image.
+			if account.AvatarMediaAttachment != nil {
+				image = &feeds.Image{
+					Title: "Avatar for " + author,
+					Url:   account.AvatarMediaAttachment.Thumbnail.URL,
+					Link:  account.URL,
+				}
+			}
 		}
 
+		// Start creating feed.
 		feed := &feeds.Feed{
+			// we specifcally do not set the author, as a lot
+			// of feed readers rely on the RSS standard of the
+			// author being an email with optional name. but
+			// our @username@domain identifiers break this.
+			//
+			// attribution is handled in the title/description.
+
 			Title:       "Posts from " + author,
 			Description: "Posts from " + author,
 			Link:        &feeds.Link{Href: account.URL},
@@ -128,6 +156,17 @@ func (p *Processor) GetRSSFeedForUsername(ctx context.Context, username string, 
 			return nil, gtserror.NewErrorInternalError(err)
 		}
 
+		// Check for no statuses.
+		if len(statuses) == 0 {
+			return feed, nil
+		}
+
+		// Get next / prev paging parameters.
+		lo := statuses[len(statuses)-1].ID
+		hi := statuses[0].ID
+		next := page.Next(lo, hi)
+		prev := page.Prev(lo, hi)
+
 		// Add each status to the rss feed.
 		for _, status := range statuses {
 			item, err := p.converter.StatusToRSSItem(ctx, status)
@@ -138,35 +177,11 @@ func (p *Processor) GetRSSFeedForUsername(ctx context.Context, username string, 
 			feed.Add(item)
 		}
 
+		// TODO: when we have some manner of supporting
+		// atom:link in RSS (and Atom), set the paging
+		// parameters for next / prev feed pages here.
+		_, _ = next, prev
+
 		return feed, nil
 	}, lastPostAt, nil
-}
-
-func (p *Processor) rssImageForAccount(ctx context.Context, account *gtsmodel.Account, author string) (*feeds.Image, gtserror.WithCode) {
-	if account.AvatarMediaAttachmentID == "" {
-		// No image, no problem!
-		return nil, nil
-	}
-
-	// Ensure account avatar attachment populated.
-	if account.AvatarMediaAttachment == nil {
-		var err error
-		account.AvatarMediaAttachment, err = p.state.DB.GetAttachmentByID(ctx, account.AvatarMediaAttachmentID)
-		if err != nil {
-			if errors.Is(err, db.ErrNoEntries) {
-				// No attachment found with this ID (race condition?).
-				return nil, nil
-			}
-
-			// Real db error.
-			err = gtserror.Newf("db error fetching avatar media attachment: %w", err)
-			return nil, gtserror.NewErrorInternalError(err)
-		}
-	}
-
-	return &feeds.Image{
-		Url:   account.AvatarMediaAttachment.Thumbnail.URL,
-		Title: "Avatar for " + author,
-		Link:  account.URL,
-	}, nil
 }

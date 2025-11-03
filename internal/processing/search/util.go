@@ -24,6 +24,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
 // return true if given queryType should include accounts.
@@ -128,42 +129,22 @@ func (p *Processor) packageStatuses(
 // packageHashtags is a util function that just
 // converts the given hashtags into an apimodel
 // hashtag slice, or errors appropriately.
-func (p *Processor) packageHashtags(
-	ctx context.Context,
-	requestingAccount *gtsmodel.Account,
-	tags []*gtsmodel.Tag,
-	v1 bool,
-) ([]any, gtserror.WithCode) {
-	apiTags := make([]any, 0, len(tags))
-
-	var rangeF func(*gtsmodel.Tag)
+func packageHashtags(tags []*gtsmodel.Tag, v1 bool) []any {
+	apiTags := make([]any, len(tags))
+	if len(apiTags) != len(tags) {
+		panic(gtserror.New("bound check elimination"))
+	}
 	if v1 {
-		// If API version 1, just provide slice of tag names.
-		rangeF = func(tag *gtsmodel.Tag) {
-			apiTags = append(apiTags, tag.Name)
+		for i, tag := range tags {
+			apiTags[i] = tag.Name
 		}
 	} else {
-		// If API not version 1, provide slice of full tags.
-		rangeF = func(tag *gtsmodel.Tag) {
-			apiTag, err := p.converter.TagToAPITag(ctx, tag, true, nil)
-			if err != nil {
-				log.Debugf(
-					ctx,
-					"skipping tag %s because it couldn't be converted to its api representation: %s",
-					tag.Name, err,
-				)
-				return
-			}
-
-			apiTags = append(apiTags, &apiTag)
+		for i, tag := range tags {
+			apiTag := typeutils.TagToAPITag(tag, true, nil)
+			apiTags[i] = apiTag
 		}
 	}
-
-	for _, tag := range tags {
-		rangeF(tag)
-	}
-
-	return apiTags, nil
+	return apiTags
 }
 
 // packageSearchResult wraps up the given accounts
@@ -197,10 +178,7 @@ func (p *Processor) packageSearchResult(
 		return nil, errWithCode
 	}
 
-	apiTags, errWithCode := p.packageHashtags(ctx, requestingAccount, tags, v1)
-	if errWithCode != nil {
-		return nil, errWithCode
-	}
+	apiTags := packageHashtags(tags, v1)
 
 	return &apimodel.SearchResult{
 		Accounts: apiAccounts,

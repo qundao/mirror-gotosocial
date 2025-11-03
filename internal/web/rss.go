@@ -232,14 +232,14 @@ func unixAfter(t1 time.Time, t2 time.Time) bool {
 // If no time was provided, or the provided time was
 // not parseable, it will return a zero time.
 func extractIfModifiedSince(r *http.Request) time.Time {
-	imsStr := r.Header.Get(ifModifiedSinceHeader)
-	if imsStr == "" {
+	val := r.Header.Get(ifModifiedSinceHeader)
+	if val == "" {
 		return time.Time{} // Nothing set.
 	}
 
-	ifModifiedSince, err := http.ParseTime(imsStr)
+	ifModifiedSince, err := http.ParseTime(val)
 	if err != nil {
-		log.Errorf(r.Context(), "couldn't parse %s value '%s' as time: %q", ifModifiedSinceHeader, imsStr, err)
+		log.Errorf(r.Context(), "couldn't parse %q as time: %v", val, err)
 		return time.Time{}
 	}
 

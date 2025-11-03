@@ -29,6 +29,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/media"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"codeberg.org/gruf/go-iotools"
 )
 
@@ -89,11 +90,6 @@ func (p *Processor) Create(ctx context.Context, account *gtsmodel.Account, form 
 		return nil, errWithCode
 	}
 
-	apiAttachment, err := p.converter.AttachmentToAPIAttachment(ctx, attachment)
-	if err != nil {
-		err := fmt.Errorf("error parsing media attachment to frontend type: %s", err)
-		return nil, gtserror.NewErrorInternalError(err)
-	}
-
-	return &apiAttachment, nil
+	a := typeutils.AttachmentToAPIAttachment(attachment)
+	return &a, nil
 }

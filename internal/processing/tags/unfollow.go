@@ -25,6 +25,8 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
+	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // Unfollow unfollows the tag with the given name as the given account.
@@ -54,5 +56,6 @@ func (p *Processor) Unfollow(
 		)
 	}
 
-	return p.apiTag(ctx, tag, false)
+	apiTag := typeutils.TagToAPITag(tag, true, util.Ptr(false))
+	return &apiTag, nil
 }

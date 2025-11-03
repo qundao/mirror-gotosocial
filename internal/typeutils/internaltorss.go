@@ -19,14 +19,12 @@ package typeutils
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"strings"
 
-	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
+	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/text"
 	"github.com/gorilla/feeds"
 )
@@ -36,133 +34,106 @@ const (
 	rssDescriptionMaxRunes = 256
 )
 
-func (c *Converter) StatusToRSSItem(ctx context.Context, s *gtsmodel.Status) (*feeds.Item, error) {
-	// see https://cyber.harvard.edu/rss/rss.html
+// see https://cyber.harvard.edu/rss/rss.html
+func (c *Converter) StatusToRSSItem(ctx context.Context, status *gtsmodel.Status) (*feeds.Item, error) {
+	var err error
+
+	// Ensure account populated.
+	if status.Account == nil {
+		status.Account, err = c.state.DB.GetAccountByID(ctx, status.AccountID)
+		if err != nil {
+			return nil, gtserror.Newf("db error getting status author: %w", err)
+		}
+	}
+
+	// Get first attachment if present.
+	var media0 *gtsmodel.MediaAttachment
+	if status.AttachmentsPopulated() && len(status.Attachments) > 0 {
+		media0 = status.Attachments[0]
+	} else if len(status.AttachmentIDs) > 0 {
+		media0, err = c.state.DB.GetAttachmentByID(ctx, status.AttachmentIDs[0])
+		if err != nil {
+			return nil, gtserror.Newf("db error getting status attachment: %w", err)
+		}
+	}
 
 	// Title -- The title of the item.
 	// example: Venice Film Festival Tries to Quit Sinking
 	var title string
-	if s.ContentWarning != "" {
-		title = trimTo(s.ContentWarning, rssTitleMaxRunes)
+	if status.ContentWarning != "" {
+		title = trimTo(status.ContentWarning, rssTitleMaxRunes)
 	} else {
-		title = trimTo(s.Text, rssTitleMaxRunes)
+		title = trimTo(status.Text, rssTitleMaxRunes)
 	}
 
-	// Link -- The URL of the item.
-	// example: http://nytimes.com/2004/12/07FEST.html
-	link := &feeds.Link{
-		Href: s.URL,
-	}
+	// Generate author name string for status.
+	authorName := "@" + status.Account.Username +
+		"@" + config.GetAccountDomain()
 
-	// Author -- Email address of the author of the item.
-	// example: oprah\@oxygen.net
-	if s.Account == nil {
-		a, err := c.state.DB.GetAccountByID(ctx, s.AccountID)
-		if err != nil {
-			return nil, fmt.Errorf("error getting status author: %s", err)
-		}
-		s.Account = a
-	}
-	authorName := "@" + s.Account.Username + "@" + config.GetAccountDomain()
-	author := &feeds.Author{
-		Name: authorName,
-	}
-
-	// Source -- The RSS channel that the item came from.
-	source := &feeds.Link{
-		Href: s.Account.URL + "/feed.rss",
-	}
+	var buf strings.Builder
+	buf.Grow(512)
 
 	// Description -- The item synopsis.
-	// example: Some of the most heated chatter at the Venice Film Festival this week was about the way that the arrival of the stars at the Palazzo del Cinema was being staged.
-	descriptionBuilder := strings.Builder{}
-	descriptionBuilder.WriteString(authorName + " ")
-
-	attachmentCount := len(s.Attachments)
-	if len(s.AttachmentIDs) > attachmentCount {
-		attachmentCount = len(s.AttachmentIDs)
-	}
-	switch {
-	case attachmentCount > 1:
-		descriptionBuilder.WriteString(fmt.Sprintf("posted [%d] attachments", attachmentCount))
-	case attachmentCount == 1:
-		descriptionBuilder.WriteString("posted 1 attachment")
+	// example: Some of the most heated chatter at the Venice Film Festival this week was
+	// about the way that the arrival of the stars at the Palazzo del Cinema was being staged.
+	buf.WriteString(authorName + " ")
+	switch l := len(status.AttachmentIDs); {
+	case l > 1:
+		buf.WriteString("posted [")
+		buf.WriteString(strconv.Itoa(l))
+		buf.WriteString("] attachments")
+	case l == 1:
+		buf.WriteString("posted 1 attachment")
 	default:
-		descriptionBuilder.WriteString("made a new post")
+		buf.WriteString("made a new post")
+	}
+	if status.Text != "" {
+		buf.WriteString(": \"")
+		buf.WriteString(status.Text)
+		buf.WriteString("\"")
+	}
+	description := trimTo(buf.String(), rssDescriptionMaxRunes)
+
+	// Enclosure, describes a media object
+	// that is attached to the item.
+	var enclosure *feeds.Enclosure
+
+	// Set media details.
+	if media0 != nil {
+		enclosure = new(feeds.Enclosure)
+		enclosure.Type = media0.File.ContentType
+		enclosure.Length = strconv.Itoa(media0.File.FileSize)
+		enclosure.Url = media0.URL
 	}
 
-	if s.Text != "" {
-		descriptionBuilder.WriteString(": \"")
-		descriptionBuilder.WriteString(s.Text)
-		descriptionBuilder.WriteString("\"")
-	}
-
-	description := trimTo(descriptionBuilder.String(), rssDescriptionMaxRunes)
-
-	// ID -- A string that uniquely identifies the item.
-	// example: http://inessential.com/2002/09/01.php#a2
-	id := s.URL
-
-	// Enclosure -- Describes a media object that is attached to the item.
-	enclosure := &feeds.Enclosure{}
-	// get first attachment if present
-	var attachment *gtsmodel.MediaAttachment
-	if len(s.Attachments) > 0 {
-		attachment = s.Attachments[0]
-	} else if len(s.AttachmentIDs) > 0 {
-		a, err := c.state.DB.GetAttachmentByID(ctx, s.AttachmentIDs[0])
-		if err == nil {
-			attachment = a
-		}
-	}
-	if attachment != nil {
-		enclosure.Type = attachment.File.ContentType
-		enclosure.Length = strconv.Itoa(attachment.File.FileSize)
-		enclosure.Url = attachment.URL
-	}
-
-	// Content
-	apiEmojis := []apimodel.Emoji{}
-	// the status might already have some gts emojis on it if it's not been pulled directly from the database
-	// if so, we can directly convert the gts emojis into api ones
-	if s.Emojis != nil {
-		for _, gtsEmoji := range s.Emojis {
-			apiEmoji, err := c.EmojiToAPIEmoji(ctx, gtsEmoji)
-			if err != nil {
-				log.Errorf(ctx, "error converting emoji with id %s: %s", gtsEmoji.ID, err)
-				continue
-			}
-			apiEmojis = append(apiEmojis, apiEmoji)
-		}
-		// the status doesn't have gts emojis on it, but it does have emoji IDs
-		// in this case, we need to pull the gts emojis from the db to convert them into api ones
-	} else {
-		for _, e := range s.EmojiIDs {
-			gtsEmoji := &gtsmodel.Emoji{}
-			if err := c.state.DB.GetByID(ctx, e, gtsEmoji); err != nil {
-				log.Errorf(ctx, "error getting emoji with id %s: %s", e, err)
-				continue
-			}
-			apiEmoji, err := c.EmojiToAPIEmoji(ctx, gtsEmoji)
-			if err != nil {
-				log.Errorf(ctx, "error converting emoji with id %s: %s", gtsEmoji.ID, err)
-				continue
-			}
-			apiEmojis = append(apiEmojis, apiEmoji)
-		}
-	}
-	content := text.EmojifyRSS(apiEmojis, s.Content)
+	// Generate emojified content.
+	apiEmojis := c.emojisToAPI(ctx, status.Emojis, status.EmojiIDs)
+	content := text.EmojifyRSS(apiEmojis, status.Content)
 
 	return &feeds.Item{
+		// we specifcally do not set the author, as a lot
+		// of feed readers rely on the RSS standard of the
+		// author being an email with optional name. but
+		// our @username@domain identifiers break this.
+		//
+		// attribution is handled in the title/description.
+
+		// ID -- A string that uniquely identifies the item.
+		// example: http://inessential.com/2002/09/01.php#a2
+		Id: status.URL,
+
+		// Source -- The RSS channel that the item came from.
+		Source: &feeds.Link{Href: status.Account.URL + "/feed.rss"},
+
+		// Link -- The URL of the item.
+		// example: http://nytimes.com/2004/12/07FEST.html
+		Link: &feeds.Link{Href: status.URL},
+
 		Title:       title,
-		Link:        link,
-		Author:      author,
-		Source:      source,
 		Description: description,
-		Id:          id,
 		IsPermaLink: "true",
-		Updated:     s.EditedAt,
-		Created:     s.CreatedAt,
+		Updated:     status.EditedAt,
+		Created:     status.CreatedAt,
 		Enclosure:   enclosure,
 		Content:     content,
 	}, nil

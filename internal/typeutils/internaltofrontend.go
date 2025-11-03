@@ -195,11 +195,16 @@ func (c *Converter) AccountToAPIAccountPublic(ctx context.Context, a *gtsmodel.A
 // AccountToAPIAccount functions instead.
 func (c *Converter) AccountToWebAccount(
 	ctx context.Context,
-	a *gtsmodel.Account,
+	account *gtsmodel.Account,
+	apiAccount *apimodel.Account,
 ) (*apimodel.WebAccount, error) {
-	apiAccount, err := c.AccountToAPIAccountPublic(ctx, a)
-	if err != nil {
-		return nil, err
+	if apiAccount == nil {
+		var err error
+
+		apiAccount, err = c.AccountToAPIAccountPublic(ctx, account)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	webAccount := &apimodel.WebAccount{
@@ -208,35 +213,23 @@ func (c *Converter) AccountToWebAccount(
 
 	// Set additional avatar information for
 	// serving the avatar in a nice <picture>.
-	if ogAvi := a.AvatarMediaAttachment; ogAvi != nil {
-		avatarAttachment, err := c.AttachmentToAPIAttachment(ctx, ogAvi)
-		if err != nil {
-			// This is just extra data so just
-			// log but don't return any error.
-			log.Errorf(ctx, "error converting account avatar attachment: %v", err)
-		} else {
-			webAccount.AvatarAttachment = &apimodel.WebAttachment{
-				Attachment:      &avatarAttachment,
-				MIMEType:        ogAvi.File.ContentType,
-				PreviewMIMEType: ogAvi.Thumbnail.ContentType,
-			}
+	if avatar := account.AvatarMediaAttachment; avatar != nil {
+		apiAttachment := AttachmentToAPIAttachment(avatar)
+		webAccount.AvatarAttachment = &apimodel.WebAttachment{
+			Attachment:      &apiAttachment,
+			MIMEType:        avatar.File.ContentType,
+			PreviewMIMEType: avatar.Thumbnail.ContentType,
 		}
 	}
 
 	// Set additional header information for
 	// serving the header in a nice <picture>.
-	if ogHeader := a.HeaderMediaAttachment; ogHeader != nil {
-		headerAttachment, err := c.AttachmentToAPIAttachment(ctx, ogHeader)
-		if err != nil {
-			// This is just extra data so just
-			// log but don't return any error.
-			log.Errorf(ctx, "error converting account header attachment: %v", err)
-		} else {
-			webAccount.HeaderAttachment = &apimodel.WebAttachment{
-				Attachment:      &headerAttachment,
-				MIMEType:        ogHeader.File.ContentType,
-				PreviewMIMEType: ogHeader.Thumbnail.ContentType,
-			}
+	if header := account.HeaderMediaAttachment; header != nil {
+		apiAttachment := AttachmentToAPIAttachment(header)
+		webAccount.HeaderAttachment = &apimodel.WebAttachment{
+			Attachment:      &apiAttachment,
+			MIMEType:        header.File.ContentType,
+			PreviewMIMEType: header.Thumbnail.ContentType,
 		}
 	}
 
@@ -244,8 +237,8 @@ func (c *Converter) AccountToWebAccount(
 	// populating settings-specific thingies,
 	// as instance account doesn't store a
 	// settings struct.
-	if a.Settings != nil {
-		webAccount.WebLayout = a.Settings.WebLayout.String()
+	if account.Settings != nil {
+		webAccount.WebLayout = account.Settings.WebLayout.String()
 	}
 
 	return webAccount, nil
@@ -325,10 +318,10 @@ func (c *Converter) accountToAPIAccountPublic(ctx context.Context, a *gtsmodel.A
 	fields := c.fieldsToAPIFields(a.Fields)
 
 	// GTS model emojis -> frontend.
-	apiEmojis, err := c.convertEmojisToAPIEmojis(ctx, a.Emojis, a.EmojiIDs)
-	if err != nil {
-		log.Errorf(ctx, "error converting account emojis: %v", err)
-	}
+	apiEmojis := c.emojisToAPI(ctx,
+		a.Emojis,
+		a.EmojiIDs,
+	)
 
 	// Bits that vary between remote + local accounts:
 	//   - Account (acct) string.
@@ -670,15 +663,15 @@ func (c *Converter) AppToAPIAppSensitive(ctx context.Context, a *gtsmodel.Applic
 // AppToAPIAppPublic takes a db model application as a param, and returns a populated apitype application, or an error
 // if something goes wrong. The returned application should be ready to serialize on an API level, and has sensitive
 // fields sanitized so that it can be served to non-authorized accounts without revealing any private information.
-func (c *Converter) AppToAPIAppPublic(ctx context.Context, a *gtsmodel.Application) (*apimodel.Application, error) {
+func AppToAPIAppPublic(app *gtsmodel.Application) *apimodel.Application {
 	return &apimodel.Application{
-		Name:    a.Name,
-		Website: a.Website,
-	}, nil
+		Name:    app.Name,
+		Website: app.Website,
+	}
 }
 
-// AttachmentToAPIAttachment converts a gts model media attacahment into its api representation for serialization on the API.
-func (c *Converter) AttachmentToAPIAttachment(ctx context.Context, media *gtsmodel.MediaAttachment) (apimodel.Attachment, error) {
+// AttachmentToAPIAttachment converts a gts model media attacahment into its api representation.
+func AttachmentToAPIAttachment(media *gtsmodel.MediaAttachment) apimodel.Attachment {
 	var api apimodel.Attachment
 	api.Type = media.Type.String()
 	api.ID = media.ID
@@ -730,111 +723,110 @@ func (c *Converter) AttachmentToAPIAttachment(ctx context.Context, media *gtsmod
 	api.PreviewRemoteURL = util.PtrIf(media.Thumbnail.RemoteURL)
 	api.Description = util.PtrIf(media.Description)
 
-	return api, nil
+	return api
 }
 
 // MentionToAPIMention converts a gts model mention into its api (frontend) representation for serialization on the API.
-func (c *Converter) MentionToAPIMention(ctx context.Context, m *gtsmodel.Mention) (apimodel.Mention, error) {
-	if m.TargetAccount == nil {
-		targetAccount, err := c.state.DB.GetAccountByID(ctx, m.TargetAccountID)
+func (c *Converter) MentionToAPIMention(ctx context.Context, mention *gtsmodel.Mention) (apimodel.Mention, error) {
+	if mention.TargetAccount == nil {
+		var err error
+
+		mention.TargetAccount, err = c.state.DB.GetAccountByID(ctx, mention.TargetAccountID)
 		if err != nil {
-			return apimodel.Mention{}, err
+			return apimodel.Mention{}, gtserror.Newf("db error getting mention target: %w", err)
 		}
-		m.TargetAccount = targetAccount
 	}
 
 	var acct string
-	if m.TargetAccount.IsLocal() {
-		acct = m.TargetAccount.Username
+	if mention.TargetAccount.IsLocal() {
+		acct = mention.TargetAccount.Username
 	} else {
-		// Domain may be in Punycode,
-		// de-punify it just in case.
-		d, err := util.DePunify(m.TargetAccount.Domain)
+		// Domain may be in Punycode, de-punify it just in case.
+		d, err := util.DePunify(mention.TargetAccount.Domain)
 		if err != nil {
-			err = fmt.Errorf("MentionToAPIMention: error de-punifying domain %s for account id %s: %w", m.TargetAccount.Domain, m.TargetAccountID, err)
-			return apimodel.Mention{}, err
+			return apimodel.Mention{}, gtserror.Newf("error de-punifying mention target %s domain: %w", mention.TargetAccount.UsernameDomain(), err)
 		}
 
-		acct = m.TargetAccount.Username + "@" + d
+		// Set the de-punified username@domain combo.
+		acct = mention.TargetAccount.Username + "@" + d
 	}
 
 	return apimodel.Mention{
-		ID:       m.TargetAccount.ID,
-		Username: m.TargetAccount.Username,
-		URL:      m.TargetAccount.URL,
+		ID:       mention.TargetAccount.ID,
+		Username: mention.TargetAccount.Username,
+		URL:      mention.TargetAccount.URL,
 		Acct:     acct,
 	}, nil
 }
 
 // EmojiToAPIEmoji converts a gts model emoji into its api (frontend) representation for serialization on the API.
-func (c *Converter) EmojiToAPIEmoji(ctx context.Context, e *gtsmodel.Emoji) (apimodel.Emoji, error) {
+func (c *Converter) EmojiToAPIEmoji(ctx context.Context, emoji *gtsmodel.Emoji) (apimodel.Emoji, error) {
 	var category string
 
-	if e.CategoryID != "" {
-		if e.Category == nil {
-			var err error
-			e.Category, err = c.state.DB.GetEmojiCategory(ctx, e.CategoryID)
-			if err != nil {
-				return apimodel.Emoji{}, err
-			}
+	if emoji.CategoryID != "" {
+		var err error
+
+		emoji.Category, err = c.state.DB.GetEmojiCategory(ctx, emoji.CategoryID)
+		if err != nil {
+			return apimodel.Emoji{}, gtserror.Newf("db error getting emoji %s category: %w", emoji.ShortcodeDomain(), err)
 		}
-		category = e.Category.Name
+
+		category = emoji.Category.Name
 	}
 
 	return apimodel.Emoji{
-		Shortcode:       e.Shortcode,
-		URL:             e.ImageURL,
-		StaticURL:       e.ImageStaticURL,
-		VisibleInPicker: *e.VisibleInPicker,
+		Shortcode:       emoji.Shortcode,
+		URL:             emoji.ImageURL,
+		StaticURL:       emoji.ImageStaticURL,
+		VisibleInPicker: *emoji.VisibleInPicker,
 		Category:        category,
 	}, nil
 }
 
 // EmojiToAdminAPIEmoji converts a gts model emoji into an API representation with extra admin information.
-func (c *Converter) EmojiToAdminAPIEmoji(ctx context.Context, e *gtsmodel.Emoji) (*apimodel.AdminEmoji, error) {
-	emoji, err := c.EmojiToAPIEmoji(ctx, e)
+func (c *Converter) EmojiToAdminAPIEmoji(ctx context.Context, emoji *gtsmodel.Emoji) (*apimodel.AdminEmoji, error) {
+	apiEmoji, err := c.EmojiToAPIEmoji(ctx, emoji)
 	if err != nil {
 		return nil, err
 	}
 
-	if !e.IsLocal() {
+	if !emoji.IsLocal() {
 		// Domain may be in Punycode,
 		// de-punify it just in case.
 		var err error
-		e.Domain, err = util.DePunify(e.Domain)
+		emoji.Domain, err = util.DePunify(emoji.Domain)
 		if err != nil {
-			err = fmt.Errorf("EmojiToAdminAPIEmoji: error de-punifying domain %s for emoji id %s: %w", e.Domain, e.ID, err)
-			return nil, err
+			return nil, gtserror.Newf("error de-punifying emoji %s domain: %w", emoji.ShortcodeDomain(), err)
 		}
 	}
 
 	return &apimodel.AdminEmoji{
-		Emoji:         emoji,
-		ID:            e.ID,
-		Disabled:      *e.Disabled,
-		Domain:        e.Domain,
-		UpdatedAt:     util.FormatISO8601(e.UpdatedAt),
-		TotalFileSize: e.ImageFileSize + e.ImageStaticFileSize,
-		ContentType:   e.ImageContentType,
-		URI:           e.URI,
+		Emoji:         apiEmoji,
+		ID:            emoji.ID,
+		Disabled:      *emoji.Disabled,
+		Domain:        emoji.Domain,
+		UpdatedAt:     util.FormatISO8601(emoji.UpdatedAt),
+		TotalFileSize: emoji.ImageFileSize + emoji.ImageStaticFileSize,
+		ContentType:   emoji.ImageContentType,
+		URI:           emoji.URI,
 	}, nil
 }
 
 // EmojiCategoryToAPIEmojiCategory converts a gts model emoji category into its api (frontend) representation.
-func (c *Converter) EmojiCategoryToAPIEmojiCategory(ctx context.Context, category *gtsmodel.EmojiCategory) (*apimodel.EmojiCategory, error) {
+func EmojiCategoryToAPIEmojiCategory(category *gtsmodel.EmojiCategory) *apimodel.EmojiCategory {
 	return &apimodel.EmojiCategory{
 		ID:   category.ID,
 		Name: category.Name,
-	}, nil
+	}
 }
 
 // TagToAPITag converts a gts model tag into its api (frontend) representation for serialization on the API.
 // If stubHistory is set to 'true', then the 'history' field of the tag will be populated with a pointer to an empty slice, for API compatibility reasons.
 // following is an optional flag marking whether the currently authenticated user (if there is one) is following the tag.
-func (c *Converter) TagToAPITag(ctx context.Context, t *gtsmodel.Tag, stubHistory bool, following *bool) (apimodel.Tag, error) {
+func TagToAPITag(tag *gtsmodel.Tag, stubHistory bool, following *bool) apimodel.Tag {
 	return apimodel.Tag{
-		Name: strings.ToLower(t.Name),
-		URL:  uris.URIForTag(t.Name),
+		Name: strings.ToLower(tag.Name),
+		URL:  uris.URIForTag(tag.Name),
 		History: func() *[]any {
 			if !stubHistory {
 				return nil
@@ -844,7 +836,7 @@ func (c *Converter) TagToAPITag(ctx context.Context, t *gtsmodel.Tag, stubHistor
 			return &h
 		}(),
 		Following: following,
-	}, nil
+	}
 }
 
 // StatusToAPIStatus converts a gts model
@@ -961,7 +953,7 @@ func (c *Converter) StatusToWebStatus(
 	}
 
 	// Convert status author to web model.
-	acct, err := c.AccountToWebAccount(ctx, s.Account)
+	acct, err := c.AccountToWebAccount(ctx, s.Account, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1205,25 +1197,13 @@ func (c *Converter) baseStatusToFrontend(
 		return nil, gtserror.Newf("error counting faves: %w", err)
 	}
 
-	apiAttachments, err := c.convertAttachmentsToAPIAttachments(ctx, status.Attachments, status.AttachmentIDs)
-	if err != nil {
-		log.Errorf(ctx, "error converting status attachments: %v", err)
-	}
+	apiAttachments := c.attachmentsToAPI(ctx, status.Attachments, status.AttachmentIDs)
 
-	apiMentions, err := c.convertMentionsToAPIMentions(ctx, status.Mentions, status.MentionIDs)
-	if err != nil {
-		log.Errorf(ctx, "error converting status mentions: %v", err)
-	}
+	apiEmojis := c.emojisToAPI(ctx, status.Emojis, status.EmojiIDs)
 
-	apiTags, err := c.convertTagsToAPITags(ctx, status.Tags, status.TagIDs)
-	if err != nil {
-		log.Errorf(ctx, "error converting status tags: %v", err)
-	}
+	apiMentions := c.mentionsToAPI(ctx, status.Mentions, status.MentionIDs)
 
-	apiEmojis, err := c.convertEmojisToAPIEmojis(ctx, status.Emojis, status.EmojiIDs)
-	if err != nil {
-		log.Errorf(ctx, "error converting status emojis: %v", err)
-	}
+	apiTags := c.tagsToAPI(ctx, status.Tags, status.TagIDs)
 
 	// Take status's interaction policy, or
 	// fall back to default for its visibility.
@@ -1262,7 +1242,7 @@ func (c *Converter) baseStatusToFrontend(
 		Card:               nil, // TODO: implement cards
 		Text:               status.Text,
 		ContentType:        ContentTypeToAPIContentType(status.ContentType),
-		InteractionPolicy:  *apiInteractionPolicy,
+		InteractionPolicy:  apiInteractionPolicy,
 
 		// Mastodon API says spoiler_text should be *text*, not HTML, so
 		// parse any HTML back to plaintext when serializing via the API,
@@ -1282,13 +1262,7 @@ func (c *Converter) baseStatusToFrontend(
 	switch {
 	case status.CreatedWithApplication != nil:
 		// App exists for this status and is set.
-		apiStatus.Application, err = c.AppToAPIAppPublic(ctx, status.CreatedWithApplication)
-		if err != nil {
-			return nil, gtserror.Newf(
-				"error converting application %s: %w",
-				status.CreatedWithApplicationID, err,
-			)
-		}
+		apiStatus.Application = AppToAPIAppPublic(status.CreatedWithApplication)
 
 	case status.CreatedWithApplicationID != "":
 		// App existed for this status but not
@@ -1374,22 +1348,14 @@ func (c *Converter) StatusToEditHistory(
 
 	// Convert the status author account to API model.
 	apiAccount, err := c.AccountToAPIAccountPublic(ctx,
-		status.Account,
-	)
+		status.Account)
 	if err != nil {
 		return nil, gtserror.Newf("error converting account: %w", err)
 	}
 
-	// Convert status emojis to their API models,
-	// this includes all status emojis both current
-	// and historic, so it gets passed to each edit.
-	apiEmojis, err := c.convertEmojisToAPIEmojis(ctx,
-		nil,
-		status.EmojiIDs,
-	)
-	if err != nil {
-		return nil, gtserror.Newf("error converting emojis: %w", err)
-	}
+	// Convert status emojis to their API models, this includes all
+	// emojis both current and historic, so it gets passed to each edit.
+	apiEmojis := c.emojisToAPI(ctx, status.Emojis, status.EmojiIDs)
 
 	var votes []int
 	var options []string
@@ -1408,8 +1374,7 @@ func (c *Converter) StatusToEditHistory(
 	// Append *current* version of the status to last slot
 	// in the edits so we can add it at the bottom as latest
 	// revision using the below loop. Note: a new slice is
-	// created here with the append, to avoid modifying
-	// Edits on the status pointer.
+	// created here with the append, to avoid modifying Edits on status.
 	edits := append(status.Edits, &gtsmodel.StatusEdit{ //nolint:gocritic
 		Content:                status.Content,
 		ContentWarning:         status.ContentWarning,
@@ -1426,8 +1391,11 @@ func (c *Converter) StatusToEditHistory(
 	//
 	// This creates a slice of revisions that goes from
 	// oldest (original status) to newest (latest revision).
-	editHistory := make([]*apimodel.StatusEdit, 0, len(edits))
-	for _, edit := range edits {
+	apiEdits := make([]*apimodel.StatusEdit, len(edits))
+	if len(apiEdits) != len(edits) {
+		panic(gtserror.New("bound check elimination"))
+	}
+	for i, edit := range edits {
 
 		// Iterate through edit attachment IDs, getting model from 'media' lookup.
 		apiAttachments := make([]*apimodel.Attachment, 0, len(edit.AttachmentIDs))
@@ -1437,16 +1405,8 @@ func (c *Converter) StatusToEditHistory(
 				continue
 			}
 
-			// Convert each media attachment to frontend API model.
-			apiAttachment, err := c.AttachmentToAPIAttachment(ctx,
-				attachment,
-			)
-			if err != nil {
-				log.Error(ctx, "error converting attachment: %v", err)
-				continue
-			}
-
-			// Append converted media attachment to return slice.
+			// Convert and append each media attachment to slice.
+			apiAttachment := AttachmentToAPIAttachment(attachment)
 			apiAttachments = append(apiAttachments, &apiAttachment)
 		}
 
@@ -1469,8 +1429,11 @@ func (c *Converter) StatusToEditHistory(
 		if len(edit.PollOptions) > 0 {
 			apiPoll = new(apimodel.Poll)
 
-			// Iterate through poll options and attach to API poll model.
+			// Iterate through poll options and attach each to API poll model.
 			apiPoll.Options = make([]apimodel.PollOption, len(edit.PollOptions))
+			if len(apiPoll.Options) != len(edit.PollOptions) {
+				panic(gtserror.New("bound check elimination"))
+			}
 			for i, option := range edit.PollOptions {
 				apiPoll.Options[i] = apimodel.PollOption{
 					Title: option,
@@ -1485,8 +1448,8 @@ func (c *Converter) StatusToEditHistory(
 			}
 		}
 
-		// Append this status edit to the return slice.
-		editHistory = append(editHistory, &apimodel.StatusEdit{
+		// Set status edit on return slice.
+		apiEdits[i] = &apimodel.StatusEdit{
 			CreatedAt:        util.FormatISO8601(edit.CreatedAt),
 			Content:          edit.Content,
 			SpoilerText:      edit.ContentWarning,
@@ -1495,10 +1458,10 @@ func (c *Converter) StatusToEditHistory(
 			Poll:             apiPoll,
 			MediaAttachments: apiAttachments,
 			Emojis:           apiEmojis, // same models used for whole status + all edits
-		})
+		}
 	}
 
-	return editHistory, nil
+	return apiEdits, nil
 }
 
 // VisToAPIVis converts a gts visibility into its api equivalent
@@ -2277,6 +2240,7 @@ func (c *Converter) MarkersToAPIMarker(ctx context.Context, markers []*gtsmodel.
 
 // PollToAPIPoll converts a database (gtsmodel) Poll into an API model representation appropriate for the given requesting account.
 func (c *Converter) PollToAPIPoll(ctx context.Context, requester *gtsmodel.Account, poll *gtsmodel.Poll) (*apimodel.Poll, error) {
+
 	// Ensure the poll model is fully populated for src status.
 	if err := c.state.DB.PopulatePoll(ctx, poll); err != nil {
 		return nil, gtserror.Newf("error populating poll: %w", err)
@@ -2290,11 +2254,13 @@ func (c *Converter) PollToAPIPoll(ctx context.Context, requester *gtsmodel.Accou
 		ownChoices  *[]int
 		isAuthor    bool
 		expiresAt   *string
-		emojis      []apimodel.Emoji
 	)
 
 	// Preallocate a slice of frontend model poll choices.
 	options = make([]apimodel.PollOption, len(poll.Options))
+	if len(options) != len(poll.Options) {
+		panic(gtserror.New("bound check elimination"))
+	}
 
 	// Add the titles to all of the options.
 	for i, title := range poll.Options {
@@ -2364,17 +2330,11 @@ func (c *Converter) PollToAPIPoll(ctx context.Context, requester *gtsmodel.Accou
 		expiresAt = &str
 	}
 
-	var err error
-
-	// Try to inherit emojis from parent status.
-	emojis, err = c.convertEmojisToAPIEmojis(ctx,
+	// Get emojis from parent status.
+	apiEmojis := c.emojisToAPI(ctx,
 		poll.Status.Emojis,
 		poll.Status.EmojiIDs,
 	)
-	if err != nil {
-		log.Errorf(ctx, "error converting emojis from parent status: %v", err)
-		emojis = []apimodel.Emoji{} // fallback to empty slice.
-	}
 
 	return &apimodel.Poll{
 		ID:          poll.ID,
@@ -2386,40 +2346,8 @@ func (c *Converter) PollToAPIPoll(ctx context.Context, requester *gtsmodel.Accou
 		Voted:       hasVoted,
 		OwnVotes:    ownChoices,
 		Options:     options,
-		Emojis:      emojis,
+		Emojis:      apiEmojis,
 	}, nil
-}
-
-// convertAttachmentsToAPIAttachments will convert a slice of GTS model attachments to frontend API model attachments, falling back to IDs if no GTS models supplied.
-func (c *Converter) convertAttachmentsToAPIAttachments(ctx context.Context, attachments []*gtsmodel.MediaAttachment, attachmentIDs []string) ([]*apimodel.Attachment, error) {
-	var errs gtserror.MultiError
-
-	if len(attachments) == 0 && len(attachmentIDs) > 0 {
-		// GTS model attachments were not populated
-
-		var err error
-
-		// Fetch GTS models for attachment IDs
-		attachments, err = c.state.DB.GetAttachmentsByIDs(ctx, attachmentIDs)
-		if err != nil {
-			errs.Appendf("error fetching attachments from database: %w", err)
-		}
-	}
-
-	// Preallocate expected frontend slice
-	apiAttachments := make([]*apimodel.Attachment, 0, len(attachments))
-
-	// Convert GTS models to frontend models
-	for _, attachment := range attachments {
-		apiAttachment, err := c.AttachmentToAPIAttachment(ctx, attachment)
-		if err != nil {
-			errs.Appendf("error converting attchment %s to api attachment: %w", attachment.ID, err)
-			continue
-		}
-		apiAttachments = append(apiAttachments, &apiAttachment)
-	}
-
-	return apiAttachments, errs.Combine()
 }
 
 // FilterToAPIFiltersV1 converts one GTS model filter into an API v1 filter list
@@ -2537,107 +2465,6 @@ func FilterStatusToAPIFilterStatus(filterStatus *gtsmodel.FilterStatus) *apimode
 	}
 }
 
-// convertEmojisToAPIEmojis will convert a slice of GTS model emojis to frontend API model emojis, falling back to IDs if no GTS models supplied.
-func (c *Converter) convertEmojisToAPIEmojis(ctx context.Context, emojis []*gtsmodel.Emoji, emojiIDs []string) ([]apimodel.Emoji, error) {
-	var errs gtserror.MultiError
-
-	// GTS model attachments were not populated
-	if len(emojis) == 0 && len(emojiIDs) > 0 {
-		var err error
-
-		// Fetch GTS models for emoji IDs
-		emojis, err = c.state.DB.GetEmojisByIDs(ctx, emojiIDs)
-		if err != nil {
-			return nil, gtserror.Newf("db error fetching emojis: %w", err)
-		}
-	}
-
-	// Preallocate expected frontend slice of emojis.
-	apiEmojis := make([]apimodel.Emoji, 0, len(emojis))
-	for _, emoji := range emojis {
-
-		// Skip adding emojis that are
-		// uncached, the empty URLs can
-		// cause issues with some clients.
-		if !*emoji.Cached {
-			continue
-		}
-
-		// Convert each to a frontend API model emoji.
-		apiEmoji, err := c.EmojiToAPIEmoji(ctx, emoji)
-		if err != nil {
-			errs.Appendf("error converting emoji %s to api emoji: %w", emoji.ID, err)
-			continue
-		}
-
-		// Append converted emoji to return slice.
-		apiEmojis = append(apiEmojis, apiEmoji)
-	}
-
-	return apiEmojis, errs.Combine()
-}
-
-// convertMentionsToAPIMentions will convert a slice of GTS model mentions to frontend API model mentions, falling back to IDs if no GTS models supplied.
-func (c *Converter) convertMentionsToAPIMentions(ctx context.Context, mentions []*gtsmodel.Mention, mentionIDs []string) ([]apimodel.Mention, error) {
-	var errs gtserror.MultiError
-
-	if len(mentions) == 0 && len(mentionIDs) > 0 {
-		var err error
-
-		// GTS model mentions were not populated
-		//
-		// Fetch GTS models for mention IDs
-		mentions, err = c.state.DB.GetMentions(ctx, mentionIDs)
-		if err != nil {
-			errs.Appendf("error fetching mentions from database: %w", err)
-		}
-	}
-
-	// Preallocate expected frontend slice
-	apiMentions := make([]apimodel.Mention, 0, len(mentions))
-
-	// Convert GTS models to frontend models
-	for _, mention := range mentions {
-		apiMention, err := c.MentionToAPIMention(ctx, mention)
-		if err != nil {
-			errs.Appendf("error converting mention %s to api mention: %w", mention.ID, err)
-			continue
-		}
-		apiMentions = append(apiMentions, apiMention)
-	}
-
-	return apiMentions, errs.Combine()
-}
-
-// convertTagsToAPITags will convert a slice of GTS model tags to frontend API model tags, falling back to IDs if no GTS models supplied.
-func (c *Converter) convertTagsToAPITags(ctx context.Context, tags []*gtsmodel.Tag, tagIDs []string) ([]apimodel.Tag, error) {
-	var errs gtserror.MultiError
-
-	if len(tags) == 0 && len(tagIDs) > 0 {
-		var err error
-
-		tags, err = c.state.DB.GetTags(ctx, tagIDs)
-		if err != nil {
-			errs.Appendf("error fetching tags from database: %w", err)
-		}
-	}
-
-	// Preallocate expected frontend slice
-	apiTags := make([]apimodel.Tag, 0, len(tags))
-
-	// Convert GTS models to frontend models
-	for _, tag := range tags {
-		apiTag, err := c.TagToAPITag(ctx, tag, false, nil)
-		if err != nil {
-			errs.Appendf("error converting tag %s to api tag: %w", tag.ID, err)
-			continue
-		}
-		apiTags = append(apiTags, apiTag)
-	}
-
-	return apiTags, errs.Combine()
-}
-
 // ThemesToAPIThemes converts a slice of gtsmodel Themes into apimodel Themes.
 func (c *Converter) ThemesToAPIThemes(themes []*gtsmodel.Theme) []apimodel.Theme {
 	apiThemes := make([]apimodel.Theme, len(themes))
@@ -2667,9 +2494,10 @@ func (c *Converter) InteractionPolicyToAPIInteractionPolicy(
 	policy *gtsmodel.InteractionPolicy,
 	status *gtsmodel.Status,
 	requester *gtsmodel.Account,
-) (*apimodel.InteractionPolicy, error) {
-	apiPolicy := new(apimodel.InteractionPolicy)
-
+) (
+	apiPolicy apimodel.InteractionPolicy,
+	err error,
+) {
 	// gtsmodel CanLike -> apimodel CanFavourite
 	if policy.CanLike != nil {
 		// Use the set CanLike value.
@@ -2739,8 +2567,7 @@ func (c *Converter) InteractionPolicyToAPIInteractionPolicy(
 
 	likeable, err := c.intFilter.StatusLikeable(ctx, requester, status)
 	if err != nil {
-		err := gtserror.Newf("error checking status likeable by requester: %w", err)
-		return nil, err
+		return apiPolicy, gtserror.Newf("error checking status likeable by requester: %w", err)
 	}
 
 	if likeable.Permission == gtsmodel.PolicyPermissionAutomaticApproval {
@@ -2759,8 +2586,7 @@ func (c *Converter) InteractionPolicyToAPIInteractionPolicy(
 
 	replyable, err := c.intFilter.StatusReplyable(ctx, requester, status)
 	if err != nil {
-		err := gtserror.Newf("error checking status replyable by requester: %w", err)
-		return nil, err
+		return apiPolicy, gtserror.Newf("error checking status replyable by requester: %w", err)
 	}
 
 	if replyable.Permission == gtsmodel.PolicyPermissionAutomaticApproval {
@@ -2779,8 +2605,7 @@ func (c *Converter) InteractionPolicyToAPIInteractionPolicy(
 
 	boostable, err := c.intFilter.StatusBoostable(ctx, requester, status)
 	if err != nil {
-		err := gtserror.Newf("error checking status boostable by requester: %w", err)
-		return nil, err
+		return apiPolicy, gtserror.Newf("error checking status boostable by requester: %w", err)
 	}
 
 	if boostable.Permission == gtsmodel.PolicyPermissionAutomaticApproval {
@@ -3000,10 +2825,7 @@ func (c *Converter) WebPushSubscriptionToAPIWebPushSubscription(
 	}, nil
 }
 
-func (c *Converter) TokenToAPITokenInfo(
-	ctx context.Context,
-	token *gtsmodel.Token,
-) (*apimodel.TokenInfo, error) {
+func (c *Converter) TokenToAPITokenInfo(ctx context.Context, token *gtsmodel.Token) (*apimodel.TokenInfo, error) {
 	createdAt, err := id.TimeFromULID(token.ID)
 	if err != nil {
 		err := gtserror.Newf("error parsing time from token id: %w", err)
@@ -3021,11 +2843,7 @@ func (c *Converter) TokenToAPITokenInfo(
 		return nil, err
 	}
 
-	apiApplication, err := c.AppToAPIAppPublic(ctx, application)
-	if err != nil {
-		err := gtserror.Newf("error converting application to api application: %w", err)
-		return nil, err
-	}
+	apiApplication := AppToAPIAppPublic(application)
 
 	return &apimodel.TokenInfo{
 		ID:          token.ID,
@@ -3036,56 +2854,197 @@ func (c *Converter) TokenToAPITokenInfo(
 	}, nil
 }
 
-func (c *Converter) ScheduledStatusToAPIScheduledStatus(
-	ctx context.Context,
-	scheduledStatus *gtsmodel.ScheduledStatus,
-) (*apimodel.ScheduledStatus, error) {
-	apiAttachments, err := c.convertAttachmentsToAPIAttachments(
-		ctx,
-		scheduledStatus.MediaAttachments,
-		scheduledStatus.MediaIDs,
-	)
-	if err != nil {
-		log.Errorf(ctx, "error converting status attachments: %v", err)
-	}
-
-	scheduledAt := util.FormatISO8601(scheduledStatus.ScheduledAt)
+func (c *Converter) ScheduledStatusToAPIScheduledStatus(ctx context.Context, status *gtsmodel.ScheduledStatus) (*apimodel.ScheduledStatus, error) {
+	scheduledAt := util.FormatISO8601(status.ScheduledAt)
 
 	apiScheduledStatus := &apimodel.ScheduledStatus{
-		ID:          scheduledStatus.ID,
+		ID:          status.ID,
 		ScheduledAt: scheduledAt,
 		Params: &apimodel.ScheduledStatusParams{
-			Text:          scheduledStatus.Text,
-			MediaIDs:      scheduledStatus.MediaIDs,
-			Sensitive:     *scheduledStatus.Sensitive,
-			SpoilerText:   scheduledStatus.SpoilerText,
-			Visibility:    VisToAPIVis(scheduledStatus.Visibility),
-			InReplyToID:   scheduledStatus.InReplyToID,
-			Language:      scheduledStatus.Language,
-			ApplicationID: scheduledStatus.ApplicationID,
-			LocalOnly:     *scheduledStatus.LocalOnly,
-			ContentType:   apimodel.StatusContentType(scheduledStatus.ContentType),
+			Text:          status.Text,
+			MediaIDs:      status.MediaIDs,
+			Sensitive:     *status.Sensitive,
+			SpoilerText:   status.SpoilerText,
+			Visibility:    VisToAPIVis(status.Visibility),
+			InReplyToID:   status.InReplyToID,
+			Language:      status.Language,
+			ApplicationID: status.ApplicationID,
+			LocalOnly:     *status.LocalOnly,
+			ContentType:   apimodel.StatusContentType(status.ContentType),
 			ScheduledAt:   nil,
 		},
-		MediaAttachments: apiAttachments,
+		MediaAttachments: c.attachmentsToAPI(ctx, status.MediaAttachments, status.MediaIDs),
 	}
 
-	if len(scheduledStatus.Poll.Options) > 1 {
+	if len(status.Poll.Options) > 1 {
 		apiScheduledStatus.Params.Poll = &apimodel.ScheduledStatusParamsPoll{
-			Options:    scheduledStatus.Poll.Options,
-			ExpiresIn:  scheduledStatus.Poll.ExpiresIn,
-			Multiple:   *scheduledStatus.Poll.Multiple,
-			HideTotals: *scheduledStatus.Poll.HideTotals,
+			Options:    status.Poll.Options,
+			ExpiresIn:  status.Poll.ExpiresIn,
+			Multiple:   *status.Poll.Multiple,
+			HideTotals: *status.Poll.HideTotals,
 		}
 	}
 
-	if scheduledStatus.InteractionPolicy != nil {
-		apiInteractionPolicy, err := c.InteractionPolicyToAPIInteractionPolicy(ctx, scheduledStatus.InteractionPolicy, nil, nil)
+	if status.InteractionPolicy != nil {
+		apiInteractionPolicy, err := c.InteractionPolicyToAPIInteractionPolicy(ctx, status.InteractionPolicy, nil, nil)
 		if err != nil {
 			return nil, gtserror.Newf("error converting interaction policy: %w", err)
 		}
-		apiScheduledStatus.Params.InteractionPolicy = apiInteractionPolicy
+		apiScheduledStatus.Params.InteractionPolicy = &apiInteractionPolicy
 	}
 
 	return apiScheduledStatus, nil
+}
+
+// attachmentsToAPI converts database model media attachments (fetching
+// using IDs if necessary) to frontend API attachment models. all errors
+// are caught and logged, with the calling function name as a prefix.
+func (c *Converter) attachmentsToAPI(
+	ctx context.Context,
+	attachments []*gtsmodel.MediaAttachment,
+	attachmentIDs []string,
+) []*apimodel.Attachment {
+	caller := log.Caller(3)
+
+	// Check if media attachments are populated.
+	if len(attachments) != len(attachmentIDs) {
+		var err error
+
+		// Media attachments are not populated, fetch from the database.
+		attachments, err = c.state.DB.GetAttachmentsByIDs(ctx, attachmentIDs)
+		if err != nil {
+
+			log.Errorf(ctx, "%s: error getting media: %v", caller, err)
+			return []*apimodel.Attachment{}
+		}
+	}
+
+	// Convert all db media attachments to slice of API models.
+	apiModels := make([]*apimodel.Attachment, len(attachments))
+	if len(apiModels) != len(attachments) {
+		panic(gtserror.New("bound check elimination"))
+	}
+	for i, media := range attachments {
+		apiModel := AttachmentToAPIAttachment(media)
+		apiModels[i] = &apiModel
+	}
+
+	return apiModels
+}
+
+// emojisToAPI converts database model emojis (fetching using IDs if
+// necessary) to frontend API emoji models. all errors are caught and
+// logged, with the calling function name as a prefix.
+func (c *Converter) emojisToAPI(
+	ctx context.Context,
+	emojis []*gtsmodel.Emoji,
+	emojiIDs []string,
+) []apimodel.Emoji {
+	caller := log.Caller(3)
+
+	// Check if emojis are populated.
+	if len(emojis) != len(emojiIDs) {
+		var err error
+
+		// Emojis are not populated, fetch from the database.
+		emojis, err = c.state.DB.GetEmojisByIDs(ctx, emojiIDs)
+		if err != nil {
+
+			log.Errorf(ctx, "%s: error getting emojis: %v", caller, err)
+			return []apimodel.Emoji{}
+		}
+	}
+
+	// Preallocate a biggest-case slice of frontend emojis.
+	apiModels := make([]apimodel.Emoji, 0, len(emojis))
+	for _, emoji := range emojis {
+
+		// Convert each database emoji to API model.
+		apiModel, err := c.EmojiToAPIEmoji(ctx, emoji)
+		if err != nil {
+			log.Errorf(ctx, "%s: error converting emoji %s: %v", caller, emoji.ShortcodeDomain(), err)
+			continue
+		}
+
+		// Append API model to the return slice.
+		apiModels = append(apiModels, apiModel)
+	}
+
+	return apiModels
+}
+
+// mentionsToAPI converts database model mentions (fetching using IDs if
+// necessary) to frontend API mention models. all errors are caught and
+// logged, with the calling function name as a prefix.
+func (c *Converter) mentionsToAPI(
+	ctx context.Context,
+	mentions []*gtsmodel.Mention,
+	mentionIDs []string,
+) []apimodel.Mention {
+	caller := log.Caller(3)
+
+	// Check if mentions are populated.
+	if len(mentions) != len(mentionIDs) {
+		var err error
+
+		// Mentions are not populated, fetch from the database.
+		mentions, err = c.state.DB.GetMentions(ctx, mentionIDs)
+		if err != nil {
+
+			log.Errorf(ctx, "%s: error getting mentions: %v", caller, err)
+			return []apimodel.Mention{}
+		}
+	}
+
+	// Preallocate a biggest-case slice of frontend mentions.
+	apiModels := make([]apimodel.Mention, 0, len(mentions))
+	for _, mention := range mentions {
+
+		// Convert each database mention to frontend API model.
+		apiModel, err := c.MentionToAPIMention(ctx, mention)
+		if err != nil {
+			log.Errorf(ctx, "%s: error converting mention %s: %v", caller, mention.ID, err)
+			continue
+		}
+
+		// Append API model to the return slice.
+		apiModels = append(apiModels, apiModel)
+	}
+
+	return apiModels
+}
+
+// tagsToAPI converts database model tags (fetching using IDs if
+// necessary) to frontend API tag models. all errors are caught
+// and logged, with the calling function name as a prefix.
+func (c *Converter) tagsToAPI(
+	ctx context.Context,
+	tags []*gtsmodel.Tag,
+	tagIDs []string,
+) []apimodel.Tag {
+	caller := log.Caller(3)
+
+	// Check if mentions are populated.
+	if len(tags) != len(tagIDs) {
+		var err error
+
+		// Tags not populated, fetch from database.
+		tags, err = c.state.DB.GetTags(ctx, tagIDs)
+		if err != nil {
+
+			log.Errorf(ctx, "%s: error getting tags: %v", caller, err)
+			return []apimodel.Tag{}
+		}
+	}
+
+	// Convert all db tags to slice of API models.
+	apiModels := make([]apimodel.Tag, len(tags))
+	if len(apiModels) != len(tags) {
+		panic(gtserror.New("bound check elimination"))
+	}
+	for i, tag := range tags {
+		apiModels[i] = TagToAPITag(tag, false, nil)
+	}
+
+	return apiModels
 }

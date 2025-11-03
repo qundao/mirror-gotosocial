@@ -25,6 +25,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
 // Get gets the tag with the given name, including whether it's followed by the given account.
@@ -53,5 +54,6 @@ func (p *Processor) Get(
 		)
 	}
 
-	return p.apiTag(ctx, tag, following)
+	apiTag := typeutils.TagToAPITag(tag, true, &following)
+	return &apiTag, nil
 }

@@ -29,6 +29,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/text"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
 // Update updates a media attachment with the given id, using the provided form parameters.
@@ -77,11 +78,7 @@ func (p *Processor) Update(ctx context.Context, account *gtsmodel.Account, media
 		return nil, gtserror.NewErrorInternalError(fmt.Errorf("database error updating media: %s", err))
 	}
 
-	a, err := p.converter.AttachmentToAPIAttachment(ctx, attachment)
-	if err != nil {
-		return nil, gtserror.NewErrorNotFound(fmt.Errorf("error converting attachment: %s", err))
-	}
-
+	a := typeutils.AttachmentToAPIAttachment(attachment)
 	return &a, nil
 }
 

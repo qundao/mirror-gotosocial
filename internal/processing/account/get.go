@@ -112,7 +112,7 @@ func (p *Processor) GetWeb(ctx context.Context, username string) (*apimodel.WebA
 		return nil, gtserror.NewErrorInternalError(err)
 	}
 
-	webAccount, err := p.converter.AccountToWebAccount(ctx, targetAccount)
+	webAccount, err := p.converter.AccountToWebAccount(ctx, targetAccount, nil)
 	if err != nil {
 		err := gtserror.Newf("error converting account: %w", err)
 		return nil, gtserror.NewErrorInternalError(err)
