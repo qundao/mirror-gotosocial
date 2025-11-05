@@ -274,6 +274,9 @@ codeberg.org/gruf/go-maps
 # codeberg.org/gruf/go-mempool v0.0.0-20251003110531-b54adae66253
 ## explicit; go 1.24.0
 codeberg.org/gruf/go-mempool
+# codeberg.org/gruf/go-mmap v0.0.0-20251105140602-5f31e9314dbf
+## explicit; go 1.20
+codeberg.org/gruf/go-mmap
 # codeberg.org/gruf/go-mutexes v1.5.8
 ## explicit; go 1.24.0
 codeberg.org/gruf/go-mutexes

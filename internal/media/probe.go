@@ -22,7 +22,6 @@ import (
 	"encoding/binary"
 	"image/jpeg"
 	"io"
-	"os"
 	"strings"
 
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
@@ -80,7 +79,7 @@ func probe(ctx context.Context, filepath string) (*result, error) {
 
 // probeJPEG decodes the given file as JPEG and determines
 // image details from the decoded JPEG using native Go code.
-func probeJPEG(file *os.File) (*result, error) {
+func probeJPEG(file fileReader) (*result, error) {
 
 	// Attempt to decode JPEG, adding back hdr magic.
 	cfg, err := jpeg.DecodeConfig(io.MultiReader(
@@ -129,7 +128,7 @@ func probeJPEG(file *os.File) (*result, error) {
 //
 // copied from github.com/disintegration/imaging
 // but modified to optimize discard operations.
-func readOrientation(r *os.File) int {
+func readOrientation(r fileReader) int {
 	const (
 		markerAPP1     = 0xffe1
 		exifHeader     = 0x45786966

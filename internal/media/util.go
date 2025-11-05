@@ -24,10 +24,13 @@ import (
 	"io/fs"
 	"os"
 	"path"
+	"runtime"
+	"syscall"
 
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"codeberg.org/gruf/go-bytesize"
 	"codeberg.org/gruf/go-iotools"
+	"codeberg.org/gruf/go-mmap"
 )
 
 // media processing tmpdir.
@@ -82,15 +85,31 @@ func (af allowFiles) Open(name string) (fs.File, error) {
 		// Ffmpeg likes to read containing
 		// dir as '.'. Allow RO access here.
 		case ".":
-			return openRead(file.dir)
+			return os.OpenFile(file.dir, os.O_RDONLY, 0)
 		}
 	}
 	return nil, os.ErrPermission
 }
 
+// MmapThreshold defines the threshold file size (in bytes) for which
+// a call to OpenRead() will deem as big enough for a file to be worth
+// opening using an `mmap` syscall. This is a runtime initialized number
+// based on the number of available CPUs, as in concurrent conditions Go
+// can make optimizations for blocking `read` syscalls which scales with
+// the number of available goroutines it can have running at once.
+var mmapThreshold = mmap.Threshold{At: int64(runtime.NumCPU() * syscall.Getpagesize())}
+
+// fileReader is a type alias to the interface{} that
+// codeberg.org/gruf/go-mmap exposes, to make things a
+// little less visually confusing. this interfaces{}
+// abstracts away whether a (regular!) file has been
+// opened via os.OpenFile(..., RDONLY) or has been
+// mmapped into memory for access via byte slice.
+type fileReader = mmap.FileReader
+
 // openRead opens the existing file at path for reads only.
-func openRead(path string) (*os.File, error) {
-	return os.OpenFile(path, os.O_RDONLY, 0)
+func openRead(path string) (fileReader, error) {
+	return mmapThreshold.OpenRead(path)
 }
 
 // openWrite opens the (new!) file at path for read / writes.
