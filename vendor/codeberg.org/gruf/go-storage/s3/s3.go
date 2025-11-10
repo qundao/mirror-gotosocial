@@ -64,6 +64,11 @@ type Config struct {
 	// to include in each list request, made
 	// during calls to .WalkKeys().
 	ListSize int
+
+	// Cache is an optional type that may be
+	// provided to store simple entry information
+	// to speed up Get() / Stat() operations.
+	Cache EntryCache
 }
 
 // getS3Config returns valid (and owned!) Config for given ptr.
@@ -91,6 +96,7 @@ func getS3Config(cfg *Config) Config {
 		CoreOpts:     cfg.CoreOpts,
 		PutChunkSize: cfg.PutChunkSize,
 		ListSize:     cfg.ListSize,
+		Cache:        cfg.Cache,
 	}
 }
 
@@ -181,6 +187,15 @@ func (st *S3Storage) GetObject(ctx context.Context, key string, opts minio.GetOb
 	// Update given key with prefix.
 	key = st.config.KeyPrefix + key
 
+	// Check cache for possible known response.
+	cinfo, ok := cacheGet(st.config.Cache, key)
+	switch {
+	case !ok:
+		break
+	case cinfo == nil:
+		return nil, minio.ObjectInfo{}, nil, cachedNotFoundError(key)
+	}
+
 	// Query bucket for object data and info.
 	rc, info, hdr, err := st.client.GetObject(
 		ctx,
@@ -191,6 +206,9 @@ func (st *S3Storage) GetObject(ctx context.Context, key string, opts minio.GetOb
 	if err != nil {
 
 		if isNotFoundError(err) {
+			// On 'not found', cache this resp.
+			cacheNotFound(st.config.Cache, key)
+
 			// Wrap not found errors as our not found type.
 			err = internal.WrapErr(err, storage.ErrNotFound)
 		} else if isObjectNameError(err) {
@@ -198,6 +216,10 @@ func (st *S3Storage) GetObject(ctx context.Context, key string, opts minio.GetOb
 			err = internal.WrapErr(err, storage.ErrInvalidKey)
 		}
 
+	} else {
+
+		// On success, cache fetched obj info.
+		cacheObject(st.config.Cache, key, info)
 	}
 
 	return rc, info, hdr, err
@@ -246,6 +268,10 @@ func (st *S3Storage) PutObject(ctx context.Context, key string, r io.Reader, opt
 				err = internal.WrapErr(err, storage.ErrInvalidKey)
 			}
 
+		} else {
+
+			// On success, cache uploaded object info.
+			cacheUpload(st.config.Cache, key, info, opts)
 		}
 
 		return info, err
@@ -360,6 +386,10 @@ loop:
 
 	// Set correct size.
 	info.Size = total
+
+	// On success, cache uploaded object info.
+	cacheUpload(st.config.Cache, key, info, opts)
+
 	return info, nil
 }
 
@@ -384,6 +414,17 @@ func (st *S3Storage) StatObject(ctx context.Context, key string, opts minio.Stat
 	// Update given key with prefix.
 	key = st.config.KeyPrefix + key
 
+	// Check cache for possible known response.
+	cinfo, ok := cacheGet(st.config.Cache, key)
+	switch {
+	case !ok:
+		break
+	case cinfo == nil:
+		return minio.ObjectInfo{}, cachedNotFoundError(key)
+	default:
+		return cinfo.ToObjectInfo(), nil
+	}
+
 	// Query bucket for object info.
 	info, err := st.client.StatObject(
 		ctx,
@@ -394,6 +435,9 @@ func (st *S3Storage) StatObject(ctx context.Context, key string, opts minio.Stat
 	if err != nil {
 
 		if isNotFoundError(err) {
+			// On 'not found', cache this resp.
+			cacheNotFound(st.config.Cache, key)
+
 			// Wrap not found errors as our not found type.
 			err = internal.WrapErr(err, storage.ErrNotFound)
 		} else if isObjectNameError(err) {
@@ -401,6 +445,10 @@ func (st *S3Storage) StatObject(ctx context.Context, key string, opts minio.Stat
 			err = internal.WrapErr(err, storage.ErrInvalidKey)
 		}
 
+	} else {
+
+		// On success, cache fetchedd obj info.
+		cacheObject(st.config.Cache, key, info)
 	}
 
 	return info, err
@@ -421,6 +469,15 @@ func (st *S3Storage) RemoveObject(ctx context.Context, key string, opts minio.Re
 	// Update given key with prefix.
 	key = st.config.KeyPrefix + key
 
+	// Check cache for possible known response.
+	cinfo, ok := cacheGet(st.config.Cache, key)
+	switch {
+	case !ok:
+		break
+	case cinfo == nil:
+		return cachedNotFoundError(key)
+	}
+
 	// Remove object from S3 bucket
 	err := st.client.RemoveObject(
 		ctx,
@@ -432,6 +489,9 @@ func (st *S3Storage) RemoveObject(ctx context.Context, key string, opts minio.Re
 	if err != nil {
 
 		if isNotFoundError(err) {
+			// On 'not found', cache this resp.
+			cacheNotFound(st.config.Cache, key)
+
 			// Wrap not found errors as our not found type.
 			err = internal.WrapErr(err, storage.ErrNotFound)
 		} else if isObjectNameError(err) {
@@ -439,6 +499,10 @@ func (st *S3Storage) RemoveObject(ctx context.Context, key string, opts minio.Re
 			err = internal.WrapErr(err, storage.ErrInvalidKey)
 		}
 
+	} else {
+
+		// Removed! also cache as 'not found'.
+		cacheNotFound(st.config.Cache, key)
 	}
 
 	return err
@@ -450,15 +514,32 @@ func (st *S3Storage) WalkKeys(ctx context.Context, opts storage.WalkKeysOpts) er
 		panic("nil step fn")
 	}
 
-	var (
-		prev  string
-		token string
-	)
+	// Step function called on each listed object.
+	var step func(string, minio.ObjectInfo) error
+
+	if st.config.Cache == nil {
+		// No cache, simply pass straight through to opts.Step().
+		step = func(key string, info minio.ObjectInfo) error {
+			return opts.Step(storage.Entry{
+				Key:  key,
+				Size: info.Size,
+			})
+		}
+	} else {
+		// Cache configured, store before passing to opts.Step().
+		step = func(key string, info minio.ObjectInfo) error {
+			st.config.Cache.Put(key, objectToCachedObjectInfo(info))
+			return opts.Step(storage.Entry{
+				Key:  key,
+				Size: info.Size,
+			})
+		}
+	}
 
 	// Update options prefix to include global prefix.
 	opts.Prefix = st.config.KeyPrefix + opts.Prefix
 
-	for {
+	for prev, token := "", ""; ; {
 		// List objects in bucket starting at marker.
 		result, err := st.client.ListObjectsV2(
 			st.bucket,
@@ -482,17 +563,13 @@ func (st *S3Storage) WalkKeys(ctx context.Context, opts storage.WalkKeysOpts) er
 				// Trim any global prefix from returned object key.
 				key := strings.TrimPrefix(obj.Key, st.config.KeyPrefix)
 
-				// Skip filtered obj keys.
-				if opts.Filter != nil &&
-					opts.Filter(key) {
+				// Skip filtered keys.
+				if opts.Filter(key) {
 					continue
 				}
 
-				// Pass each obj through step func.
-				if err := opts.Step(storage.Entry{
-					Key:  key,
-					Size: obj.Size,
-				}); err != nil {
+				// Pass each object to step funcion.
+				if err := step(key, obj); err != nil {
 					return err
 				}
 			}
@@ -501,11 +578,8 @@ func (st *S3Storage) WalkKeys(ctx context.Context, opts storage.WalkKeysOpts) er
 				// Trim any global prefix from returned object key.
 				key := strings.TrimPrefix(obj.Key, st.config.KeyPrefix)
 
-				// Pass each obj through step func.
-				if err := opts.Step(storage.Entry{
-					Key:  key,
-					Size: obj.Size,
-				}); err != nil {
+				// Pass each object to step funcion.
+				if err := step(key, obj); err != nil {
 					return err
 				}
 			}

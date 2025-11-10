@@ -101,7 +101,6 @@ storage-s3-secret-key: ""
 # Default: ""
 storage-s3-bucket: ""
 
-
 # String. Key prefix to use for the S3 storage.
 # This is optional.
 #
@@ -127,6 +126,18 @@ storage-s3-key-prefix: ""
 # Examples: ["path", "dns", "auto"]
 # Default: "auto"
 storage-s3-bucket-lookup: "auto"
+
+cache:
+  # cache.s3-object-info (if set) enables caching
+  # of S3 object information in the storage driver.
+  # This can help reduce S3 calls on metered buckets
+  # by caching simple information like whether an
+  # object exists, and if so, its size. Left unset,
+  # the cache will be disabled, which is the default.
+  # The given value determines the cache capacity.
+  # Examples: [0, 8000, 16000, 2560000]
+  # Default: 0
+  s3-object-info: 0
 ```
 
 ## AWS S3 Configuration

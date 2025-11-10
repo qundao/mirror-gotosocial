@@ -33,12 +33,14 @@ func (b *Builder) Reset() {
 	b.set = false
 }
 
-// Len returns the number of accumulated bytes in the Builder
+// Len returns the number of
+// accumulated bytes in the Builder.
 func (b Builder) Len() int {
 	return len(b.B)
 }
 
-// Cap returns the capacity of the underlying Builder buffer
+// Cap returns the capacity of
+// the underlying Builder buffer.
 func (b Builder) Cap() int {
 	return cap(b.B)
 }
@@ -50,7 +52,7 @@ func (b Builder) Bytes() []byte {
 
 // String returns the accumulated path string.
 func (b Builder) String() string {
-	return *(*string)(unsafe.Pointer(&b.B))
+	return unsafe.String(unsafe.SliceData(b.B), len(b.B))
 }
 
 // Absolute returns whether current path is absolute (not relative).
@@ -139,7 +141,7 @@ func (b *Builder) AppendBytes(path []byte) {
 		return
 	}
 	b.Guarantee(len(path) + 1)
-	b.append(*(*string)(unsafe.Pointer(&b)))
+	b.append(unsafe.String(unsafe.SliceData(path), len(path)))
 }
 
 // Append adds and cleans the supplied path string to the

@@ -157,6 +157,18 @@ var Defaults = Configuration{
 	},
 
 	Cache: CacheConfiguration{
+		// We purposely leave this unset as
+		// guesstimating the number of media
+		// objects a server may have cached
+		// is quite difficult.
+		//
+		// And for example, on my extremely
+		// well federated single user instance
+		// I (kim) have over 2.5M media objects
+		// alone in storage. We'll leave this
+		// to those on metered S3 to tweak.
+		S3ObjectInfo: 0,
+
 		// Rough memory target that the total
 		// size of all State.Caches will attempt
 		// to remain with. Emphasis on *rough*.

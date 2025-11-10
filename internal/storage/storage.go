@@ -34,6 +34,7 @@ import (
 	"codeberg.org/gruf/go-cache/v3/ttl"
 	"codeberg.org/gruf/go-storage"
 	"codeberg.org/gruf/go-storage/s3"
+	s3cache "codeberg.org/gruf/go-storage/s3/cache"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 )
@@ -240,7 +241,14 @@ func NewS3Storage() (*Driver, error) {
 		bucketLookup = minio.BucketLookupAuto
 	}
 
-	// Open the s3 storage implementation
+	var objCache s3.EntryCache
+
+	// Check if an S3 object info cache was requested.
+	if cap := config.GetCacheS3ObjectInfo(); cap > 0 {
+		objCache = s3cache.New(0, cap)
+	}
+
+	// Open the s3 storage backend with configuration.
 	s3, err := s3.Open(endpoint, bucket, &s3.Config{
 		KeyPrefix: config.GetStorageS3KeyPrefix(),
 		CoreOpts: minio.Options{
@@ -250,6 +258,7 @@ func NewS3Storage() (*Driver, error) {
 		},
 		PutChunkSize: 5 * 1024 * 1024, // 5MiB
 		ListSize:     200,
+		Cache:        objCache,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error opening s3 storage: %w", err)

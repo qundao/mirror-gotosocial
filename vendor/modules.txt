@@ -244,8 +244,8 @@ codeberg.org/gruf/go-errors/v2
 # codeberg.org/gruf/go-fastcopy v1.1.3
 ## explicit; go 1.17
 codeberg.org/gruf/go-fastcopy
-# codeberg.org/gruf/go-fastpath/v2 v2.0.0
-## explicit; go 1.14
+# codeberg.org/gruf/go-fastpath/v2 v2.0.1
+## explicit; go 1.20
 codeberg.org/gruf/go-fastpath/v2
 # codeberg.org/gruf/go-ffmpreg v0.6.12
 ## explicit; go 1.22.0
@@ -289,13 +289,14 @@ codeberg.org/gruf/go-sched
 # codeberg.org/gruf/go-split v1.2.0
 ## explicit; go 1.20
 codeberg.org/gruf/go-split
-# codeberg.org/gruf/go-storage v0.3.1
+# codeberg.org/gruf/go-storage v0.4.0
 ## explicit; go 1.23.0
 codeberg.org/gruf/go-storage
 codeberg.org/gruf/go-storage/disk
 codeberg.org/gruf/go-storage/internal
 codeberg.org/gruf/go-storage/memory
 codeberg.org/gruf/go-storage/s3
+codeberg.org/gruf/go-storage/s3/cache
 # codeberg.org/gruf/go-structr v0.9.13
 ## explicit; go 1.24.5
 codeberg.org/gruf/go-structr

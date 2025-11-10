@@ -17,8 +17,8 @@ require (
 	codeberg.org/gruf/go-debug v1.3.0
 	codeberg.org/gruf/go-errors/v2 v2.3.2
 	codeberg.org/gruf/go-fastcopy v1.1.3
-	codeberg.org/gruf/go-fastpath/v2 v2.0.0
-	codeberg.org/gruf/go-ffmpreg v0.6.12
+	codeberg.org/gruf/go-fastpath/v2 v2.0.1
+	codeberg.org/gruf/go-ffmpreg v0.6.14
 	codeberg.org/gruf/go-iotools v0.0.0-20240710125620-934ae9c654cf
 	codeberg.org/gruf/go-kv/v2 v2.0.7
 	codeberg.org/gruf/go-list v0.0.0-20240425093752-494db03d641f
@@ -28,7 +28,7 @@ require (
 	codeberg.org/gruf/go-runners v1.7.0
 	codeberg.org/gruf/go-sched v1.3.0
 	codeberg.org/gruf/go-split v1.2.0
-	codeberg.org/gruf/go-storage v0.3.1
+	codeberg.org/gruf/go-storage v0.4.0
 	codeberg.org/gruf/go-structr v0.9.13
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/KimMachineGun/automemlimit v0.7.5

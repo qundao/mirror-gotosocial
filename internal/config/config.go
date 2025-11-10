@@ -215,7 +215,8 @@ type MediaConfiguration struct {
 }
 
 type CacheConfiguration struct {
-	MemoryTarget                          bytesize.Size `name:"memory-target"`
+	S3ObjectInfo                          int           `name:"s3-object-info" usage:"Enables caching of S3 object information in the storage driver to reduce S3 calls, value is cache capacity."`
+	MemoryTarget                          bytesize.Size `name:"memory-target" usage:"Sets a target limit that the application will *try* to keep *most* of its caches within."`
 	AccountMemRatio                       float64       `name:"account-mem-ratio"`
 	AccountNoteMemRatio                   float64       `name:"account-note-mem-ratio"`
 	AccountSettingsMemRatio               float64       `name:"account-settings-mem-ratio"`
