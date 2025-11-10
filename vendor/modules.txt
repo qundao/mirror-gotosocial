@@ -247,8 +247,8 @@ codeberg.org/gruf/go-fastcopy
 # codeberg.org/gruf/go-fastpath/v2 v2.0.1
 ## explicit; go 1.20
 codeberg.org/gruf/go-fastpath/v2
-# codeberg.org/gruf/go-ffmpreg v0.6.12
-## explicit; go 1.22.0
+# codeberg.org/gruf/go-ffmpreg v0.6.14
+## explicit; go 1.23.0
 codeberg.org/gruf/go-ffmpreg/embed
 codeberg.org/gruf/go-ffmpreg/wasm
 # codeberg.org/gruf/go-iotools v0.0.0-20240710125620-934ae9c654cf
@@ -739,7 +739,7 @@ github.com/modern-go/reflect2
 # github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
 ## explicit
 github.com/munnerz/goautoneg
-# github.com/ncruces/go-sqlite3 v0.30.0
+# github.com/ncruces/go-sqlite3 v0.30.1
 ## explicit; go 1.24.0
 github.com/ncruces/go-sqlite3
 github.com/ncruces/go-sqlite3/driver
@@ -882,8 +882,8 @@ github.com/tdewolff/parse/v2/strconv
 # github.com/temoto/robotstxt v1.1.2
 ## explicit; go 1.11
 github.com/temoto/robotstxt
-# github.com/tetratelabs/wazero v1.9.0
-## explicit; go 1.22.0
+# github.com/tetratelabs/wazero v1.10.0
+## explicit; go 1.23.0
 github.com/tetratelabs/wazero
 github.com/tetratelabs/wazero/api
 github.com/tetratelabs/wazero/experimental
@@ -1229,7 +1229,7 @@ golang.org/x/oauth2/internal
 ## explicit; go 1.24.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.37.0
+# golang.org/x/sys v0.38.0
 ## explicit; go 1.24.0
 golang.org/x/sys/cpu
 golang.org/x/sys/unix

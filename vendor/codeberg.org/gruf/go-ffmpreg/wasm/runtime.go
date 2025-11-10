@@ -5,6 +5,7 @@ import (
 
 	"github.com/tetratelabs/wazero"
 	"github.com/tetratelabs/wazero/api"
+	"github.com/tetratelabs/wazero/experimental"
 	"github.com/tetratelabs/wazero/imports/wasi_snapshot_preview1"
 )
 
@@ -15,7 +16,8 @@ const CoreFeatures = api.CoreFeatureSIMD |
 	api.CoreFeatureNonTrappingFloatToIntConversion |
 	api.CoreFeatureMutableGlobal |
 	api.CoreFeatureReferenceTypes |
-	api.CoreFeatureSignExtensionOps
+	api.CoreFeatureSignExtensionOps |
+	experimental.CoreFeaturesTailCall
 
 // NewRuntime returns a new WebAssembly wazero.Runtime compatible with go-ffmpreg.
 func NewRuntime(ctx context.Context, cfg wazero.RuntimeConfig) (wazero.Runtime, error) {
@@ -40,9 +42,9 @@ func NewRuntime(ctx context.Context, cfg wazero.RuntimeConfig) (wazero.Runtime, 
 	env = env.NewFunctionBuilder().
 		WithGoModuleFunction(
 			api.GoModuleFunc(setjmp),
-			[]api.ValueType{api.ValueTypeI32},
-			[]api.ValueType{api.ValueTypeI32},
-		).Export("setjmp")
+			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32, api.ValueTypeI32},
+			[]api.ValueType{},
+		).Export("__wasm_setjmp")
 
 	// Register longjmp host function.
 	env = env.NewFunctionBuilder().
@@ -50,7 +52,7 @@ func NewRuntime(ctx context.Context, cfg wazero.RuntimeConfig) (wazero.Runtime, 
 			api.GoModuleFunc(longjmp),
 			[]api.ValueType{api.ValueTypeI32, api.ValueTypeI32},
 			[]api.ValueType{},
-		).Export("longjmp")
+		).Export("__wasm_longjmp")
 
 	// Instantiate "env" module.
 	_, err = env.Instantiate(ctx)
