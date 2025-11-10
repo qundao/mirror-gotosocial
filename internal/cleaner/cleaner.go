@@ -141,8 +141,8 @@ func (c *Cleaner) ScheduleJobs() error {
 		)
 	}
 
-	// Time travel from
-	// year zero, groovy.
+	// Time travel from the
+	// year zero, groovy baby.
 	firstCleanupAt := time.Date(
 		now.Year(),
 		now.Month(),

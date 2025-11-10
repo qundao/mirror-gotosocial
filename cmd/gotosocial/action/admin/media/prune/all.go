@@ -52,13 +52,8 @@ func All(ctx context.Context) error {
 	days := config.GetMediaRemoteCacheDays()
 
 	// Perform the actual pruning with logging.
-	prune.cleaner.Media().All(ctx, days)
-	prune.cleaner.Emoji().All(ctx, days)
-
-	// Perform a cleanup of storage (for removed local dirs).
-	if err := prune.storage.Storage.Clean(ctx); err != nil {
-		log.Error(ctx, "error cleaning storage: %v", err)
-	}
+	prune.cleaner.Media().AllAndFix(ctx, days)
+	prune.cleaner.Emoji().AllAndFix(ctx, days)
 
 	return nil
 }

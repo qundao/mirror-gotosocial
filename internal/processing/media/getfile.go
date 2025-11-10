@@ -21,6 +21,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"net/url"
 	"strings"
 	"time"
@@ -33,6 +35,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/regexes"
 	"code.superseriousbusiness.org/gotosocial/internal/storage"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
+	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // GetFile retrieves a file from storage and streams it back
@@ -162,47 +165,94 @@ func (p *Processor) getAttachmentContent(
 		requestUser = requester.Username
 	}
 
-	// Ensure that stored media is cached.
-	// (this handles local media / recaches).
-	attach, err = p.federator.RefreshMedia(
-		ctx,
-		requestUser,
-		attach,
-		media.AdditionalMediaInfo{},
-		false,
-	)
-	if err != nil {
-		err := gtserror.Newf("error recaching media: %w", err)
-		return nil, gtserror.NewErrorNotFound(err)
-	}
-
-	// Start preparing API content model.
-	apiContent := &apimodel.Content{}
-
-	// Retrieve appropriate
-	// size file from storage.
+	// Start preparing API content model and other
+	// values depending on requested media size.
+	var content apimodel.Content
+	var mediaPath string
 	switch sizeStr {
 
+	// Original media size.
 	case media.SizeOriginal:
-		apiContent.ContentType = attach.File.ContentType
-		apiContent.ContentLength = int64(attach.File.FileSize)
-		return p.getContent(ctx,
-			attach.File.Path,
-			apiContent,
-		)
+		content.ContentType = attach.File.ContentType
+		content.ContentLength = int64(attach.File.FileSize)
+		mediaPath = attach.File.Path
 
+	// Thumbnail media size.
 	case media.SizeSmall:
-		apiContent.ContentType = attach.Thumbnail.ContentType
-		apiContent.ContentLength = int64(attach.Thumbnail.FileSize)
-		return p.getContent(ctx,
-			attach.Thumbnail.Path,
-			apiContent,
-		)
+		content.ContentType = attach.Thumbnail.ContentType
+		content.ContentLength = int64(attach.Thumbnail.FileSize)
+		mediaPath = attach.Thumbnail.Path
 
 	default:
-		const text = "invalid media attachment size"
-		return nil, gtserror.NewErrorBadRequest(errors.New(text), text)
+		const text = "invalid media size"
+		return nil, gtserror.NewErrorBadRequest(
+			errors.New(text),
+			text,
+		)
 	}
+
+	// Attachment file
+	// stream from storage.
+	var rc io.ReadCloser
+
+	// Check media is meant
+	// to be cached locally.
+	if *attach.Cached {
+
+		// Check storage for media at determined path.
+		rc, err = p.state.Storage.GetStream(ctx, mediaPath)
+		if err != nil && !storage.IsNotFound(err) {
+			err := gtserror.Newf("storage error getting media %s: %w", attach.URL, err)
+			return nil, gtserror.NewErrorInternalError(err)
+		}
+	}
+
+	if rc == nil {
+		// This is local media without
+		// a cached attachment, unfulfillable!
+		if attach.IsLocal() {
+			return nil, gtserror.NewfWithCode(http.StatusNotFound,
+				"local media file not found: %s", attach.URL)
+		}
+
+		// Whether the cached flag was set or
+		// not, we know it isn't in storage.
+		attach.Cached = util.Ptr(false)
+
+		// Attempt to recache this remote media.
+		attach, err = p.federator.RefreshMedia(ctx,
+			requestUser,
+			attach,
+			media.AdditionalMediaInfo{},
+			false,
+		)
+		if err != nil {
+			err := gtserror.Newf("error recaching media %s: %w", attach.URL, err)
+			return nil, gtserror.NewErrorNotFound(err)
+		}
+
+		// Check storage for media at determined path.
+		rc, err = p.state.Storage.GetStream(ctx, mediaPath)
+		if err != nil && !storage.IsNotFound(err) {
+			err := gtserror.Newf("storage error getting media %s: %w", attach.URL, err)
+			return nil, gtserror.NewErrorInternalError(err)
+		} else if rc == nil {
+			return nil, gtserror.NewfWithCode(http.StatusNotFound,
+				"remote media file not found: %s", attach.URL)
+		}
+	}
+
+	// If running on S3 storage with proxying disabled,
+	// just fetch a pre-signed URL instead of the content.
+	if url := p.state.Storage.URL(ctx, mediaPath); url != nil {
+		_ = rc.Close() // close storage stream
+		content.URL = url
+		return &content, nil
+	}
+
+	// Return with stream.
+	content.Content = rc
+	return &content, nil
 }
 
 func (p *Processor) getEmojiContent(
@@ -242,83 +292,92 @@ func (p *Processor) getEmojiContent(
 		return nil, gtserror.NewErrorNotFound(errors.New(text), text)
 	}
 
-	// Ensure that stored emoji is cached.
-	// (this handles local emoji / recaches).
-	emoji, err = p.federator.RecacheEmoji(
-		ctx,
-		emoji,
-		false, // async
-	)
-	if err != nil {
-		err := gtserror.Newf("error recaching emoji: %w", err)
-		return nil, gtserror.NewErrorNotFound(err)
-	}
-
-	// Start preparing API content model.
-	apiContent := &apimodel.Content{}
-
-	// Retrieve appropriate
-	// size file from storage.
+	// Start preparing API content model and other
+	// values depending on requested media size.
+	var content apimodel.Content
+	var emojiPath string
 	switch sizeStr {
 
+	// Original emoji image.
 	case media.SizeOriginal:
-		apiContent.ContentType = emoji.ImageContentType
-		apiContent.ContentLength = int64(emoji.ImageFileSize)
-		return p.getContent(ctx,
-			emoji.ImagePath,
-			apiContent,
-		)
+		content.ContentType = emoji.ImageContentType
+		content.ContentLength = int64(emoji.ImageFileSize)
+		emojiPath = emoji.ImagePath
 
+	// Static emoji image.
 	case media.SizeStatic:
-		apiContent.ContentType = emoji.ImageStaticContentType
-		apiContent.ContentLength = int64(emoji.ImageStaticFileSize)
-		return p.getContent(ctx,
-			emoji.ImageStaticPath,
-			apiContent,
-		)
+		content.ContentType = emoji.ImageStaticContentType
+		content.ContentLength = int64(emoji.ImageStaticFileSize)
+		emojiPath = emoji.ImageStaticPath
 
 	default:
-		const text = "invalid media attachment size"
-		return nil, gtserror.NewErrorBadRequest(errors.New(text), text)
-	}
-}
-
-// getContent performs the final file fetching of
-// stored content at path in storage. This is
-// populated in the apimodel.Content{} and returned.
-// (note: this also handles un-proxied S3 storage).
-func (p *Processor) getContent(
-	ctx context.Context,
-	path string,
-	content *apimodel.Content,
-) (
-	*apimodel.Content,
-	gtserror.WithCode,
-) {
-	// If running on S3 storage with proxying disabled then
-	// just fetch pre-signed URL instead of the content.
-	if url := p.state.Storage.URL(ctx, path); url != nil {
-		content.URL = url
-		return content, nil
+		const text = "invalid emoji size"
+		return nil, gtserror.NewErrorBadRequest(
+			errors.New(text),
+			text,
+		)
 	}
 
-	// Fetch file stream for the stored media at path.
-	rc, err := p.state.Storage.GetStream(ctx, path)
-	if err != nil && !storage.IsNotFound(err) {
-		err := gtserror.Newf("error getting file %s from storage: %w", path, err)
-		return nil, gtserror.NewErrorInternalError(err)
+	// Emoji image file
+	// stream from storage.
+	var rc io.ReadCloser
+
+	// Check emoji is meant
+	// to be cached locally.
+	if *emoji.Cached {
+
+		// Check storage for emoji at determined image path.
+		rc, err = p.state.Storage.GetStream(ctx, emojiPath)
+		if err != nil && !storage.IsNotFound(err) {
+			err := gtserror.Newf("storage error getting emoji %s: %w", emoji.URI, err)
+			return nil, gtserror.NewErrorInternalError(err)
+		}
 	}
 
-	// Ensure found.
 	if rc == nil {
-		err := gtserror.Newf("file not found at %s", path)
-		const text = "file not found"
-		return nil, gtserror.NewErrorNotFound(err, text)
+		// This is a local emoji without
+		// a cached image, unfulfillable!
+		if emoji.IsLocal() {
+			return nil, gtserror.NewfWithCode(http.StatusNotFound,
+				"local emoji image not found: %s", emoji.URI)
+		}
+
+		// Whether the cached flag was set or
+		// not, we know it isn't in storage.
+		emoji.Cached = util.Ptr(false)
+
+		// Attempt to recache this remote emoji.
+		emoji, err = p.federator.RecacheEmoji(ctx,
+			emoji,
+			false,
+		)
+		if err != nil {
+			err := gtserror.Newf("error recaching emoji %s: %w", emoji.URI, err)
+			return nil, gtserror.NewErrorNotFound(err)
+		}
+
+		// Check storage for emoji at determined image path.
+		rc, err = p.state.Storage.GetStream(ctx, emojiPath)
+		if err != nil && !storage.IsNotFound(err) {
+			err := gtserror.Newf("storage error getting emoji %s after recache: %w", emoji.URI, err)
+			return nil, gtserror.NewErrorInternalError(err)
+		} else if rc == nil {
+			return nil, gtserror.NewfWithCode(http.StatusNotFound,
+				"remote emoji image not found: %s", emoji.URI)
+		}
+	}
+
+	// If running on S3 storage with proxying disabled,
+	// just fetch a pre-signed URL instead of the content.
+	if url := p.state.Storage.URL(ctx, emojiPath); url != nil {
+		_ = rc.Close() // close storage stream
+		content.URL = url
+		return &content, nil
 	}
 
 	// Return with stream.
 	content.Content = rc
-	return content, nil
+	return &content, nil
 }
 
 // handles serving Content for "unknown" file

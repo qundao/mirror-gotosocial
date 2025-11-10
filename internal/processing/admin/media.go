@@ -56,11 +56,11 @@ func (p *Processor) MediaPrune(ctx context.Context, mediaRemoteCacheDays int) gt
 		return gtserror.NewErrorBadRequest(err, err.Error())
 	}
 
-	// Start background task performing all media cleanup tasks.
 	go func() {
-		ctx := context.Background()
-		p.cleaner.Media().All(ctx, mediaRemoteCacheDays)
-		p.cleaner.Emoji().All(ctx, mediaRemoteCacheDays)
+		// Start background task performing all media cleanup tasks.
+		ctx := gtscontext.WithValues(context.Background(), ctx)
+		p.cleaner.Media().AllAndFix(ctx, mediaRemoteCacheDays)
+		p.cleaner.Emoji().AllAndFix(ctx, mediaRemoteCacheDays)
 	}()
 
 	return nil
