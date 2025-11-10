@@ -41,8 +41,14 @@ func (e *Emoji) All(ctx context.Context, maxRemoteDays int) {
 	e.LogUncacheRemote(ctx, t)
 	e.LogFixBroken(ctx)
 	e.LogPruneUnused(ctx)
-	e.LogFixCacheStates(ctx)
 	_ = e.state.Storage.Storage.Clean(ctx)
+}
+
+// AllAndFix calls LogFixCacheStates(), followed by All(), it
+// is done this way round so Storage.Clean() is performed last.
+func (e *Emoji) AllAndFix(ctx context.Context, maxRemoteDays int) {
+	e.LogFixCacheStates(ctx)
+	e.All(ctx, maxRemoteDays)
 }
 
 // LogUncacheRemote performs Emoji.UncacheRemote(...), logging the start and outcome.

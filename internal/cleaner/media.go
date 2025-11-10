@@ -44,8 +44,14 @@ func (m *Media) All(ctx context.Context, maxRemoteDays int) {
 	m.LogUncacheRemote(ctx, t)
 	m.LogPruneOrphaned(ctx)
 	m.LogPruneUnused(ctx)
-	m.LogFixCacheStates(ctx)
 	_ = m.state.Storage.Storage.Clean(ctx)
+}
+
+// AllAndFix calls LogFixCacheStates(), followed by All(), it
+// is done this way round so Storage.Clean() is performed last.
+func (m *Media) AllAndFix(ctx context.Context, maxRemoteDays int) {
+	m.LogFixCacheStates(ctx)
+	m.All(ctx, maxRemoteDays)
 }
 
 // LogUncacheRemote performs Media.UncacheRemote(...), logging the start and outcome.
