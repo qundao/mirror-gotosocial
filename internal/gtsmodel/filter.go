@@ -206,7 +206,7 @@ const (
 	// be removed from timeline results entirely.
 	FilterActionHide FilterAction = 2
 
-	// FilterActionWarn means that the status should
+	// FilterActionBlur means that the status should
 	// be shown with its media attachments hidden/blurred.
 	FilterActionBlur FilterAction = 3
 )

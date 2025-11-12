@@ -52,6 +52,7 @@ type FilterV2 struct {
 	// Enum:
 	//	- warn
 	//	- hide
+	//	- blur
 	FilterAction FilterAction `json:"filter_action"`
 	// The keywords grouped under this filter.
 	Keywords []FilterKeyword `json:"keywords"`

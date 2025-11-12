@@ -96,6 +96,7 @@ import (
 //		enum:
 //			- warn
 //			- hide
+//			- blur
 //		default: warn
 //	-
 //		name: keywords_attributes[][keyword]

@@ -15185,6 +15185,7 @@ paths:
                   enum:
                     - warn
                     - hide
+                    - blur
                   in: formData
                   name: filter_action
                   type: string
@@ -15414,6 +15415,7 @@ paths:
                   enum:
                     - warn
                     - hide
+                    - blur
                   in: formData
                   name: filter_action
                   type: string

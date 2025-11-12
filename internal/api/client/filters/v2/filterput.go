@@ -129,6 +129,7 @@ import (
 //		enum:
 //			- warn
 //			- hide
+//			- blur
 //
 //	security:
 //	- OAuth2 Bearer:
