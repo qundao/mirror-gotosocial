@@ -23,7 +23,7 @@ require (
 	codeberg.org/gruf/go-kv/v2 v2.0.7
 	codeberg.org/gruf/go-list v0.0.0-20240425093752-494db03d641f
 	codeberg.org/gruf/go-mempool v0.0.0-20251003110531-b54adae66253
-	codeberg.org/gruf/go-mmap v0.0.0-20251105200114-34f58283863a
+	codeberg.org/gruf/go-mmap v0.0.0-20251111184116-345a42dab154
 	codeberg.org/gruf/go-mutexes v1.5.8
 	codeberg.org/gruf/go-runners v1.7.0
 	codeberg.org/gruf/go-sched v1.3.0
