@@ -69,6 +69,13 @@ func (p *ProcessingEmoji) LoadAsync(deferred func()) *gtsmodel.Emoji {
 		}
 	})
 
+	var pathID string
+	if p.newPathID != "" {
+		pathID = p.newPathID
+	} else {
+		pathID = p.emoji.ID
+	}
+
 	// Placeholder returns a copy of internally stored processing placeholder,
 	// returning only the fields that may be known *before* completion,
 	// and as such all fields which are safe to concurrently read.
@@ -82,6 +89,15 @@ func (p *ProcessingEmoji) LoadAsync(deferred func()) *gtsmodel.Emoji {
 	placeholder.Disabled = p.emoji.Disabled
 	placeholder.VisibleInPicker = p.emoji.VisibleInPicker
 	placeholder.CategoryID = p.emoji.CategoryID
+
+	// We specifically set placeholder path values that allow an API user to fetch the appropriate
+	// emoji, even if we don't know what filetype it is yet. (since we just parse the IDs from URL path).
+	//
+	// This way the API caller can (in the worst case that it hasn't loaded yet) attempt to fetch the emoji,
+	// then block on ProcessingEmoji{}.Load() for the processing entry it gets from a call to the dereferencer.
+	placeholder.ImageURL = uris.URIForAttachment(p.instAccID, string(TypeEmoji), string(SizeOriginal), pathID, "loading")
+	placeholder.ImageStaticURL = uris.URIForAttachment(p.instAccID, string(TypeEmoji), string(SizeStatic), pathID, "png")
+
 	return placeholder
 }
 
