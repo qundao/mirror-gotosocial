@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-for file in "$(go env GOROOT)"/src/os/stat_{linux,netbsd,openbsd,freebsd}.go; do
+for file in "$(go env GOROOT)"/src/os/stat_{linux,netbsd,openbsd,freebsd,darwin}.go; do
     cp "$file" .
     name="$(basename "$file")"
     sed -i "./${name}" -E -e 's|package os|package mmap|' \
