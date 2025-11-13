@@ -13940,13 +13940,23 @@ paths:
 
                     Options are:
 
-                    `user`: receive updates for the account's home timeline.
+                    `user`: receive updates for the account's home timeline, and notifications for the account.
+                    `user:notification`: receive notifications for the account.
                     `public`: receive updates for the public timeline.
                     `public:local`: receive updates for the local timeline.
                     `hashtag`: receive updates for a given hashtag.
                     `hashtag:local`: receive local updates for a given hashtag.
                     `list`: receive updates for a certain list of accounts.
                     `direct`: receive updates for direct messages.
+                  enum:
+                    - user
+                    - user:notification
+                    - public
+                    - public:local
+                    - hashtag
+                    - hashtag:local
+                    - list
+                    - direct
                   in: query
                   name: stream
                   required: true
@@ -14001,6 +14011,7 @@ paths:
                                 items:
                                     enum:
                                         - user
+                                        - user:notification
                                         - public
                                         - public:local
                                         - hashtag

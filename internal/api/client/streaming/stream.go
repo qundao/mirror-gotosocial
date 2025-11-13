@@ -71,12 +71,22 @@ var pingMsg = []byte("ping!")
 //	-
 //		name: stream
 //		type: string
+//		enum:
+//			- user
+//			- user:notification
+//			- public
+//			- public:local
+//			- hashtag
+//			- hashtag:local
+//			- list
+//			- direct
 //		description: |-
 //			Type of stream to request.
 //
 //			Options are:
 //
-//			`user`: receive updates for the account's home timeline.
+//			`user`: receive updates for the account's home timeline, and notifications for the account.
+//			`user:notification`: receive notifications for the account.
 //			`public`: receive updates for the public timeline.
 //			`public:local`: receive updates for the local timeline.
 //			`hashtag`: receive updates for a given hashtag.
@@ -115,6 +125,7 @@ var pingMsg = []byte("ping!")
 //							type: string
 //							enum:
 //							- user
+//							- user:notification
 //							- public
 //							- public:local
 //							- hashtag
