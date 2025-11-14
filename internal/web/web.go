@@ -33,21 +33,22 @@ import (
 )
 
 const (
-	confirmEmailPath      = "/" + uris.ConfirmEmailPath
-	profileGroupPath      = "/@:username"
-	statusPath            = "/statuses/:" + apiutil.WebStatusIDKey // leave out the '/@:username' prefix as this will be served within the profile group
-	tagsPath              = "/tags/:" + apiutil.TagNameKey
-	customCSSPath         = profileGroupPath + "/custom.css"
-	instanceCustomCSSPath = "/custom.css"
-	rssFeedPath           = profileGroupPath + "/feed.rss"
-	assetsPathPrefix      = "/assets"
-	distPathPrefix        = assetsPathPrefix + "/dist"
-	themesPathPrefix      = assetsPathPrefix + "/themes"
-	settingsPathPrefix    = "/settings"
-	settingsPanelGlob     = settingsPathPrefix + "/*panel"
-	userPanelPath         = settingsPathPrefix + "/user"
-	adminPanelPath        = settingsPathPrefix + "/admin"
-	signupPath            = "/signup"
+	confirmEmailPath         = "/" + uris.ConfirmEmailPath
+	profileGroupPath         = "/@:username"
+	statusPath               = "/statuses/:" + apiutil.WebStatusIDKey // leave out the '/@:username' prefix as this will be served within the profile group
+	tagsPath                 = "/tags/:" + apiutil.TagNameKey
+	customCSSPath            = profileGroupPath + "/custom.css"
+	instanceCustomCSSPath    = "/custom.css"
+	rssFeedPath              = profileGroupPath + "/feed.rss"
+	assetsPathPrefix         = "/assets"
+	distPathPrefix           = assetsPathPrefix + "/dist"
+	themesPathPrefix         = assetsPathPrefix + "/themes"
+	settingsPathPrefix       = "/settings"
+	settingsPanelGlob        = settingsPathPrefix + "/*panel"
+	userPanelPath            = settingsPathPrefix + "/user"
+	adminPanelPath           = settingsPathPrefix + "/admin"
+	signupPath               = "/signup"
+	authorizeInteractionPath = "/authorize_interaction"
 
 	cacheControlHeader    = "Cache-Control"     // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control
 	cacheControlNoCache   = "no-cache"          // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Cache-Control#response_directives
@@ -127,6 +128,7 @@ func (m *Module) Route(r *router.Router, mi ...gin.HandlerFunc) {
 	everythingElseGroup.Handle(http.MethodGet, domainAllowlistPath, m.domainAllowlistGETHandler)
 	everythingElseGroup.Handle(http.MethodGet, tagsPath, m.tagGETHandler)
 	everythingElseGroup.Handle(http.MethodGet, signupPath, m.signupGETHandler)
+	everythingElseGroup.Handle(http.MethodGet, authorizeInteractionPath, m.authorizeInteractionGETHandler)
 	everythingElseGroup.Handle(http.MethodPost, signupPath, m.signupPOSTHandler)
 
 	// Redirects from old endpoints for back compat.
