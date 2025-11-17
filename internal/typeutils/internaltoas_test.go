@@ -670,7 +670,7 @@ func (suite *InternalToASTestSuite) TestStatusWithTagsToASWithIDs() {
         0.5
       ],
       "mediaType": "image/jpeg",
-      "summary": "Black and white image of some 50's style text saying: Welcome On Board",
+      "name": "Black and white image of some 50's style text saying: Welcome On Board",
       "type": "Image",
       "url": "http://localhost:8080/fileserver/01F8MH17FWEB39HZJ76B6VXSKF/attachment/original/01F8MH6NEM8D7527KZAECTCR76.jpg"
     }
@@ -790,7 +790,7 @@ func (suite *InternalToASTestSuite) TestStatusWithTagsToASFromDB() {
         0.5
       ],
       "mediaType": "image/jpeg",
-      "summary": "Black and white image of some 50's style text saying: Welcome On Board",
+      "name": "Black and white image of some 50's style text saying: Welcome On Board",
       "type": "Image",
       "url": "http://localhost:8080/fileserver/01F8MH17FWEB39HZJ76B6VXSKF/attachment/original/01F8MH6NEM8D7527KZAECTCR76.jpg"
     }

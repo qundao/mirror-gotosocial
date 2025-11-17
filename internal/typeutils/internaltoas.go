@@ -1151,8 +1151,12 @@ func (c *Converter) attachAttachments(
 		}
 		ap.AppendURL(attachmentable, imageURL)
 
-		// `summary` ie., media description / alt text
-		ap.AppendSummary(attachmentable, a.Description)
+		// `name` ie., media description / alt text
+		//
+		// TODO: Change this to `summary` when there's
+		// wider support for this across fedi. See:
+		// https://codeberg.org/superseriousbusiness/gotosocial/issues/4524
+		ap.AppendName(attachmentable, a.Description)
 
 		// `blurhash`
 		ap.SetBlurhash(attachmentable, a.Blurhash)
