@@ -9,7 +9,14 @@ GoToSocial sends media attachments in the `attachment` property of posts using t
 - `Audio` - any audio type (mp3, flac, wma, etc).
 - `Document` - fallback for any other / unknown type.
 
-Attachments sent from GoToSocial include the MIME `mediaType`, the `url` of the full-sized version of the media file, and the `summary` property, which can be interpreted by remote instance's as a short description / alt text for the attachment.
+Attachments sent from GoToSocial include the MIME `mediaType`, the `url` of the full-sized version of the media file, and the `name` property, which can be interpreted by remote instance's as a short description / alt text for the attachment.
+
+!!! warning
+    According to ActivityStreams, `name` is "A simple, human-readable, plain-text name for the object" ([Link](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name)). On the other hand, `summary` should be "A natural language summarization of the object encoded as HTML" ([Link](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-summary)).
+
+    In light of `summary`'s better suitability as description / alt text, in future GoToSocial will switch to either using *only* the `summary` property instead of the `name` property, or will use *both* the `name` and `summary` properties (exact implementation tbd). This change will likely be introduced in version 0.21.0 of the software.
+    
+    This means the `summary` property transmitted by GoToSocial in v0.21.0 onwards will likely contain things like HTML `<br>` elements instead of newlines, escaped HTML characters, etc. Receiving instances should account for this when interpreting `summary` as alt text.
 
 Types `Image` and `Video` will also include the `http://joinmastodon.org/ns#blurhash` property so that remotes can generate a colorful hash of the image. If an audio file included an embedded cover art image, then the `Audio` type will also include a blurhash. See the [Mastodon blurhash docs](https://docs.joinmastodon.org/spec/activitypub/#blurhash).
 
@@ -40,7 +47,7 @@ Here's an example of a `Note` with one attachment:
         0.5
       ],
       "mediaType": "image/jpeg",
-      "summary": "Black and white image of some 50's style text saying: Welcome On Board",
+      "name": "Black and white image of some 50's style text saying: Welcome On Board",
       "type": "Image",
       "url": "http://localhost:8080/fileserver/01F8MH17FWEB39HZJ76B6VXSKF/attachment/original/01F8MH6NEM8D7527KZAECTCR76.jpg"
     }
