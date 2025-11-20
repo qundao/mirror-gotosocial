@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"codeberg.org/gruf/go-storage"
 
@@ -19,20 +20,28 @@ var _ storage.Storage = (*MemoryStorage)(nil)
 // pairs in a Go map in-memory. The map is protected by a mutex.
 type MemoryStorage struct {
 	ow bool // overwrites
-	fs map[string][]byte
+	fs map[string]file
 	mu sync.Mutex
+}
+
+// file wraps file data
+// with last-mod time.
+type file struct {
+	data []byte
+	mtim time.Time
 }
 
 // Open opens a new MemoryStorage instance with internal map starting size.
 func Open(size int, overwrites bool) *MemoryStorage {
 	return &MemoryStorage{
+		fs: make(map[string]file, size),
 		ow: overwrites,
-		fs: make(map[string][]byte, size),
 	}
 }
 
 // Clean: implements Storage.Clean().
 func (st *MemoryStorage) Clean(ctx context.Context) error {
+
 	// Check context still valid
 	if err := ctx.Err(); err != nil {
 		return err
@@ -41,12 +50,14 @@ func (st *MemoryStorage) Clean(ctx context.Context) error {
 	// Lock map.
 	st.mu.Lock()
 
+	// Copy old.
+	old := st.fs
+
 	// Resize map to only necessary size in-mem.
-	fs := make(map[string][]byte, len(st.fs))
-	for key, val := range st.fs {
-		fs[key] = val
+	st.fs = make(map[string]file, len(st.fs))
+	for key, val := range old {
+		st.fs[key] = val
 	}
-	st.fs = fs
 
 	// Done with lock.
 	st.mu.Unlock()
@@ -56,20 +67,17 @@ func (st *MemoryStorage) Clean(ctx context.Context) error {
 
 // ReadBytes: implements Storage.ReadBytes().
 func (st *MemoryStorage) ReadBytes(ctx context.Context, key string) ([]byte, error) {
-	// Check context still valid.
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
+	var b []byte
 
 	// Lock map.
 	st.mu.Lock()
 
 	// Check key in store.
-	b, ok := st.fs[key]
+	file, ok := st.fs[key]
 	if ok {
 
-		// COPY bytes.
-		b = copyb(b)
+		// COPY file bytes.
+		b = copyb(file.data)
 	}
 
 	// Done with lock.
@@ -84,6 +92,7 @@ func (st *MemoryStorage) ReadBytes(ctx context.Context, key string) ([]byte, err
 
 // ReadStream: implements Storage.ReadStream().
 func (st *MemoryStorage) ReadStream(ctx context.Context, key string) (io.ReadCloser, error) {
+
 	// Read value data from store.
 	b, err := st.ReadBytes(ctx, key)
 	if err != nil {
@@ -97,10 +106,6 @@ func (st *MemoryStorage) ReadStream(ctx context.Context, key string) (io.ReadClo
 
 // WriteBytes: implements Storage.WriteBytes().
 func (st *MemoryStorage) WriteBytes(ctx context.Context, key string, b []byte) (int, error) {
-	// Check context still valid
-	if err := ctx.Err(); err != nil {
-		return 0, err
-	}
 
 	// Lock map.
 	st.mu.Lock()
@@ -112,12 +117,15 @@ func (st *MemoryStorage) WriteBytes(ctx context.Context, key string, b []byte) (
 		// Done with lock.
 		st.mu.Unlock()
 
-		// Overwrites are disabled, return existing key error.
+		// Overwrites are disabled, return an existing key error.
 		return 0, internal.ErrWithKey(storage.ErrAlreadyExists, key)
 	}
 
 	// Write copy to store.
-	st.fs[key] = copyb(b)
+	st.fs[key] = file{
+		mtim: time.Now(),
+		data: copyb(b),
+	}
 
 	// Done with lock.
 	st.mu.Unlock()
@@ -127,6 +135,7 @@ func (st *MemoryStorage) WriteBytes(ctx context.Context, key string, b []byte) (
 
 // WriteStream: implements Storage.WriteStream().
 func (st *MemoryStorage) WriteStream(ctx context.Context, key string, r io.Reader) (int64, error) {
+
 	// Read all from reader.
 	b, err := io.ReadAll(r)
 	if err != nil {
@@ -140,19 +149,15 @@ func (st *MemoryStorage) WriteStream(ctx context.Context, key string, r io.Reade
 
 // Stat: implements Storage.Stat().
 func (st *MemoryStorage) Stat(ctx context.Context, key string) (*storage.Entry, error) {
-	// Check context still valid
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
 
 	// Lock map.
 	st.mu.Lock()
 
 	// Check key in store.
-	b, ok := st.fs[key]
+	file, ok := st.fs[key]
 
-	// Get entry size.
-	sz := int64(len(b))
+	// Get file entry size.
+	sz := int64(len(file.data))
 
 	// Done with lock.
 	st.mu.Unlock()
@@ -162,17 +167,14 @@ func (st *MemoryStorage) Stat(ctx context.Context, key string) (*storage.Entry, 
 	}
 
 	return &storage.Entry{
-		Key:  key,
-		Size: sz,
+		Modified: file.mtim,
+		Size:     sz,
+		Key:      key,
 	}, nil
 }
 
 // Remove: implements Storage.Remove().
 func (st *MemoryStorage) Remove(ctx context.Context, key string) error {
-	// Check context still valid
-	if err := ctx.Err(); err != nil {
-		return err
-	}
 
 	// Lock map.
 	st.mu.Lock()
@@ -201,9 +203,28 @@ func (st *MemoryStorage) WalkKeys(ctx context.Context, opts storage.WalkKeysOpts
 		panic("nil step fn")
 	}
 
-	// Check context still valid.
-	if err := ctx.Err(); err != nil {
-		return err
+	// Extract filter func.
+	filter := opts.Filter
+
+	switch {
+	case opts.Prefix == "":
+		// nothing to update.
+
+	case filter != nil:
+		// Filter according to prefix
+		// BEFORE passing to filter func.
+		filter = func(key string) bool {
+			if strings.HasPrefix(key, opts.Prefix) {
+				return false
+			}
+			return opts.Filter(key)
+		}
+
+	default: // filter == nil
+		// Filter according to prefix.
+		filter = func(key string) bool {
+			return strings.HasPrefix(key, opts.Prefix)
+		}
 	}
 
 	var err error
@@ -214,27 +235,39 @@ func (st *MemoryStorage) WalkKeys(ctx context.Context, opts storage.WalkKeysOpts
 	// Ensure unlocked.
 	defer st.mu.Unlock()
 
-	// Range all key-vals in hash map.
-	for key, val := range st.fs {
-		// Check for filtered prefix.
-		if opts.Prefix != "" &&
-			!strings.HasPrefix(key, opts.Prefix) {
-			continue // ignore
-		}
+	// Range key-vals in hash map.
+	//
+	// Use different loops depending
+	// on if filter func was provided,
+	// to reduce loop operations.
+	if filter != nil {
+		for key, val := range st.fs {
+			// Check filtering.
+			if !filter(key) {
+				continue
+			}
 
-		// Check for filtered key.
-		if opts.Filter != nil &&
-			!opts.Filter(key) {
-			continue // ignore
+			// Pass to provided step func.
+			err = opts.Step(storage.Entry{
+				Modified: val.mtim,
+				Size:     int64(len(val.data)),
+				Key:      key,
+			})
+			if err != nil {
+				return err
+			}
 		}
-
-		// Pass to provided step func.
-		err = opts.Step(storage.Entry{
-			Key:  key,
-			Size: int64(len(val)),
-		})
-		if err != nil {
-			return err
+	} else {
+		for key, val := range st.fs {
+			// Pass to provided step func.
+			err = opts.Step(storage.Entry{
+				Modified: val.mtim,
+				Size:     int64(len(val.data)),
+				Key:      key,
+			})
+			if err != nil {
+				return err
+			}
 		}
 	}
 

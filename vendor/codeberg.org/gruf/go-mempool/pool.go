@@ -55,7 +55,7 @@ func (p *Pool[T]) Put(t T) {
 // with the addition of concurrency safety.
 type UnsafePool struct {
 	internal
-	_ [cache_line_size - unsafe.Sizeof(internal{})%cache_line_size]byte
+	_ [cache_line_bytes - unsafe.Sizeof(internal{})%cache_line_bytes]byte
 }
 
 func NewUnsafePool(check func(current, victim int) bool) UnsafePool {
@@ -65,11 +65,8 @@ func NewUnsafePool(check func(current, victim int) bool) UnsafePool {
 }
 
 const (
-	// current platform integer size.
-	int_size = 32 << (^uint(0) >> 63)
-
 	// platform CPU cache line size to avoid false sharing.
-	cache_line_size = unsafe.Sizeof(cpu.CacheLinePad{})
+	cache_line_bytes = unsafe.Sizeof(cpu.CacheLinePad{})
 )
 
 type internal struct {
@@ -78,8 +75,8 @@ type internal struct {
 	//
 	// if Go ever exposes goroutine IDs
 	// to us we can make this a lot faster.
-	ring  [int_size / 4]unsafe.Pointer
-	index atomic.Uint64
+	ring  [20]unsafe.Pointer
+	index atomic.Uint32
 
 	// underlying pool and
 	// slow mutex protection.
@@ -103,8 +100,10 @@ func (p *internal) Check(fn func(current, victim int) bool) func(current, victim
 }
 
 func (p *internal) Get() unsafe.Pointer {
-	if ptr := atomic.SwapPointer(&p.ring[p.index.Load()%uint64(cap(p.ring))], nil); ptr != nil {
-		p.index.Add(^uint64(0)) // i.e. -1
+	const cap = uint32(cap(p.ring))
+	idx := p.index.Load() % cap
+	if ptr := atomic.SwapPointer(&p.ring[idx], nil); ptr != nil {
+		p.index.Add(^uint32(0)) // i.e. -1
 		return ptr
 	}
 	p.mutex.Lock()
@@ -114,12 +113,13 @@ func (p *internal) Get() unsafe.Pointer {
 }
 
 func (p *internal) Put(ptr unsafe.Pointer) {
-	if atomic.CompareAndSwapPointer(&p.ring[p.index.Add(1)%uint64(cap(p.ring))], nil, ptr) {
-		return
+	const cap = uint32(cap(p.ring))
+	idx := p.index.Add(1) % cap
+	if ptr := atomic.SwapPointer(&p.ring[idx], ptr); ptr != nil {
+		p.mutex.Lock()
+		p.pool.Put(ptr)
+		p.mutex.Unlock()
 	}
-	p.mutex.Lock()
-	p.pool.Put(ptr)
-	p.mutex.Unlock()
 }
 
 func (p *internal) GC() {

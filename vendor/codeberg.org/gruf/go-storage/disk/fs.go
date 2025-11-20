@@ -11,14 +11,17 @@ import (
 	"codeberg.org/gruf/go-storage/internal"
 )
 
-// NOTE:
-// These functions are for opening storage files,
-// not necessarily for e.g. initial setup (OpenFile)
+// open file for read args.
+var readArgs = OpenArgs{
+	Flags: syscall.O_RDONLY,
+	Perms: 0,
+}
 
-// walkDir traverses the dir tree of the supplied path, performing the supplied walkFn on each entry
-func walkDir(pb *fastpath.Builder, path string, args OpenArgs, walkFn func(string, fs.DirEntry) error) error {
+// walkDir traverses the dir tree of the supplied path, performing the supplied walkFn on each entry.
+func walkDir(pb *fastpath.Builder, path string, walkFn func(string, fs.DirEntry) error) error {
+
 	// Read directory entries at path.
-	entries, err := readDir(path, args)
+	entries, err := readDir(path)
 	if err != nil {
 		return err
 	}
@@ -75,7 +78,7 @@ outer:
 				path = pb.Join(path, entry.Name())
 
 				// Read next directory entries
-				next, err := readDir(path, args)
+				next, err := readDir(path)
 				if err != nil {
 					return err
 				}
@@ -91,18 +94,20 @@ outer:
 	return nil
 }
 
-// cleanDirs traverses the dir tree of the supplied path, removing any folders with zero children
-func cleanDirs(path string, args OpenArgs) error {
+// cleanDirs traverses the dir tree of supplied
+// path, removing any folders with zero children.
+func cleanDirs(path string) error {
 	pb := internal.GetPathBuilder()
-	err := cleanDir(pb, path, args, true)
+	err := cleanDir(pb, path, true)
 	internal.PutPathBuilder(pb)
 	return err
 }
 
 // cleanDir performs the actual dir cleaning logic for the above top-level version.
-func cleanDir(pb *fastpath.Builder, path string, args OpenArgs, top bool) error {
+func cleanDir(pb *fastpath.Builder, path string, top bool) error {
+
 	// Get directory entries at path.
-	entries, err := readDir(path, args)
+	entries, err := readDir(path)
 	if err != nil {
 		return err
 	}
@@ -121,8 +126,8 @@ func cleanDir(pb *fastpath.Builder, path string, args OpenArgs, top bool) error 
 			// Calculate directory path.
 			dir := pb.Join(path, entry.Name())
 
-			// Recursively clean sub-directory entries, adding errs.
-			if err := cleanDir(pb, dir, args, false); err != nil {
+			// Recursively clean sub-dir entries, adding errs.
+			if err := cleanDir(pb, dir, false); err != nil {
 				err = fmt.Errorf("error(s) cleaning subdir %s: %w", dir, err)
 				errs = append(errs, err)
 			}
@@ -134,9 +139,10 @@ func cleanDir(pb *fastpath.Builder, path string, args OpenArgs, top bool) error 
 }
 
 // readDir will open file at path, read the unsorted list of entries, then close.
-func readDir(path string, args OpenArgs) ([]fs.DirEntry, error) {
-	// Open directory at path.
-	file, err := open(path, args)
+func readDir(path string) ([]fs.DirEntry, error) {
+
+	// Open directory at path for read.
+	file, err := open(path, readArgs)
 	if err != nil {
 		return nil, err
 	}
@@ -179,6 +185,22 @@ func stat(path string) (*syscall.Stat_t, error) {
 	return &stat, nil
 }
 
+// lstat is a simple wrapper around syscall.Lstat().
+func lstat(path string) (*syscall.Stat_t, error) {
+	var stat syscall.Stat_t
+	err := retryOnEINTR(func() error {
+		return syscall.Lstat(path, &stat)
+	})
+	if err != nil {
+		if err == syscall.ENOENT {
+			// not-found is no error
+			err = nil
+		}
+		return nil, err
+	}
+	return &stat, nil
+}
+
 // unlink is a simple wrapper around syscall.Unlink().
 func unlink(path string) error {
 	return retryOnEINTR(func() error {
@@ -190,6 +212,20 @@ func unlink(path string) error {
 func rmdir(path string) error {
 	return retryOnEINTR(func() error {
 		return syscall.Rmdir(path)
+	})
+}
+
+// symlink is a simple wrapper around syscall.Symlink()
+func symlink(oldpath, newpath string) error {
+	return retryOnEINTR(func() error {
+		return syscall.Symlink(oldpath, newpath)
+	})
+}
+
+// link is a simple wrapper around syscall.Link()
+func link(oldpath, newpath string) error {
+	return retryOnEINTR(func() error {
+		return syscall.Link(oldpath, newpath)
 	})
 }
 

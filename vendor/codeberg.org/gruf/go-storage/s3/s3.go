@@ -521,8 +521,9 @@ func (st *S3Storage) WalkKeys(ctx context.Context, opts storage.WalkKeysOpts) er
 		// No cache, simply pass straight through to opts.Step().
 		step = func(key string, info minio.ObjectInfo) error {
 			return opts.Step(storage.Entry{
-				Key:  key,
-				Size: info.Size,
+				Modified: info.LastModified,
+				Size:     info.Size,
+				Key:      key,
 			})
 		}
 	} else {
@@ -530,8 +531,9 @@ func (st *S3Storage) WalkKeys(ctx context.Context, opts storage.WalkKeysOpts) er
 		step = func(key string, info minio.ObjectInfo) error {
 			st.config.Cache.Put(key, objectToCachedObjectInfo(info))
 			return opts.Step(storage.Entry{
-				Key:  key,
-				Size: info.Size,
+				Modified: info.LastModified,
+				Size:     info.Size,
+				Key:      key,
 			})
 		}
 	}

@@ -247,7 +247,7 @@ codeberg.org/gruf/go-fastcopy
 # codeberg.org/gruf/go-fastpath/v2 v2.0.1
 ## explicit; go 1.20
 codeberg.org/gruf/go-fastpath/v2
-# codeberg.org/gruf/go-ffmpreg v0.6.14
+# codeberg.org/gruf/go-ffmpreg v0.6.15
 ## explicit; go 1.23.0
 codeberg.org/gruf/go-ffmpreg/embed
 codeberg.org/gruf/go-ffmpreg/wasm
@@ -271,7 +271,7 @@ codeberg.org/gruf/go-mangler/v2
 # codeberg.org/gruf/go-maps v1.0.4
 ## explicit; go 1.20
 codeberg.org/gruf/go-maps
-# codeberg.org/gruf/go-mempool v0.0.0-20251003110531-b54adae66253
+# codeberg.org/gruf/go-mempool v0.0.0-20251108154517-8ed128fbca8e
 ## explicit; go 1.24.0
 codeberg.org/gruf/go-mempool
 # codeberg.org/gruf/go-mmap v0.0.0-20251111184116-345a42dab154
@@ -289,7 +289,7 @@ codeberg.org/gruf/go-sched
 # codeberg.org/gruf/go-split v1.2.0
 ## explicit; go 1.20
 codeberg.org/gruf/go-split
-# codeberg.org/gruf/go-storage v0.4.0
+# codeberg.org/gruf/go-storage v0.5.0
 ## explicit; go 1.23.0
 codeberg.org/gruf/go-storage
 codeberg.org/gruf/go-storage/disk
@@ -869,7 +869,7 @@ github.com/stretchr/testify/suite
 # github.com/subosito/gotenv v1.6.0
 ## explicit; go 1.18
 github.com/subosito/gotenv
-# github.com/tdewolff/minify/v2 v2.24.6
+# github.com/tdewolff/minify/v2 v2.24.7
 ## explicit; go 1.24.0
 github.com/tdewolff/minify/v2
 github.com/tdewolff/minify/v2/html
@@ -882,7 +882,7 @@ github.com/tdewolff/parse/v2/strconv
 # github.com/temoto/robotstxt v1.1.2
 ## explicit; go 1.11
 github.com/temoto/robotstxt
-# github.com/tetratelabs/wazero v1.10.0
+# github.com/tetratelabs/wazero v1.10.1
 ## explicit; go 1.23.0
 github.com/tetratelabs/wazero
 github.com/tetratelabs/wazero/api
@@ -958,8 +958,8 @@ github.com/ugorji/go/codec
 github.com/ulule/limiter/v3
 github.com/ulule/limiter/v3/drivers/store/common
 github.com/ulule/limiter/v3/drivers/store/memory
-# github.com/uptrace/bun v1.2.15
-## explicit; go 1.23.0
+# github.com/uptrace/bun v1.2.16
+## explicit; go 1.24.0
 github.com/uptrace/bun
 github.com/uptrace/bun/dialect
 github.com/uptrace/bun/dialect/feature
@@ -972,14 +972,14 @@ github.com/uptrace/bun/internal/tagparser
 github.com/uptrace/bun/migrate
 github.com/uptrace/bun/migrate/sqlschema
 github.com/uptrace/bun/schema
-# github.com/uptrace/bun/dialect/pgdialect v1.2.15
-## explicit; go 1.23.0
+# github.com/uptrace/bun/dialect/pgdialect v1.2.16
+## explicit; go 1.24.0
 github.com/uptrace/bun/dialect/pgdialect
-# github.com/uptrace/bun/dialect/sqlitedialect v1.2.15
-## explicit; go 1.23.0
+# github.com/uptrace/bun/dialect/sqlitedialect v1.2.16
+## explicit; go 1.24.0
 github.com/uptrace/bun/dialect/sqlitedialect
-# github.com/uptrace/bun/extra/bunotel v1.2.15
-## explicit; go 1.23.0
+# github.com/uptrace/bun/extra/bunotel v1.2.16
+## explicit; go 1.24.0
 github.com/uptrace/bun/extra/bunotel
 # github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2
 ## explicit; go 1.22
@@ -1016,8 +1016,8 @@ go.mongodb.org/mongo-driver/bson/bsonrw
 go.mongodb.org/mongo-driver/bson/bsontype
 go.mongodb.org/mongo-driver/bson/primitive
 go.mongodb.org/mongo-driver/x/bsonx/bsoncore
-# go.opentelemetry.io/auto/sdk v1.1.0
-## explicit; go 1.22.0
+# go.opentelemetry.io/auto/sdk v1.2.1
+## explicit; go 1.24.0
 go.opentelemetry.io/auto/sdk
 go.opentelemetry.io/auto/sdk/internal/telemetry
 # go.opentelemetry.io/contrib/bridges/prometheus v0.63.0
@@ -1046,7 +1046,6 @@ go.opentelemetry.io/otel/semconv/v1.10.0
 go.opentelemetry.io/otel/semconv/v1.12.0
 go.opentelemetry.io/otel/semconv/v1.20.0
 go.opentelemetry.io/otel/semconv/v1.24.0
-go.opentelemetry.io/otel/semconv/v1.26.0
 go.opentelemetry.io/otel/semconv/v1.37.0
 go.opentelemetry.io/otel/semconv/v1.37.0/goconv
 go.opentelemetry.io/otel/semconv/v1.37.0/otelconv
@@ -1168,7 +1167,7 @@ go.yaml.in/yaml/v3
 # golang.org/x/arch v0.22.0
 ## explicit; go 1.24.0
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.43.0
+# golang.org/x/crypto v0.45.0
 ## explicit; go 1.24.0
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
@@ -1191,7 +1190,7 @@ golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 # golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
 ## explicit; go 1.23.0
 golang.org/x/exp/constraints
-# golang.org/x/image v0.32.0
+# golang.org/x/image v0.33.0
 ## explicit; go 1.24.0
 golang.org/x/image/riff
 golang.org/x/image/vp8
@@ -1202,7 +1201,7 @@ golang.org/x/image/webp
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.46.0
+# golang.org/x/net v0.47.0
 ## explicit; go 1.24.0
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -1221,11 +1220,11 @@ golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/publicsuffix
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.32.0
+# golang.org/x/oauth2 v0.33.0
 ## explicit; go 1.24.0
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sync v0.17.0
+# golang.org/x/sync v0.18.0
 ## explicit; go 1.24.0
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
@@ -1235,7 +1234,7 @@ golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
 golang.org/x/sys/windows/registry
-# golang.org/x/text v0.30.0
+# golang.org/x/text v0.31.0
 ## explicit; go 1.24.0
 golang.org/x/text/cases
 golang.org/x/text/encoding
@@ -1440,7 +1439,7 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.40.0 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.40.0-concurrency-workaround
+# modernc.org/sqlite v1.40.1 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.40.0-concurrency-workaround
 ## explicit; go 1.24.0
 modernc.org/sqlite
 modernc.org/sqlite/lib

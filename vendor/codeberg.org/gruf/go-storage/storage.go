@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"io"
+	"time"
 )
 
 // Storage defines a means of accessing and storing
@@ -49,6 +50,10 @@ type Entry struct {
 	// Size is the size of
 	// this entry in storage.
 	Size int64
+
+	// Modified is the time of
+	// last entry modification.
+	Modified time.Time
 }
 
 // WalkKeysOpts are arguments provided
