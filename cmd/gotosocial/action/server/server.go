@@ -441,6 +441,7 @@ func Start(ctx context.Context) error {
 		middleware.UserAgent(),
 		middleware.CORS(),
 		middleware.ExtraHeaders(),
+		middleware.Timeout(10 * time.Minute),
 	}...)
 
 	// Instantiate Content-Security-Policy
@@ -461,12 +462,14 @@ func Start(ctx context.Context) error {
 	}
 
 	// Add any extra CSP URIs from config.
-	cspExtraURIs = append(cspExtraURIs, config.GetAdvancedCSPExtraURIs()...)
+	cspExtraURIs = append(cspExtraURIs,
+		config.GetAdvancedCSPExtraURIs()...)
 
 	// Add CSP to middlewares.
-	middlewares = append(middlewares, middleware.ContentSecurityPolicy(cspExtraURIs...))
+	middlewares = append(middlewares,
+		middleware.ContentSecurityPolicy(cspExtraURIs...))
 
-	// attach global middlewares which are used for every request
+	// Attach global middlewares which are used for every request
 	route.AttachGlobalMiddleware(middlewares...)
 
 	// attach global no route / 404 handler to the router

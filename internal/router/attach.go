@@ -17,9 +17,15 @@
 
 package router
 
-import "github.com/gin-gonic/gin"
+import (
+	"slices"
+	"unsafe"
+
+	"github.com/gin-gonic/gin"
+)
 
 func (r *Router) AttachGlobalMiddleware(handlers ...gin.HandlerFunc) gin.IRoutes {
+	handlers = slices.DeleteFunc(handlers, func(h gin.HandlerFunc) bool { return h == nil })
 	return r.engine.Use(handlers...)
 }
 
@@ -27,10 +33,25 @@ func (r *Router) AttachNoRouteHandler(handler gin.HandlerFunc) {
 	r.engine.NoRoute(handler)
 }
 
-func (r *Router) AttachGroup(relativePath string, handlers ...gin.HandlerFunc) *gin.RouterGroup {
-	return r.engine.Group(relativePath, handlers...)
+func (r *Router) AttachGroup(relativePath string, handlers ...gin.HandlerFunc) *RouterGroup {
+	handlers = slices.DeleteFunc(handlers, func(h gin.HandlerFunc) bool { return h == nil })
+	return (*RouterGroup)(unsafe.Pointer(r.engine.Group(relativePath, handlers...)))
 }
 
 func (r *Router) AttachHandler(method string, path string, handler gin.HandlerFunc) {
 	r.engine.Handle(method, path, handler)
+}
+
+// RouterGroup wraps a gin.RouterGroup to
+// check for and skip appending nil handlers.
+type RouterGroup struct{ gin.RouterGroup } // nolint:revive
+
+func (g *RouterGroup) Handle(httpMethod string, relativePath string, handlers ...gin.HandlerFunc) gin.IRoutes {
+	handlers = slices.DeleteFunc(handlers, func(h gin.HandlerFunc) bool { return h == nil })
+	return g.RouterGroup.Handle(httpMethod, relativePath, handlers...)
+}
+
+func (g *RouterGroup) Use(middleware ...gin.HandlerFunc) gin.IRoutes {
+	middleware = slices.DeleteFunc(middleware, func(h gin.HandlerFunc) bool { return h == nil })
+	return g.RouterGroup.Use(middleware...)
 }

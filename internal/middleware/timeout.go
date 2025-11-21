@@ -18,17 +18,38 @@
 package middleware
 
 import (
-	"github.com/gin-contrib/gzip"
+	"context"
+	"time"
+
 	"github.com/gin-gonic/gin"
 )
 
-// Gzip returns a gzip gin middleware using default compression.
-func Gzip() gin.HandlerFunc {
-	const enabled = true
-	if !enabled {
-		// use noop middleware
-		// if gzip is disabled
+// Timeout provides gin middleware that times out
+// the request context after the given duration.
+func Timeout(timeout time.Duration) gin.HandlerFunc {
+	if timeout <= 0 {
 		return nil
 	}
-	return gzip.Gzip(gzip.DefaultCompression)
+	return func(c *gin.Context) {
+		if upgr := c.GetHeader("Upgrade"); upgr != "" {
+			// Upgrade to wss (probably).
+			// Leave well enough alone.
+			c.Next()
+			return
+		}
+
+		// Wrap request context with timeout.
+		ctx, cancel := context.WithTimeout(
+			c.Request.Context(),
+			timeout,
+		)
+		defer cancel()
+
+		// Update request context with timeout.
+		c.Request = c.Request.WithContext(ctx)
+
+		// Process
+		// request!
+		c.Next()
+	}
 }

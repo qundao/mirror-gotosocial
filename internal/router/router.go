@@ -89,9 +89,8 @@ func New(ctx context.Context) (*Router, error) {
 		return nil, err
 	}
 
-	// Use the passed-in cmd context as the base context for the
-	// server, since we'll never want the server to live past the
-	// `server start` command anyway.
+	// Use the passed-in cmd context as the base context for server, since
+	// we'll never want the server to live past `server start` command anyway.
 	baseCtx := func(_ net.Listener) context.Context { return ctx }
 
 	// Create joined listen addr.
@@ -100,14 +99,9 @@ func New(ctx context.Context) (*Router, error) {
 		strconv.Itoa(config.GetPort()),
 	)
 
-	// Wrap the gin engine handler in our
-	// own timeout handler, to ensure we
-	// don't keep very slow requests around.
-	handler := timeoutHandler{engine}
-
 	s := &http.Server{
 		Addr:              addr,
-		Handler:           handler,
+		Handler:           engine,
 		ReadTimeout:       readTimeout,
 		ReadHeaderTimeout: readHeaderTimeout,
 		WriteTimeout:      writeTimeout,

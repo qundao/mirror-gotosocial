@@ -78,8 +78,9 @@ type token struct{}
 //   - https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/503
 func Throttle(cpuMultiplier int, retryAfter time.Duration) gin.HandlerFunc {
 	if cpuMultiplier <= 0 {
-		// throttling is disabled, return a noop middleware
-		return func(c *gin.Context) {}
+		// throttling is disabled,
+		// return a noop middleware
+		return nil
 	}
 
 	if retryAfter < 0 {
@@ -126,6 +127,7 @@ func Throttle(cpuMultiplier int, retryAfter time.Duration) gin.HandlerFunc {
 		case <-c.Request.Context().Done():
 			// request context has
 			// been canceled already.
+			c.Abort()
 			return
 
 		case tok := <-tokens:

@@ -257,6 +257,11 @@ func testHeaderFilter(t *testing.T, allow, block []filter, input http.Header, ex
 
 	// Create new filter middleware to test against.
 	middleware := middleware.HeaderFilter(&state)
+	if middleware == nil {
+
+		// if nil, use an empty handler func.
+		middleware = func(ctx *gin.Context) {}
+	}
 	e.Use(middleware)
 
 	// Set the empty gin handler (always returns okay).

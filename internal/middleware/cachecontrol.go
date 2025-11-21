@@ -52,7 +52,7 @@ func CacheControl(config CacheControlConfig) gin.HandlerFunc {
 	if len(config.Directives) == 0 {
 		// No Cache-Control directives provided,
 		// return empty/stub function.
-		return func(c *gin.Context) {}
+		return nil
 	}
 
 	// Cache control is usually done on hot paths so

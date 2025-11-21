@@ -39,7 +39,7 @@ var (
 func HeaderFilter(state *state.State) gin.HandlerFunc {
 	switch mode := config.GetAdvancedHeaderFilterMode(); mode {
 	case config.RequestHeaderFilterModeDisabled:
-		return func(ctx *gin.Context) {}
+		return nil
 
 	case config.RequestHeaderFilterModeAllow:
 		return headerFilterAllowMode(state)

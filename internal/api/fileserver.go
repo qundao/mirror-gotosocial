@@ -32,7 +32,7 @@ type Fileserver struct {
 }
 
 // Attach cache middleware appropriate for file serving.
-func useFSCacheMiddleware(grp *gin.RouterGroup) {
+func useFSCacheMiddleware(grp *router.RouterGroup) {
 	// If we're using local storage or proxying s3 (ie., serving
 	// from here) we can set a long max-age + immutable on file
 	// requests to reflect that we never host different files at
