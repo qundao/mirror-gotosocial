@@ -24,7 +24,7 @@ import BackButton from "../../../../components/back-button";
 import { useGetDomainPermissionSubscriptionQuery, useRemoveDomainPermissionSubscriptionMutation, useTestDomainPermissionSubscriptionMutation, useUpdateDomainPermissionSubscriptionMutation } from "../../../../lib/query/admin/domain-permissions/subscriptions";
 import { useBoolInput, useNumberInput, useTextInput } from "../../../../lib/form";
 import FormWithData from "../../../../lib/form/form-with-data";
-import { DomainPerm, DomainPermSub } from "../../../../lib/types/domain-permission";
+import { DomainPermission, DomainPermissionSubscription } from "../../../../lib/types/domain";
 import MutationButton from "../../../../components/form/mutation-button";
 import { Checkbox, NumberInput, Select, TextInput } from "../../../../components/form/inputs";
 import useFormSubmit from "../../../../lib/form/submit";
@@ -48,7 +48,7 @@ export default function DomainPermissionSubscriptionDetail() {
 	);
 }
 
-function DomainPermSubForm({ data: permSub }: { data: DomainPermSub }) {
+function DomainPermSubForm({ data: permSub }: { data: DomainPermissionSubscription }) {
 	const baseUrl = useBaseUrl();
 	const backLocation: string = history.state?.backLocation ?? `~${baseUrl}/subscriptions/search`;
 	
@@ -63,7 +63,7 @@ function DomainPermSubForm({ data: permSub }: { data: DomainPermSub }) {
 	);
 }
 
-function DomainPermSubDetails({ permSub }: { permSub: DomainPermSub }) {
+function DomainPermSubDetails({ permSub }: { permSub: DomainPermissionSubscription }) {
 	const [ location ] = useLocation();
 	const baseUrl = useBaseUrl();
 	
@@ -129,7 +129,7 @@ function DomainPermSubDetails({ permSub }: { permSub: DomainPermSub }) {
 	);
 }
 
-function UpdateDomainPermSub({ permSub }: { permSub: DomainPermSub }) {
+function UpdateDomainPermSub({ permSub }: { permSub: DomainPermissionSubscription }) {
 	const [ showPassword, setShowPassword ] = useState(false);
 	const form = {
 		priority: useNumberInput("priority", { source: permSub }),
@@ -349,7 +349,7 @@ function UpdateDomainPermSub({ permSub }: { permSub: DomainPermSub }) {
 	);
 }
 
-function DeleteDomainPermSub({ permSub, backLocation }: { permSub: DomainPermSub, backLocation: string }) {
+function DeleteDomainPermSub({ permSub, backLocation }: { permSub: DomainPermissionSubscription, backLocation: string }) {
 	const permType = permSub.permission_type;
 	if (!permType) {
 		throw "permission_type was undefined";
@@ -391,7 +391,7 @@ function DeleteDomainPermSub({ permSub, backLocation }: { permSub: DomainPermSub
 	);
 }
 
-function TestDomainPermSub({ permSub }: { permSub: DomainPermSub }) {
+function TestDomainPermSub({ permSub }: { permSub: DomainPermissionSubscription }) {
 	const permType = permSub.permission_type;
 	if (!permType) {
 		throw "permission_type was undefined";
@@ -404,7 +404,7 @@ function TestDomainPermSub({ permSub }: { permSub: DomainPermSub }) {
 	};
 
 	// Function to map an item to a list entry.
-	function itemToEntry(perm: DomainPerm): ReactNode {
+	function itemToEntry(perm: DomainPermission): ReactNode {
 		return (
 			<span className="text-cutoff entry perm-preview">
 				<strong>{ perm.domain }</strong>

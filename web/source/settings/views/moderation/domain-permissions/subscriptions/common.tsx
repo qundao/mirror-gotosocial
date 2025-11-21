@@ -19,7 +19,7 @@
 
 import React, { useMemo } from "react";
 import { useLocation } from "wouter";
-import { DomainPermSub } from "../../../../lib/types/domain-permission";
+import { DomainPermissionSubscription } from "../../../../lib/types/domain";
 import { yesOrNo } from "../../../../lib/util";
 
 export function DomainPermissionSubscriptionHelpText() {
@@ -47,7 +47,7 @@ export function DomainPermissionSubscriptionDocsLink() {
 }
 
 export interface SubscriptionEntryProps {
-	permSub: DomainPermSub;
+	permSub: DomainPermissionSubscription;
 	linkTo: string;
 	backLocation: string;
 }

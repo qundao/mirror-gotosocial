@@ -23,10 +23,10 @@ import { unparse as csvUnparse } from "papaparse";
 import { gtsApi } from "../../gts-api";
 import { RootState } from "../../../../redux/store";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
-import { DomainPerm, ExportDomainPermsParams } from "../../../types/domain-permission";
+import { DomainPermission, ExportDomainPermissionsParams } from "../../../types/domain";
 
 interface _exportProcess {
-	transformEntry: (_entry: DomainPerm) => any;
+	transformEntry: (_entry: DomainPermission) => any;
 	stringify: (_list: any[]) => string;
 	extension: string;
 	mime: string;
@@ -39,7 +39,7 @@ interface _exportProcess {
  * @param formData 
  * @returns 
  */
-function exportProcess(formData: ExportDomainPermsParams): _exportProcess {
+function exportProcess(formData: ExportDomainPermissionsParams): _exportProcess {
 	if (formData.exportType == "json") {
 		return {
 			transformEntry: (entry) => ({
@@ -90,7 +90,7 @@ function exportProcess(formData: ExportDomainPermsParams): _exportProcess {
 
 const extended = gtsApi.injectEndpoints({
 	endpoints: (build) => ({		
-		exportDomainList: build.mutation<string | null, ExportDomainPermsParams>({
+		exportDomainList: build.mutation<string | null, ExportDomainPermissionsParams>({
 			async queryFn(formData, api, _extraOpts, fetchWithBQ) {
 				// Fetch domain perms from relevant endpoint.
 				// We could have used 'useDomainBlocksQuery'
@@ -103,7 +103,7 @@ const extended = gtsApi.injectEndpoints({
 
 				// Process perms into desired export format.
 				const process = exportProcess(formData); 
-				const transformed = (permsRes.data as DomainPerm[]).map(process.transformEntry);
+				const transformed = (permsRes.data as DomainPermission[]).map(process.transformEntry);
 				const exportAsString = process.stringify(transformed);
 
 				if (formData.action == "export") {

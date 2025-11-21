@@ -18,30 +18,161 @@
 */
 
 import typia from "typia";
-import { PermType } from "./perm";
 import { Links } from "parse-link-header";
-import { PermSubContentType } from "./permsubcontenttype";
 
-export const validateDomainPerms = typia.createValidate<DomainPerm[]>();
+export const validateDomainPerms = typia.createValidate<DomainPermission[]>();
 
 /**
- * A single domain permission entry (block, allow, draft, ignore).
+ * A single domain action entry, containing common
+ * fields across limits, blocks, and allows.
  */
-export interface DomainPerm {
+export interface DomainAction {
 	id?: string;
 	domain: string;
-	obfuscate?: boolean;
+	created_at?: string;
 	private_comment?: string;
 	public_comment?: string;
-	comment?: string;
-	created_at?: string;
 	created_by?: string;
+}
+
+/**
+ * Type of a domain action.
+ */
+export type DomainActionType = "limit" | "block" | "allow";
+
+/**
+ * Uppercase version of DomainActionType.
+ */
+export type DomainActionTypeUpper = "Limit" | "Block" | "Allow";
+
+/**
+ * Domain actions mapped to an Object where the Object
+ * keys are the "domain" value of each DomainAction.
+ */
+export interface MappedDomainActions {
+	[key: string]: DomainAction;
+}
+
+/**
+ * Policy to apply to media files originating from the limited domain.
+ */
+export type DomainLimitMediaPolicy = "no_action" | "mark_sensitive" | "reject";
+
+/**
+ * Policy to apply to follow (requests) originating from the limited domain.
+ */
+export type DomainLimitFollowsPolicy = "no_action" | "manual_approval" | "reject_non_mutual" | "reject_all";
+
+/**
+ * Policy to apply to statuses of non-followed accounts on the limited domain.
+ */
+export type DomainLimitStatusesPolicy = "no_action" | "filter_warn" | "filter_hide";
+
+/**
+ * Policy to apply to non-followed accounts on the limited domain.
+ */
+export type DomainLimitAccountsPolicy = "no_action" | "mute";
+
+/**
+ * DomainLimit is a domain action that enforces specific policies
+ * for media, follows, statuses, accounts, and content warning.
+ */
+export interface DomainLimit extends DomainAction {
+	/**
+	 * Policy to apply to media files originating from the limited domain.
+	 */
+	media_policy: DomainLimitMediaPolicy;
+	
+	/**
+	 * Policy to apply to follow (requests) originating from the limited domain.
+	 */
+	follows_policy: DomainLimitFollowsPolicy;
+	
+	/**
+	 * Policy to apply to statuses of non-followed accounts on the limited domain.
+	 */
+	statuses_policy: DomainLimitStatusesPolicy;
+	
+	/**
+	 * Policy to apply to non-followed accounts on the limited domain.
+	 */
+	accounts_policy: DomainLimitAccountsPolicy;
+	
+	/**
+	 * Content warning to prepend to statuses originating from the limited domain.
+	 */
+	content_warning?: string;
+}
+
+/**
+ * Domain limits mapped to an Object where the Object
+ * keys are the "domain" value of each domain limit.
+ */
+export interface MappedDomainLimits {
+	[key: string]: DomainLimit;
+}
+
+export interface DomainLimitUpdateParams {
+	/**
+	 * Policy to apply to media files originating from the limited domain.
+	 */
+	media_policy?: DomainLimitMediaPolicy;
+	
+	/**
+	 * Policy to apply to follow (requests) originating from the limited domain.
+	 */
+	follows_policy?: DomainLimitFollowsPolicy;
+	
+	/**
+	 * Policy to apply to statuses of non-followed accounts on the limited domain.
+	 */
+	statuses_policy?: DomainLimitStatusesPolicy;
+	
+	/**
+	 * Policy to apply to non-followed accounts on the limited domain.
+	 */
+	accounts_policy?: DomainLimitAccountsPolicy;
+	
+	/**
+	 * Content warning to prepend to statuses originating from the limited domain.
+	 */
+	content_warning?: string;
+
+	/**
+	 * (Optionally) publicly stated reason for limiting the domain.
+	 */
+	public_comment?: string;
+
+	/**
+	 * Privately stated reason for limiting the domain.
+	 */
+	private_comment?: string;
+}
+
+export interface DomainLimitCreateParams extends DomainLimitUpdateParams {
+	/**
+	 * The hostname of the domain.
+	 */
+	domain: string;
+}
+
+/**
+ * Type of a domain permission entry.
+ */
+export type DomainPermissionType = "block" | "allow" | "draft" | "exclude";
+
+/**
+ * A single domain permission entry of type block, allow, draft, or exclude.
+ */
+export interface DomainPermission extends DomainAction {
+	obfuscate?: boolean;
+	comment?: string;
 	subscription_id?: string;
 
-	// Keys that should be stripped before
-	// sending the domain permission (if imported).
+	// Fields that should be stripped before
+	// sending a domain permission via the API.
 
-	permission_type?: PermType;
+	permission_type?: DomainPermissionType;
 	key?: string;
 	suggest?: string;
 	valid?: boolean;
@@ -55,13 +186,17 @@ export interface DomainPerm {
  * Domain permissions mapped to an Object where the Object
  * keys are the "domain" value of each DomainPerm.
  */
-export interface MappedDomainPerms {
-	[key: string]: DomainPerm;
+export interface MappedDomainPermissions {
+	[key: string]: DomainPermission;
 }
 
-const domainPermStripOnImport: Set<keyof DomainPerm> = new Set([
-	"key",
+/**
+ * Set of fields that should be stripped before
+ * sending a domain permission via the API.
+ */
+const domainPermissionStripOnImport: Set<keyof DomainPermission> = new Set([
 	"permission_type",
+	"key",
 	"suggest",
 	"valid",
 	"checked",
@@ -71,31 +206,31 @@ const domainPermStripOnImport: Set<keyof DomainPerm> = new Set([
 ]);
 
 /**
- * Returns true if provided DomainPerm Object key is one
+ * Returns true if provided DomainPermission Object key is one
  * that should be stripped when importing a domain permission.
  * 
  * @param key 
  * @returns 
  */
-export function stripOnImport(key: keyof DomainPerm) {
-	return domainPermStripOnImport.has(key);
+export function stripOnImport(key: keyof DomainPermission) {
+	return domainPermissionStripOnImport.has(key);
 }
 
-export interface ImportDomainPermsParams {
-	domains: DomainPerm[];
+export interface ImportDomainPermissionsParams {
+	domains: DomainPermission[];
 
 	// Internal processing keys;
 	// remove before serdes of form.
 	obfuscate?: boolean;
 	commentType?: string;
-	permType: PermType;
+	permType: DomainPermissionType;
 }
 
 /**
  * Model domain permissions bulk export params.
  */
-export interface ExportDomainPermsParams {
-	permType: PermType;
+export interface ExportDomainPermissionsParams {
+	permType: DomainPermissionType;
 	action: "export" | "export-file";
 	exportType: "json" | "csv" | "plain";
 }
@@ -103,7 +238,7 @@ export interface ExportDomainPermsParams {
 /**
  * Parameters for GET to /api/v1/admin/domain_permission_drafts.
  */
-export interface DomainPermDraftSearchParams {
+export interface DomainPermissionDraftsSearchParams {
 	/**
 	 * Show only drafts created by the given subscription ID.
 	 */
@@ -115,7 +250,7 @@ export interface DomainPermDraftSearchParams {
 	/**
 	 * Filter on "block" or "allow" type drafts.
 	 */
-	permission_type?: PermType;
+	permission_type?: DomainPermissionType;
 	/**
 	 * Return only items *OLDER* than the given max ID (for paging downwards).
 	 * The item with the specified ID will not be included in the response.
@@ -137,12 +272,12 @@ export interface DomainPermDraftSearchParams {
 	limit?: number;
 }
 
-export interface DomainPermDraftSearchResp {
-	drafts: DomainPerm[];
+export interface DomainPermissionDraftsSearchResp {
+	drafts: DomainPermission[];
 	links: Links | null;
 }
 
-export interface DomainPermDraftCreateParams {
+export interface DomainPermissionDraftCreateParams {
 	/**
 	 * Domain to create the permission draft for.
 	 */
@@ -150,7 +285,7 @@ export interface DomainPermDraftCreateParams {
 	/**
 	 * Create a draft "allow" or a draft "block".
 	 */
-	permission_type: PermType;
+	permission_type: DomainPermissionType;
 	/**
 	 * Obfuscate the name of the domain when serving it publicly.
 	 * Eg., `example.org` becomes something like `ex***e.org`.
@@ -172,7 +307,7 @@ export interface DomainPermDraftCreateParams {
 /**
  * Parameters for GET to /api/v1/admin/domain_permission_excludes.
  */
-export interface DomainPermExcludeSearchParams {
+export interface DomainPermissionExcludesSearchParams {
 	/**
 	 * Return only excludes that target the given domain.
 	 */
@@ -198,12 +333,12 @@ export interface DomainPermExcludeSearchParams {
 	limit?: number;
 }
 
-export interface DomainPermExcludeSearchResp {
-	excludes: DomainPerm[];
+export interface DomainPermissionExcludesSearchResp {
+	excludes: DomainPermission[];
 	links: Links | null;
 }
 
-export interface DomainPermExcludeCreateParams {
+export interface DomainPermissionExcludeCreateParams {
 	/**
 	 * Domain to create the permission exclude for.
 	 */
@@ -217,9 +352,14 @@ export interface DomainPermExcludeCreateParams {
 }
 
 /**
+ * Content type of a domain permission subscription.
+ */
+export type DomainPermissionSubscriptionContentType = "text/plain" | "text/csv" | "application/json";
+
+/**
  * API model of one domain permission susbcription.
  */
-export interface DomainPermSub {
+export interface DomainPermissionSubscription {
 	/**
 	 * The ID of the domain permission subscription.
 	 */
@@ -239,7 +379,7 @@ export interface DomainPermSub {
 	/**
 	 * The type of domain permission subscription (allow, block).
 	 */
-	permission_type: PermType;
+	permission_type: DomainPermissionType;
 	/**
 	 * If true, domain permissions arising from this subscription will be created as drafts that must be approved by a moderator to take effect.
 	 * If false, domain permissions from this subscription will come into force immediately.
@@ -264,7 +404,7 @@ export interface DomainPermSub {
 	/**
 	 * MIME content type to use when parsing the permissions list.
 	 */
-	content_type: PermSubContentType;
+	content_type: DomainPermissionSubscriptionContentType;
 	/**
 	 * (Optional) username to set for basic auth when doing a fetch of URI.
 	 */
@@ -294,11 +434,11 @@ export interface DomainPermSub {
 /**
  * Parameters for GET to /api/v1/admin/domain_permission_subscriptions.
  */
-export interface DomainPermSubSearchParams {
+export interface DomainPermissionSubscriptionSearchParams {
 	/**
 	 * Return only block or allow subscriptions.
 	 */
-	permission_type?: PermType;
+	permission_type?: DomainPermissionType;
 	/**
 	 * Return only items *OLDER* than the given max ID (for paging downwards).
 	 * The item with the specified ID will not be included in the response.
@@ -320,7 +460,7 @@ export interface DomainPermSubSearchParams {
 	limit?: number;
 }
 
-export interface DomainPermSubCreateUpdateParams {
+export interface DomainPermissionSubscriptionCreateUpdateParams {
 	/**
 	 * The priority of the domain permission subscription.
 	 */
@@ -336,7 +476,7 @@ export interface DomainPermSubCreateUpdateParams {
 	/**
 	 * MIME content type to use when parsing the permissions list.
 	 */
-	content_type: PermSubContentType;
+	content_type: DomainPermissionSubscriptionContentType;
 	/**
 	 * If true, domain permissions arising from this subscription will be created as drafts that must be approved by a moderator to take effect.
 	 * If false, domain permissions from this subscription will come into force immediately.
@@ -361,10 +501,10 @@ export interface DomainPermSubCreateUpdateParams {
 	/**
 	 * The type of domain permission subscription to create or update (allow, block).
 	 */
-	permission_type: PermType;
+	permission_type: DomainPermissionType;
 }
 
-export interface DomainPermSubSearchResp {
-	subs: DomainPermSub[];
+export interface DomainPermissionSubscriptionsSearchResp {
+	subs: DomainPermissionSubscription[];
 	links: Links | null;
 }

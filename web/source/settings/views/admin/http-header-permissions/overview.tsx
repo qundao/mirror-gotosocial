@@ -21,9 +21,12 @@ import React, { useMemo } from "react";
 import { useGetHeaderAllowsQuery, useGetHeaderBlocksQuery } from "../../../lib/query/admin/http-header-permissions";
 import { NoArg } from "../../../lib/types/query";
 import { PageableList } from "../../../components/pageable-list";
-import { HeaderPermission } from "../../../lib/types/http-header-permissions";
+import type {
+	HeaderPermission,
+	HeaderPermissionType,
+	HeaderPermissionTypeUpper
+} from "../../../lib/types/http-header-permissions";
 import { useLocation, useParams } from "wouter";
-import { PermType } from "../../../lib/types/perm";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { SerializedError } from "@reduxjs/toolkit";
 import HeaderPermCreateForm from "./create";
@@ -37,12 +40,16 @@ export default function HeaderPermsOverview() {
 	if (params.permType !== "blocks" && params.permType !== "allows") {
 		throw "unrecognized perm type " + params.permType;
 	}
+
+	// Safe to cast to HeaderPermissionType as
+	// we've already checked params.permType.
 	const permType = useMemo(() => {
-		return params.permType?.slice(0, -1) as PermType;
+		return params.permType?.slice(0, -1) as HeaderPermissionType;
 	}, [params]);
 
 	// Uppercase first letter of given permType.
-	const permTypeUpper = useCapitalize(permType);
+	// Safe to cast as we've already checked permType.
+	const permTypeUpper = useCapitalize(permType) as HeaderPermissionTypeUpper;
 	
 	// Fetch desired perms, skipping
 	// the ones we don't want.

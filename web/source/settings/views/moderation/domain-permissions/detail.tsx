@@ -44,15 +44,15 @@ import {
 	useUpdateDomainAllowMutation,
 	useUpdateDomainBlockMutation,
 } from "../../../lib/query/admin/domain-permissions/update";
-import { DomainPerm } from "../../../lib/types/domain-permission";
+import { DomainPermission, DomainPermissionType } from "../../../lib/types/domain";
 import { NoArg } from "../../../lib/types/query";
 import { Error } from "../../../components/error";
 import { useBaseUrl } from "../../../lib/navigation/util";
-import { PermType } from "../../../lib/types/perm";
 import { useCapitalize } from "../../../lib/util";
 import { formDomainValidator } from "../../../lib/util/formvalidators";
 import UsernameLozenge from "../../../components/username-lozenge";
 import { FormSubmitEvent } from "../../../lib/form/types";
+import { useDomainFromParams } from "../../../lib/util/domain";
 
 export default function DomainPermView() {
 	const baseUrl = useBaseUrl();
@@ -66,9 +66,19 @@ export default function DomainPermView() {
 		throw "unrecognized perm type " + params.permType;
 	}
 	const permType = useMemo(() => {
-		return permTypeRaw.slice(0, -1) as PermType;
+		return permTypeRaw.slice(0, -1) as DomainPermissionType;
 	}, [permTypeRaw]);
 	
+	// Parse domain from routing params.
+	let domain = useDomainFromParams(params, search);
+	if (domain === undefined) {
+		throw "undefined domain";
+	}
+
+	// Normalize / decode domain
+	// (it may be URL-encoded).
+	domain = decodeURIComponent(domain);
+
 	// Conditionally fetch either domain blocks or domain
 	// allows depending on which perm type we're looking at.
 	const {
@@ -89,23 +99,6 @@ export default function DomainPermView() {
 	if (loading) {
 		return <Loading />;
 	}
-
-	// Parse domain from routing params.
-	let domain = params.domain ?? "unknown";
-	if (domain === "view") {
-		// Retrieve domain from form field submission.
-		const searchParams = new URLSearchParams(search);
-		const searchDomain = searchParams.get("domain");
-		if (!searchDomain) {
-			throw "empty view domain";
-		}
-		
-		domain = searchDomain;
-	}
-
-	// Normalize / decode domain
-	// (it may be URL-encoded).
-	domain = decodeURIComponent(domain);
 
 	// Check if we already have a perm
 	// of the desired type for this domain.
@@ -132,8 +125,8 @@ export default function DomainPermView() {
 }
 
 interface DomainPermDetailsProps {
-	perm: DomainPerm,
-	permType: PermType,
+	perm: DomainPermission,
+	permType: DomainPermissionType,
 }
 
 function DomainPermDetails({
@@ -190,8 +183,8 @@ function DomainPermDetails({
 
 interface CreateOrUpdateDomainPermProps {
 	defaultDomain: string;
-	perm?: DomainPerm;
-	permType: PermType;
+	perm?: DomainPermission;
+	permType: DomainPermissionType;
 }
 
 function CreateOrUpdateDomainPerm({

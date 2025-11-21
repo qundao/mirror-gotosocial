@@ -24,7 +24,7 @@ import { PageableList } from "../../../../components/pageable-list";
 import MutationButton from "../../../../components/form/mutation-button";
 import { useLocation, useSearch } from "wouter";
 import { useLazySearchDomainPermissionSubscriptionsQuery } from "../../../../lib/query/admin/domain-permissions/subscriptions";
-import { DomainPermSub } from "../../../../lib/types/domain-permission";
+import { DomainPermissionSubscription } from "../../../../lib/types/domain";
 import { Select } from "../../../../components/form/inputs";
 import { DomainPermissionSubscriptionDocsLink, DomainPermissionSubscriptionHelpText, SubscriptionListEntry } from "./common";
 
@@ -107,7 +107,7 @@ function DomainPermissionSubscriptionsSearchForm() {
 	const backLocation = location + (hasParams ? `?${urlQueryParams}` : "");
 	
 	// Function to map an item to a list entry.
-	function itemToEntry(permSub: DomainPermSub): ReactNode {
+	function itemToEntry(permSub: DomainPermissionSubscription): ReactNode {
 		return (
 			<SubscriptionListEntry
 				key={permSub.id}

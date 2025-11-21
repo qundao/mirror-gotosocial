@@ -24,7 +24,7 @@ import { PageableList } from "../../../../components/pageable-list";
 import MutationButton from "../../../../components/form/mutation-button";
 import { useLocation, useSearch } from "wouter";
 import { useDeleteDomainPermissionExcludeMutation, useLazySearchDomainPermissionExcludesQuery } from "../../../../lib/query/admin/domain-permissions/excludes";
-import { DomainPerm } from "../../../../lib/types/domain-permission";
+import { DomainPermission } from "../../../../lib/types/domain";
 import { Error as ErrorC } from "../../../../components/error";
 import { Select, TextInput } from "../../../../components/form/inputs";
 import { formDomainValidator } from "../../../../lib/util/formvalidators";
@@ -111,7 +111,7 @@ function DomainPermissionExcludesSearchForm() {
 	const backLocation = location + (hasParams ? `?${urlQueryParams}` : "");
 	
 	// Function to map an item to a list entry.
-	function itemToEntry(exclude: DomainPerm): ReactNode {
+	function itemToEntry(exclude: DomainPermission): ReactNode {
 		return (
 			<ExcludeListEntry
 				key={exclude.id}	
@@ -170,7 +170,7 @@ function DomainPermissionExcludesSearchForm() {
 }
 
 interface ExcludeEntryProps {
-	permExclude: DomainPerm;
+	permExclude: DomainPermission;
 	linkTo: string;
 	backLocation: string;
 }

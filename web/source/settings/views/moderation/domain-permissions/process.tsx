@@ -19,7 +19,7 @@
 
 import React from "react";
 import { memo, useMemo, useCallback, useEffect } from "react";
-import { isValidDomainPermission, hasBetterScope } from "../../../lib/util/domain-permission";
+import { isValidDomain, hasBetterScope } from "../../../lib/util/domain";
 
 import {
 	useTextInput,
@@ -46,11 +46,11 @@ import {
 	useDomainBlocksQuery
 } from "../../../lib/query/admin/domain-permissions/get";
 
-import type { DomainPerm, MappedDomainPerms } from "../../../lib/types/domain-permission";
+import type { DomainPermission, MappedDomainPermissions } from "../../../lib/types/domain";
 import type { ChecklistInputHook, RadioFormInputHook } from "../../../lib/form/types";
 
 export interface ProcessImportProps {
-	list: DomainPerm[],
+	list: DomainPermission[],
 	permType: RadioFormInputHook,
 }
 
@@ -70,8 +70,8 @@ export const ProcessImport = memo(
 );
 
 export interface ImportListProps {
-	list: Array<DomainPerm>,
-	data: MappedDomainPerms,
+	list: Array<DomainPermission>,
+	data: MappedDomainPermissions,
 	permType: RadioFormInputHook,
 }
 
@@ -191,13 +191,13 @@ function ImportList({ list, data: domainPerms, permType }: ImportListProps) {
 
 interface DomainCheckListProps {
 	field: ChecklistInputHook,
-	domainPerms: MappedDomainPerms,
+	domainPerms: MappedDomainPermissions,
 	commentType: "public_comment" | "private_comment",
 	permType: RadioFormInputHook,
 }
 
 function DomainCheckList({ field, domainPerms, commentType, permType }: DomainCheckListProps) {
-	const getExtraProps = useCallback((entry: DomainPerm) => {
+	const getExtraProps = useCallback((entry: DomainPermission) => {
 		return {
 			comment: entry[commentType],
 			alreadyExists: entry.domain in domainPerms,
@@ -206,7 +206,7 @@ function DomainCheckList({ field, domainPerms, commentType, permType }: DomainCh
 	}, [domainPerms, commentType, permType]);
 
 	const entriesWithSuggestions = useMemo(() => {
-		const fieldValue = (field.value ?? {}) as { [k: string]: DomainPerm; };
+		const fieldValue = (field.value ?? {}) as { [k: string]: DomainPermission; };
 		return Object.values(fieldValue).filter((entry) => entry.suggest);
 	}, [field.value]);
 
@@ -307,7 +307,7 @@ function DomainEntry({ entry, onChange, extraProps: { alreadyExists, comment, pe
 		defaultValue: entry.domain,
 		showValidation: entry.checked,
 		initValidation: domainValidationError(entry.valid),
-		validator: (value) => domainValidationError(isValidDomainPermission(value))
+		validator: (value) => domainValidationError(isValidDomain(value))
 	});
 
 	useEffect(() => {

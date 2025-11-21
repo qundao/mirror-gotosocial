@@ -24,7 +24,7 @@ import { PageableList } from "../../../../components/pageable-list";
 import MutationButton from "../../../../components/form/mutation-button";
 import { useLocation, useSearch } from "wouter";
 import { useAcceptDomainPermissionDraftMutation, useLazySearchDomainPermissionDraftsQuery, useRemoveDomainPermissionDraftMutation } from "../../../../lib/query/admin/domain-permissions/drafts";
-import { DomainPerm } from "../../../../lib/types/domain-permission";
+import { DomainPermission } from "../../../../lib/types/domain";
 import { Error as ErrorC } from "../../../../components/error";
 import { Select, TextInput } from "../../../../components/form/inputs";
 import { formDomainValidator } from "../../../../lib/util/formvalidators";
@@ -114,7 +114,7 @@ function DomainPermissionDraftsSearchForm() {
 	const backLocation = location + (hasParams ? `?${urlQueryParams}` : "");
 	
 	// Function to map an item to a list entry.
-	function itemToEntry(draft: DomainPerm): ReactNode {
+	function itemToEntry(draft: DomainPermission): ReactNode {
 		return (
 			<DraftListEntry
 				key={draft.id}	
@@ -184,7 +184,7 @@ function DomainPermissionDraftsSearchForm() {
 }
 
 interface DraftEntryProps {
-	permDraft: DomainPerm;
+	permDraft: DomainPermission;
 	linkTo: string;
 	backLocation: string;
 }

@@ -39,6 +39,8 @@ import DomainPermissionSubscriptionsSearch from "./domain-permissions/subscripti
 import DomainPermissionSubscriptionNew from "./domain-permissions/subscriptions/new";
 import DomainPermissionSubscriptionDetail from "./domain-permissions/subscriptions/detail";
 import DomainPermissionSubscriptionsPreview from "./domain-permissions/subscriptions/preview";
+import DomainLimitsOverview from "./domain-limits";
+import DomainLimitView from "./domain-limits/detail";
 
 /*
 	EXPORTED COMPONENTS
@@ -71,6 +73,7 @@ export default function ModerationRouter() {
 			<Router base={thisBase}>
 				<ModerationReportsRouter />
 				<ModerationAccountsRouter />
+				<ModerationDomainLimitsRouter />
 				<ModerationDomainPermsRouter />
 			</Router>
 		</BaseUrlContext.Provider>
@@ -124,6 +127,30 @@ function ModerationAccountsRouter() {
 						<Route path="/pending" component={AccountsPending}/>
 						<Route path="/:accountID" component={AccountDetail}/>
 						<Route><Redirect to="/search"/></Route>
+					</Switch>
+				</ErrorBoundary>
+			</Router>
+		</BaseUrlContext.Provider>
+	);
+}
+
+/**
+ * - /settings/moderation/domain-limits
+ * - /settings/moderation/domain-limits/:domain
+ */
+function ModerationDomainLimitsRouter() {
+	const parentUrl = useBaseUrl();
+	const thisBase = "/domain-limits";
+	const absBase = parentUrl + thisBase;
+
+	return (
+		<BaseUrlContext.Provider value={absBase}>
+			<Router base={thisBase}>
+				<ErrorBoundary>
+					<Switch>
+						<Route path="/" component={DomainLimitsOverview} />
+						<Route path="/:domain" component={DomainLimitView} />
+						<Route><Redirect to="/"/></Route>
 					</Switch>
 				</ErrorBoundary>
 			</Router>

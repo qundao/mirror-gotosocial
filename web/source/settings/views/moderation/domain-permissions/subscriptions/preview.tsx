@@ -23,10 +23,9 @@ import { useTextInput } from "../../../../lib/form";
 import { PageableList } from "../../../../components/pageable-list";
 import { useLocation } from "wouter";
 import { useGetDomainPermissionSubscriptionsPreviewQuery } from "../../../../lib/query/admin/domain-permissions/subscriptions";
-import { DomainPermSub } from "../../../../lib/types/domain-permission";
+import { DomainPermissionSubscription, DomainPermissionType } from "../../../../lib/types/domain";
 import { Select } from "../../../../components/form/inputs";
 import { DomainPermissionSubscriptionDocsLink, SubscriptionListEntry } from "./common";
-import { PermType } from "../../../../lib/types/perm";
 
 export default function DomainPermissionSubscriptionsPreview() {
 	return (
@@ -57,10 +56,10 @@ function DomainPermissionSubscriptionsPreviewForm() {
 		isSuccess,
 		isError,
 		error,
-	} = useGetDomainPermissionSubscriptionsPreviewQuery(permType.value as PermType);
+	} = useGetDomainPermissionSubscriptionsPreviewQuery(permType.value as DomainPermissionType);
 	
 	// Function to map an item to a list entry.
-	function itemToEntry(permSub: DomainPermSub): ReactNode {
+	function itemToEntry(permSub: DomainPermissionSubscription): ReactNode {
 		return (
 			<SubscriptionListEntry
 				key={permSub.id}

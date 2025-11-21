@@ -20,18 +20,18 @@
 import { gtsApi } from "../../gts-api";
 
 import type {
-	DomainPerm,
-	DomainPermSub,
-	DomainPermSubCreateUpdateParams,
-	DomainPermSubSearchParams,
-	DomainPermSubSearchResp,
-} from "../../../types/domain-permission";
+	DomainPermission,
+	DomainPermissionSubscription,
+	DomainPermissionSubscriptionCreateUpdateParams,
+	DomainPermissionSubscriptionSearchParams,
+	DomainPermissionSubscriptionsSearchResp,
+	DomainPermissionType,
+} from "../../../types/domain";
 import parse from "parse-link-header";
-import { PermType } from "../../../types/perm";
 
 const extended = gtsApi.injectEndpoints({
 	endpoints: (build) => ({
-		searchDomainPermissionSubscriptions: build.query<DomainPermSubSearchResp, DomainPermSubSearchParams>({
+		searchDomainPermissionSubscriptions: build.query<DomainPermissionSubscriptionsSearchResp, DomainPermissionSubscriptionSearchParams>({
 			query: (form) => {
 				const params = new(URLSearchParams);
 				Object.entries(form).forEach(([k, v]) => {
@@ -50,7 +50,7 @@ const extended = gtsApi.injectEndpoints({
 				};
 			},
 			// Headers required for paging.
-			transformResponse: (apiResp: DomainPermSub[], meta) => {
+			transformResponse: (apiResp: DomainPermissionSubscription[], meta) => {
 				const subs = apiResp;
 				const linksStr = meta?.response?.headers.get("Link");
 				const links = parse(linksStr);
@@ -61,7 +61,7 @@ const extended = gtsApi.injectEndpoints({
 			providesTags: [{ type: "DomainPermissionSubscription", id: "TRANSFORMED" }]
 		}),
 
-		getDomainPermissionSubscriptionsPreview: build.query<DomainPermSub[], PermType>({
+		getDomainPermissionSubscriptionsPreview: build.query<DomainPermissionSubscription[], DomainPermissionType>({
 			query: (permType) => ({
 				url: `/api/v1/admin/domain_permission_subscriptions/preview?permission_type=${permType}`
 			}),
@@ -70,7 +70,7 @@ const extended = gtsApi.injectEndpoints({
 				[{ type: "DomainPermissionSubscription", id: `${permType}sByPriority` }]
 		}),
 
-		getDomainPermissionSubscription: build.query<DomainPermSub, string>({
+		getDomainPermissionSubscription: build.query<DomainPermissionSubscription, string>({
 			query: (id) => ({
 				url: `/api/v1/admin/domain_permission_subscriptions/${id}`
 			}),
@@ -79,7 +79,7 @@ const extended = gtsApi.injectEndpoints({
 			],
 		}),
 
-		createDomainPermissionSubscription: build.mutation<DomainPermSub, DomainPermSubCreateUpdateParams>({
+		createDomainPermissionSubscription: build.mutation<DomainPermissionSubscription, DomainPermissionSubscriptionCreateUpdateParams>({
 			query: (formData) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_permission_subscriptions`,
@@ -96,7 +96,13 @@ const extended = gtsApi.injectEndpoints({
 				]
 		}),
 
-		updateDomainPermissionSubscription: build.mutation<DomainPermSub, { id: string, permType: PermType, formData: DomainPermSubCreateUpdateParams }>({
+		updateDomainPermissionSubscription: build.mutation<DomainPermissionSubscription,
+			{
+				id: string,
+				permType: DomainPermissionType,
+				formData: DomainPermissionSubscriptionCreateUpdateParams
+			}
+		>({
 			query: ({ id, formData }) => ({
 				method: "PATCH",
 				url: `/api/v1/admin/domain_permission_subscriptions/${id}`,
@@ -114,7 +120,12 @@ const extended = gtsApi.injectEndpoints({
 				],
 		}),
 
-		removeDomainPermissionSubscription: build.mutation<DomainPermSub, { id: string, remove_children: boolean }>({
+		removeDomainPermissionSubscription: build.mutation<DomainPermissionSubscription,
+			{
+				id: string,
+				remove_children: boolean
+			}
+		>({
 			query: ({ id, remove_children }) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_permission_subscriptions/${id}/remove`,
@@ -123,7 +134,7 @@ const extended = gtsApi.injectEndpoints({
 			}),
 		}),
 
-		testDomainPermissionSubscription: build.mutation<{ error: string } | DomainPerm[], string>({
+		testDomainPermissionSubscription: build.mutation<{ error: string } | DomainPermission[], string>({
 			query: (id) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_permission_subscriptions/${id}/test`,

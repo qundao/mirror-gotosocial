@@ -23,13 +23,13 @@ import {
 } from "papaparse";
 import { nanoid } from "nanoid";
 
-import { isValidDomainPermission, hasBetterScope } from "../../../util/domain-permission";
+import { isValidDomain, hasBetterScope } from "../../../util/domain";
 import { gtsApi } from "../../gts-api";
 
 import {
 	validateDomainPerms,
-	type DomainPerm,
-} from "../../../types/domain-permission";
+	type DomainPermission,
+} from "../../../types/domain";
 
 /**
  * Parse the given string of domain permissions and return it as an array.
@@ -39,7 +39,7 @@ import {
  * @returns
  * @throws
  */
-function parseDomainList(list: string): DomainPerm[] {	
+function parseDomainList(list: string): DomainPermission[] {	
 	if (list.startsWith("[")) {
 		// Assume JSON array.
 		const data = JSON.parse(list);
@@ -96,7 +96,7 @@ function parseDomainList(list: string): DomainPerm[] {
 	} else {
 		// Fallback: assume newline-separated
 		// list of simple domain strings.
-		const data: DomainPerm[] = [];
+		const data: DomainPermission[] = [];
 		list.split("\n").forEach((line) => {
 			let domain = line.trim();
 			let valid = true;
@@ -118,7 +118,7 @@ function parseDomainList(list: string): DomainPerm[] {
 	}
 }
 
-function deduplicateDomainList(list: DomainPerm[]): DomainPerm[] {
+function deduplicateDomainList(list: DomainPermission[]): DomainPermission[] {
 	let domains = new Set();
 	return list.filter((entry) => {
 		if (domains.has(entry.domain)) {
@@ -130,7 +130,7 @@ function deduplicateDomainList(list: DomainPerm[]): DomainPerm[] {
 	});
 }
 
-function validateDomainList(list: DomainPerm[]) {
+function validateDomainList(list: DomainPermission[]) {
 	list.forEach((entry) => {		
 		if (entry.domain.startsWith("*.")) {
 			// A domain permission always includes
@@ -138,7 +138,7 @@ function validateDomainList(list: DomainPerm[]) {
 			entry.domain = entry.domain.slice(2);
 		}
 
-		entry.valid = (entry.valid !== false) && isValidDomainPermission(entry.domain);
+		entry.valid = (entry.valid !== false) && isValidDomain(entry.domain);
 		if (entry.valid) {
 			entry.suggest = hasBetterScope(entry.domain);
 		}
@@ -150,7 +150,7 @@ function validateDomainList(list: DomainPerm[]) {
 
 const extended = gtsApi.injectEndpoints({
 	endpoints: (build) => ({
-		processDomainPermissions: build.mutation<DomainPerm[], any>({
+		processDomainPermissions: build.mutation<DomainPermission[], any>({
 			async queryFn(formData, _api, _extraOpts, _fetchWithBQ) {
 				if (formData.domains == undefined || formData.domains.length == 0) {
 					throw "No domains entered";

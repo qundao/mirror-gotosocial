@@ -31,6 +31,8 @@ import { useHasPermission } from "../../lib/navigation/util";
  * - /settings/moderation/accounts/search
  * - /settings/moderation/accounts/pending
  * - /settings/moderation/accounts/:accountID
+ * - /settings/moderation/domain-limits
+ * - /settings/moderation/domain-limits/:domain
  * - /settings/moderation/domain-permissions/:permType
  * - /settings/moderation/domain-permissions/:permType/:domain
  * - /settings/moderation/domain-permissions/import-export
@@ -52,6 +54,7 @@ export default function ModerationMenu() {
 		>
 			<ModerationReportsMenu />
 			<ModerationAccountsMenu />
+			<ModerationDomainLimitsMenu />
 			<ModerationDomainPermsMenu />
 		</MenuItem>
 	);
@@ -90,6 +93,16 @@ function ModerationAccountsMenu() {
 				icon="fa-question"
 			/>
 		</MenuItem>
+	);
+}
+
+function ModerationDomainLimitsMenu() {
+	return (
+		<MenuItem
+			name="Domain Limits"
+			itemUrl="domain-limits"
+			icon="fa-filter"
+		/>
 	);
 }
 

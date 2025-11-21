@@ -20,17 +20,17 @@
 import { gtsApi } from "../../gts-api";
 
 import type {
-	DomainPerm,
-	DomainPermDraftCreateParams,
-	DomainPermDraftSearchParams,
-	DomainPermDraftSearchResp,
-} from "../../../types/domain-permission";
+	DomainPermission,
+	DomainPermissionDraftCreateParams,
+	DomainPermissionDraftsSearchParams,
+	DomainPermissionDraftsSearchResp,
+	DomainPermissionType,
+} from "../../../types/domain";
 import parse from "parse-link-header";
-import { PermType } from "../../../types/perm";
 
 const extended = gtsApi.injectEndpoints({
 	endpoints: (build) => ({
-		searchDomainPermissionDrafts: build.query<DomainPermDraftSearchResp, DomainPermDraftSearchParams>({
+		searchDomainPermissionDrafts: build.query<DomainPermissionDraftsSearchResp, DomainPermissionDraftsSearchParams>({
 			query: (form) => {
 				const params = new(URLSearchParams);
 				Object.entries(form).forEach(([k, v]) => {
@@ -49,7 +49,7 @@ const extended = gtsApi.injectEndpoints({
 				};
 			},
 			// Headers required for paging.
-			transformResponse: (apiResp: DomainPerm[], meta) => {
+			transformResponse: (apiResp: DomainPermission[], meta) => {
 				const drafts = apiResp;
 				const linksStr = meta?.response?.headers.get("Link");
 				const links = parse(linksStr);
@@ -60,7 +60,7 @@ const extended = gtsApi.injectEndpoints({
 			providesTags: [{ type: "DomainPermissionDraft", id: "TRANSFORMED" }]
 		}),
 
-		getDomainPermissionDraft: build.query<DomainPerm, string>({
+		getDomainPermissionDraft: build.query<DomainPermission, string>({
 			query: (id) => ({
 				url: `/api/v1/admin/domain_permission_drafts/${id}`
 			}),
@@ -69,7 +69,7 @@ const extended = gtsApi.injectEndpoints({
 			],
 		}),
 
-		createDomainPermissionDraft: build.mutation<DomainPerm, DomainPermDraftCreateParams>({
+		createDomainPermissionDraft: build.mutation<DomainPermission, DomainPermissionDraftCreateParams>({
 			query: (formData) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_permission_drafts`,
@@ -80,7 +80,13 @@ const extended = gtsApi.injectEndpoints({
 			invalidatesTags: [{ type: "DomainPermissionDraft", id: "TRANSFORMED" }],
 		}),
 
-		acceptDomainPermissionDraft: build.mutation<DomainPerm, { id: string, overwrite?: boolean, permType: PermType }>({
+		acceptDomainPermissionDraft: build.mutation<DomainPermission,
+			{
+				id: string,
+				overwrite?: boolean,
+				permType: DomainPermissionType
+			}
+		>({
 			query: ({ id, overwrite }) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_permission_drafts/${id}/accept`,
@@ -117,7 +123,13 @@ const extended = gtsApi.injectEndpoints({
 			}
 		}),
 
-		removeDomainPermissionDraft: build.mutation<DomainPerm, { id: string, exclude_target?: boolean }>({
+		removeDomainPermissionDraft: build.mutation<
+			DomainPermission,
+			{
+				id: string,
+				exclude_target?: boolean
+			}
+		>({
 			query: ({ id, exclude_target }) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_permission_drafts/${id}/remove`,

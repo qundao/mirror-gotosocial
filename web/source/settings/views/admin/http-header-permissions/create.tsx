@@ -23,10 +23,10 @@ import { useTextInput } from "../../../lib/form";
 import useFormSubmit from "../../../lib/form/submit";
 import { TextInput } from "../../../components/form/inputs";
 import MutationButton from "../../../components/form/mutation-button";
-import { PermType } from "../../../lib/types/perm";
+import type { HeaderPermissionType } from "../../../lib/types/http-header-permissions";
 import { RE2JS } from "re2js";
 
-export default function HeaderPermCreateForm({ permType }: { permType: PermType }) {
+export default function HeaderPermCreateForm({ permType }: { permType: HeaderPermissionType }) {
 	const form = {
 		header: useTextInput("header", {
 			validator: (val: string) => {

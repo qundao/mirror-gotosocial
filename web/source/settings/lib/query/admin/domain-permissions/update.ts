@@ -26,13 +26,13 @@ import {
 } from "../../query-modifiers";
 import { listToKeyedObject } from "../../transforms";
 import type {
-	DomainPerm,
-	MappedDomainPerms
-} from "../../../types/domain-permission";
+	DomainPermission,
+	MappedDomainPermissions
+} from "../../../types/domain";
 
 const extended = gtsApi.injectEndpoints({
 	endpoints: (build) => ({
-		addDomainBlock: build.mutation<MappedDomainPerms, any>({
+		addDomainBlock: build.mutation<MappedDomainPermissions, any>({
 			query: (formData) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_blocks`,
@@ -40,11 +40,11 @@ const extended = gtsApi.injectEndpoints({
 				body: formData,
 				discardEmpty: true
 			}),
-			transformResponse: listToKeyedObject<DomainPerm>("domain"),
+			transformResponse: listToKeyedObject<DomainPermission>("domain"),
 			...replaceCacheOnMutation("domainBlocks"),
 		}),
 
-		addDomainAllow: build.mutation<MappedDomainPerms, any>({
+		addDomainAllow: build.mutation<MappedDomainPermissions, any>({
 			query: (formData) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_allows`,
@@ -52,11 +52,11 @@ const extended = gtsApi.injectEndpoints({
 				body: formData,
 				discardEmpty: true
 			}),
-			transformResponse: listToKeyedObject<DomainPerm>("domain"),
+			transformResponse: listToKeyedObject<DomainPermission>("domain"),
 			...replaceCacheOnMutation("domainAllows")
 		}),
 
-		updateDomainBlock: build.mutation<DomainPerm, any>({
+		updateDomainBlock: build.mutation<DomainPermission, any>({
 			query: ({ id, ...formData}) => ({
 				method: "PUT",
 				url: `/api/v1/admin/domain_blocks/${id}`,
@@ -71,7 +71,7 @@ const extended = gtsApi.injectEndpoints({
 			})
 		}),
 
-		updateDomainAllow: build.mutation<DomainPerm, any>({
+		updateDomainAllow: build.mutation<DomainPermission, any>({
 			query: ({ id, ...formData}) => ({
 				method: "PUT",
 				url: `/api/v1/admin/domain_allows/${id}`,
@@ -86,7 +86,7 @@ const extended = gtsApi.injectEndpoints({
 			})
 		}),
 
-		removeDomainBlock: build.mutation<DomainPerm, string>({
+		removeDomainBlock: build.mutation<DomainPermission, string>({
 			query: (id) => ({
 				method: "DELETE",
 				url: `/api/v1/admin/domain_blocks/${id}`,
@@ -98,7 +98,7 @@ const extended = gtsApi.injectEndpoints({
 			})
 		}),
 
-		removeDomainAllow: build.mutation<DomainPerm, string>({
+		removeDomainAllow: build.mutation<DomainPermission, string>({
 			query: (id) => ({
 				method: "DELETE",
 				url: `/api/v1/admin/domain_allows/${id}`,

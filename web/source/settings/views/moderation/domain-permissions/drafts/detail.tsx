@@ -32,7 +32,7 @@ import UsernameLozenge from "../../../../components/username-lozenge";
 import MutationButton from "../../../../components/form/mutation-button";
 import { useBoolInput, useTextInput } from "../../../../lib/form";
 import { Checkbox, Select } from "../../../../components/form/inputs";
-import { PermType } from "../../../../lib/types/perm";
+import { DomainPermissionType } from "../../../../lib/types/domain";
 
 export default function DomainPermissionDraftDetail() {
 	const baseUrl = useBaseUrl();
@@ -124,7 +124,7 @@ export default function DomainPermissionDraftDetail() {
 	);
 }
 
-function HandleDraft({ id, permType, backLocation }: { id: string, permType: PermType, backLocation: string }) {
+function HandleDraft({ id, permType, backLocation }: { id: string, permType: DomainPermissionType, backLocation: string }) {
 	const [ accept, acceptResult ] = useAcceptDomainPermissionDraftMutation();
 	const [ remove, removeResult ] = useRemoveDomainPermissionDraftMutation();
 	const [_location, setLocation] = useLocation();

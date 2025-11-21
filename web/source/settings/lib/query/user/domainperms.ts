@@ -19,17 +19,17 @@
 
 import { gtsApi } from "../gts-api";
 
-import type { DomainPerm } from "../../types/domain-permission";
+import type { DomainPermission } from "../../types/domain";
 
 const extended = gtsApi.injectEndpoints({
 	endpoints: (build) => ({
-		instanceDomainBlocks: build.query<DomainPerm[], void>({
+		instanceDomainBlocks: build.query<DomainPermission[], void>({
 			query: () => ({
 				url: `/api/v1/instance/domain_blocks`
 			}),
 		}),
 
-		instanceDomainAllows: build.query<DomainPerm[], void>({
+		instanceDomainAllows: build.query<DomainPermission[], void>({
 			query: () => ({
 				url: `/api/v1/instance/domain_allows`
 			})

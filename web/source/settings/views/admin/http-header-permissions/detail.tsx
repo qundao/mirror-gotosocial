@@ -19,9 +19,16 @@
 
 import React, { useMemo } from "react";
 import { useLocation, useParams } from "wouter";
-import { PermType } from "../../../lib/types/perm";
-import { useDeleteHeaderAllowMutation, useDeleteHeaderBlockMutation, useGetHeaderAllowQuery, useGetHeaderBlockQuery } from "../../../lib/query/admin/http-header-permissions";
-import { HeaderPermission } from "../../../lib/types/http-header-permissions";
+import {
+	useDeleteHeaderAllowMutation,
+	useDeleteHeaderBlockMutation,
+	useGetHeaderAllowQuery,
+	useGetHeaderBlockQuery
+} from "../../../lib/query/admin/http-header-permissions";
+import type {
+	HeaderPermission,
+	HeaderPermissionType,
+} from "../../../lib/types/http-header-permissions";
 import { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import { SerializedError } from "@reduxjs/toolkit";
 import Loading from "../../../components/loading";
@@ -41,12 +48,16 @@ Some Test Value
 Another Test Value`;
 
 export default function HeaderPermDetail() {
+	// Parse perm type from routing params.
 	let params = useParams();
 	if (params.permType !== "blocks" && params.permType !== "allows") {
 		throw "unrecognized perm type " + params.permType;
 	}
+
+	// Safe to cast to HeaderPermissionType as
+	// we've already checked params.permType.
 	const permType = useMemo(() => {
-		return params.permType?.slice(0, -1) as PermType;
+		return params.permType?.slice(0, -1) as HeaderPermissionType;
 	}, [params]);
 
 	let permID = params.permId as string | undefined;

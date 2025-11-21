@@ -17,8 +17,9 @@
 	along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-import isValidDomain from "is-valid-domain";
+import validateDomain from "is-valid-domain";
 import { get } from "psl";
+import { DefaultParams } from "wouter";
 
 /**
  * Check the input string to ensure it's a valid
@@ -26,8 +27,8 @@ import { get } from "psl";
  * @param domain 
  * @returns 
  */
-export function isValidDomainPermission(domain: string): boolean {
-	return isValidDomain(domain, {
+export function isValidDomain(domain: string): boolean {
+	return validateDomain(domain, {
 		wildcard: false,
 		allowUnicode: true
 	});
@@ -45,4 +46,24 @@ export function hasBetterScope(domain: string): string | undefined {
 	if (lookup && lookup != domain) {
 		return lookup;
 	}
+}
+
+/**
+ * 
+ * @param params Wouter params.
+ * @param search Wouter search value.
+ * @returns 
+ */
+export function useDomainFromParams(params: DefaultParams, search: string): string | undefined {
+	let domain = params.domain;
+	if (domain === "view") {
+		// Retrieve domain from form field submission.
+		const searchParams = new URLSearchParams(search);
+		const searchDomain = searchParams.get("domain");
+		if (!searchDomain) {
+			throw "empty view domain";
+		}
+		domain = searchDomain;
+	}
+	return domain;
 }

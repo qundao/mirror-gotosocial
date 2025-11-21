@@ -21,11 +21,11 @@ import { replaceCacheOnMutation } from "../../query-modifiers";
 import { gtsApi } from "../../gts-api";
 
 import {
-	type DomainPerm,
-	type ImportDomainPermsParams,
-	type MappedDomainPerms,
+	type DomainPermission,
+	type ImportDomainPermissionsParams,
+	type MappedDomainPermissions,
 	stripOnImport,
-} from "../../../types/domain-permission";
+} from "../../../types/domain";
 import { listToKeyedObject } from "../../transforms";
 
 /**
@@ -35,12 +35,12 @@ import { listToKeyedObject } from "../../transforms";
  * @param formData 
  * @returns 
  */
-function importEntriesProcessor(formData: ImportDomainPermsParams): (_entry: DomainPerm) => DomainPerm {
-	let processingFuncs: { (_entry: DomainPerm): void; }[] = [];
+function importEntriesProcessor(formData: ImportDomainPermissionsParams): (_entry: DomainPermission) => DomainPermission {
+	let processingFuncs: { (_entry: DomainPermission): void; }[] = [];
 
 	// Override each obfuscate entry if necessary.
 	if (formData.obfuscate !== undefined) {
-		processingFuncs.push((entry: DomainPerm) => {
+		processingFuncs.push((entry: DomainPermission) => {
 			entry.obfuscate = formData.obfuscate;
 		});
 	}
@@ -50,7 +50,7 @@ function importEntriesProcessor(formData: ImportDomainPermsParams): (_entry: Dom
 	["private_comment","public_comment"].forEach((commentType) => {
 		if (formData[`replace_${commentType}`]) {
 			const text = formData[commentType]?.trim();
-			processingFuncs.push((entry: DomainPerm) => {
+			processingFuncs.push((entry: DomainPermission) => {
 				entry[commentType] = text;
 			});
 		}
@@ -62,7 +62,7 @@ function importEntriesProcessor(formData: ImportDomainPermsParams): (_entry: Dom
 
 		// Unset all internal processing keys
 		// and any undefined keys on this entry.
-		Object.entries(entry).forEach(([key, val]: [keyof DomainPerm, any]) => {			
+		Object.entries(entry).forEach(([key, val]: [keyof DomainPermission, any]) => {			
 			if (val == undefined || stripOnImport(key)) {
 				delete entry[key];
 			}
@@ -74,7 +74,7 @@ function importEntriesProcessor(formData: ImportDomainPermsParams): (_entry: Dom
 
 const extended = gtsApi.injectEndpoints({
 	endpoints: (build) => ({		
-		importDomainPerms: build.mutation<MappedDomainPerms, ImportDomainPermsParams>({
+		importDomainPerms: build.mutation<MappedDomainPermissions, ImportDomainPermissionsParams>({
 			query: (formData) => {
 				// Add/replace comments, remove internal keys.
 				const process = importEntriesProcessor(formData);
@@ -94,8 +94,8 @@ const extended = gtsApi.injectEndpoints({
 					}
 				};
 			},
-			transformResponse: listToKeyedObject<DomainPerm>("domain"),
-			...replaceCacheOnMutation((formData: ImportDomainPermsParams) => {
+			transformResponse: listToKeyedObject<DomainPermission>("domain"),
+			...replaceCacheOnMutation((formData: ImportDomainPermissionsParams) => {
 				// Query names for blocks and allows are like
 				// `domainBlocks` and `domainAllows`, so we need
 				// to convert `block` -> `Block` or `allow` -> `Allow`

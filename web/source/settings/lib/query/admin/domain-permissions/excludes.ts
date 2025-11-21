@@ -20,16 +20,16 @@
 import { gtsApi } from "../../gts-api";
 
 import type {
-	DomainPerm,
-	DomainPermExcludeCreateParams,
-	DomainPermExcludeSearchParams,
-	DomainPermExcludeSearchResp,
-} from "../../../types/domain-permission";
+	DomainPermission,
+	DomainPermissionExcludeCreateParams,
+	DomainPermissionExcludesSearchParams,
+	DomainPermissionExcludesSearchResp,
+} from "../../../types/domain";
 import parse from "parse-link-header";
 
 const extended = gtsApi.injectEndpoints({
 	endpoints: (build) => ({
-		searchDomainPermissionExcludes: build.query<DomainPermExcludeSearchResp, DomainPermExcludeSearchParams>({
+		searchDomainPermissionExcludes: build.query<DomainPermissionExcludesSearchResp, DomainPermissionExcludesSearchParams>({
 			query: (form) => {
 				const params = new(URLSearchParams);
 				Object.entries(form).forEach(([k, v]) => {
@@ -48,7 +48,7 @@ const extended = gtsApi.injectEndpoints({
 				};
 			},
 			// Headers required for paging.
-			transformResponse: (apiResp: DomainPerm[], meta) => {
+			transformResponse: (apiResp: DomainPermission[], meta) => {
 				const excludes = apiResp;
 				const linksStr = meta?.response?.headers.get("Link");
 				const links = parse(linksStr);
@@ -59,7 +59,7 @@ const extended = gtsApi.injectEndpoints({
 			providesTags: [{ type: "DomainPermissionExclude", id: "TRANSFORMED" }]
 		}),
 
-		getDomainPermissionExclude: build.query<DomainPerm, string>({
+		getDomainPermissionExclude: build.query<DomainPermission, string>({
 			query: (id) => ({
 				url: `/api/v1/admin/domain_permission_excludes/${id}`
 			}),
@@ -68,7 +68,7 @@ const extended = gtsApi.injectEndpoints({
 			],
 		}),
 
-		createDomainPermissionExclude: build.mutation<DomainPerm, DomainPermExcludeCreateParams>({
+		createDomainPermissionExclude: build.mutation<DomainPermission, DomainPermissionExcludeCreateParams>({
 			query: (formData) => ({
 				method: "POST",
 				url: `/api/v1/admin/domain_permission_excludes`,
@@ -79,7 +79,7 @@ const extended = gtsApi.injectEndpoints({
 			invalidatesTags: [{ type: "DomainPermissionExclude", id: "TRANSFORMED" }],
 		}),
 
-		deleteDomainPermissionExclude: build.mutation<DomainPerm, string>({
+		deleteDomainPermissionExclude: build.mutation<DomainPermission, string>({
 			query: (id) => ({
 				method: "DELETE",
 				url: `/api/v1/admin/domain_permission_excludes/${id}`,

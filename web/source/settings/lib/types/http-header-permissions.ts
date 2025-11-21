@@ -46,3 +46,6 @@ export interface HeaderPermission {
 	 */
 	regex: string;
 }
+
+export type HeaderPermissionType = "block" | "allow";
+export type HeaderPermissionTypeUpper = "Block" | "Allow";

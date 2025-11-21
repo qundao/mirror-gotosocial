@@ -45,15 +45,24 @@ export function TextInput({label, field, ...props}: TextInputProps) {
 
 	return (
 		<div className={`form-field text${field.valid ? "" : " invalid"}`}>
-			<label>
-				{label}
+			{ label ?
+				<label>
+					{label}
+					<input
+						onChange={onChange}
+						value={value}
+						ref={ref as RefObject<HTMLInputElement>}
+						{...props}
+					/>
+				</label>
+				:
 				<input
 					onChange={onChange}
 					value={value}
 					ref={ref as RefObject<HTMLInputElement>}
 					{...props}
 				/>
-			</label>
+			}
 		</div>
 	);
 }
