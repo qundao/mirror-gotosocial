@@ -136,12 +136,14 @@ func misskeyReportInlineURLs(content string) []*url.URL {
 //		</ul>
 //	</div>
 func placeholderAttachments(arr []*apimodel.Attachment) (string, []*apimodel.Attachment) {
-
-	// Extract non-locally stored attachments into a
-	// separate slice, deleting them from input slice.
 	var nonLocal []*apimodel.Attachment
+
+	// Extract non-locally stored attachments into a new slice,
+	// deleting them from input slice. This checks whether any
+	// file metadata has been set, which will only happen in the
+	// case that we successfully finish processing an attachment.
 	arr = slices.DeleteFunc(arr, func(elem *apimodel.Attachment) bool {
-		if elem.URL == nil {
+		if elem.Meta == nil {
 			nonLocal = append(nonLocal, elem)
 			return true
 		}

@@ -251,51 +251,56 @@ func (m *Manager) UpdateEmoji(
 	oldStaticPath := emoji.ImageStaticPath
 	oldPath := emoji.ImagePath
 
-	// Since this is a refresh we will end up storing new images at new
-	// paths, so we should wrap closer to delete old paths at completion.
-	wrapped := func(ctx context.Context) (io.ReadCloser, error) {
+	// Check whether old emoji paths were set.
+	if oldPath != "" || oldStaticPath != "" {
+		unwrapped := data
 
-		// Call original func.
-		rc, err := data(ctx)
-		if err != nil {
-			return nil, err
-		}
+		// Since this is a refresh we will end up storing new images at new
+		// paths, so we should wrap closer to delete old paths at completion.
+		data = func(ctx context.Context) (io.ReadCloser, error) {
 
-		// Cast as separated reader / closer types.
-		rct, ok := rc.(*iotools.ReadCloserType)
-
-		if !ok {
-			// Allocate new read closer type.
-			rct = new(iotools.ReadCloserType)
-			rct.Reader = rc
-			rct.Closer = rc
-		}
-
-		// Wrap underlying io.Closer type to cleanup old data.
-		rct.Closer = iotools.CloserCallback(rct.Closer, func() {
-
-			// Remove any *old* emoji image file path now stream is closed.
-			if err := m.state.Storage.Delete(ctx, oldPath); err != nil &&
-				!storage.IsNotFound(err) {
-				log.Errorf(ctx, "error deleting old emoji %s from storage: %v", shortcodeDomain, err)
+			// Call original data func.
+			rc, err := unwrapped(ctx)
+			if err != nil {
+				return nil, err
 			}
 
-			// Remove any *old* emoji static image file path now stream is closed.
-			if err := m.state.Storage.Delete(ctx, oldStaticPath); err != nil &&
-				!storage.IsNotFound(err) {
-				log.Errorf(ctx, "error deleting old static emoji %s from storage: %v", shortcodeDomain, err)
-			}
-		})
+			// Cast as separated reader / closer types.
+			rct, ok := rc.(*iotools.ReadCloserType)
 
-		return rct, nil
+			if !ok {
+				// Allocate new read closer type.
+				rct = new(iotools.ReadCloserType)
+				rct.Reader = rc
+				rct.Closer = rc
+			}
+
+			// Wrap underlying io.Closer type to cleanup old paths.
+			rct.Closer = iotools.CloserCallback(rct.Closer, func() {
+
+				// Remove any *old* emoji image file path now stream is closed.
+				if err := m.state.Storage.Delete(ctx, oldPath); err != nil &&
+					!storage.IsNotFound(err) {
+					log.Errorf(ctx, "error deleting old emoji %s from storage: %v", shortcodeDomain, err)
+				}
+
+				// Remove any *old* emoji static image file path now stream is closed.
+				if err := m.state.Storage.Delete(ctx, oldStaticPath); err != nil &&
+					!storage.IsNotFound(err) {
+					log.Errorf(ctx, "error deleting old static emoji %s from storage: %v", shortcodeDomain, err)
+				}
+			})
+
+			return rct, nil
+		}
 	}
 
-	// Update existing emoji in database.
+	// Update existing emoji model in the database.
 	processingEmoji, err := m.createOrUpdateEmoji(ctx,
 		func(ctx context.Context, emoji *gtsmodel.Emoji) error {
 			return m.state.DB.UpdateEmoji(ctx, emoji)
 		},
-		wrapped,
+		data,
 		emoji,
 		info,
 	)

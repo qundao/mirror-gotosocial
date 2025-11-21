@@ -21,6 +21,7 @@ import (
 	"slices"
 
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/media"
 )
 
 // getEmojiByShortcodeDomain searches input slice
@@ -40,6 +41,64 @@ func getEmojiByShortcodeDomain(
 		}
 	}
 	return nil, false
+}
+
+// mediaUpToDate returns whether media is up-to-date according
+// to additional info, updating media fields where necessary.
+func mediaUpToDate(media *gtsmodel.MediaAttachment, info media.AdditionalMediaInfo) bool {
+	ok := true
+
+	// Check blurhash up-to-date.
+	if info.Blurhash != nil &&
+		*info.Blurhash != media.Blurhash {
+		media.Blurhash = *info.Blurhash
+		ok = false
+	}
+
+	// Check description up-to-date.
+	if info.Description != nil &&
+		*info.Description != media.Description {
+		media.Description = *info.Description
+		ok = false
+	}
+
+	// Check remote URL up-to-date.
+	if info.RemoteURL != nil &&
+		*info.RemoteURL != media.RemoteURL {
+		media.RemoteURL = *info.RemoteURL
+		ok = false
+	}
+
+	return ok
+}
+
+// emojiUpToDate returns whether emoji is up-to-date according
+// to additional info, updating emoji fields where necessary.
+func emojiUpToDate(emoji *gtsmodel.Emoji, info media.AdditionalEmojiInfo) bool {
+	ok := true
+
+	// Recheck uri up-to-date.
+	if info.URI != nil &&
+		*info.URI != emoji.URI {
+		emoji.URI = *info.URI
+		ok = false
+	}
+
+	// Recheck image remote URL up-to-date.
+	if info.ImageRemoteURL != nil &&
+		*info.ImageRemoteURL != emoji.ImageRemoteURL {
+		emoji.ImageRemoteURL = *info.ImageRemoteURL
+		ok = false
+	}
+
+	// Recheck image static remote URL up-to-date.
+	if info.ImageStaticRemoteURL != nil &&
+		*info.ImageStaticRemoteURL != emoji.ImageStaticRemoteURL {
+		emoji.ImageStaticRemoteURL = *info.ImageStaticRemoteURL
+		ok = false
+	}
+
+	return ok
 }
 
 // emojiChanged returns whether an emoji has changed in a way
@@ -69,4 +128,45 @@ func pollStateUpdated(existing, latest *gtsmodel.Poll) bool {
 // pollJustClosed returns whether a poll has *just* closed.
 func pollJustClosed(existing, latest *gtsmodel.Poll) bool {
 	return existing.ClosedAt.IsZero() && latest.Closed()
+}
+
+// keyedList is a simple alternative to a hashmap which can
+// be used when you expect a (relatively) small number of entries
+// and want it to be able to compact when not heavily in use.
+// unlike a hashmap which requires enough buckets to handle all
+// the possible hashed key permutations of new key values, even
+// if it doesn't contain many non-nil entries.
+type keyedList[T any] []struct {
+	k string
+	v T
+}
+
+func (l keyedList[T]) get(key string) T {
+	for _, kv := range l {
+		if kv.k == key {
+			return kv.v
+		}
+	}
+	var t T
+	return t
+}
+
+func (l *keyedList[T]) put(key string, value T) {
+	(*l) = append((*l), struct {
+		k string
+		v T
+	}{
+		k: key,
+		v: value,
+	})
+}
+
+func (l *keyedList[T]) delete(key string) {
+	for i, kv := range *l {
+		if kv.k == key {
+			copy((*l)[:i], (*l)[i+1:])
+			(*l) = (*l)[:len(*l)-1]
+			return
+		}
+	}
 }

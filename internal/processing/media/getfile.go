@@ -225,6 +225,7 @@ func (p *Processor) getAttachmentContent(
 			attach,
 			media.AdditionalMediaInfo{},
 			false,
+			false, // async
 		)
 		if err != nil {
 			err := gtserror.Newf("error recaching media %s: %w", attach.URL, err)

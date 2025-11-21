@@ -844,6 +844,7 @@ func (d *Dereferencer) fetchStatusAttachments(
 				existing,
 				info,
 				diff,
+				true, // async
 			)
 			if err != nil {
 				log.Errorf(ctx, "error updating existing attachment: %v", err)
@@ -877,6 +878,7 @@ func (d *Dereferencer) fetchStatusAttachments(
 				FocusX:      &placeholder.FileMeta.Focus.X,
 				FocusY:      &placeholder.FileMeta.Focus.Y,
 			},
+			false, // async
 		)
 		if err != nil {
 			if attachment == nil {

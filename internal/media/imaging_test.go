@@ -33,60 +33,60 @@ import (
 )
 
 func BenchmarkFlipH(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = flipH(img)
 	})
 }
 
 func BenchmarkFlipV(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = flipV(img)
 	})
 }
 
 func BenchmarkRotate90(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = rotate90(img)
 	})
 }
 
 func BenchmarkRotate180(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = rotate180(img)
 	})
 }
 
 func BenchmarkRotate270(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = rotate270(img)
 	})
 }
 
 func BenchmarkTranspose(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = transpose(img)
 	})
 }
 
 func BenchmarkTransverse(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = transverse(img)
 	})
 }
 
 func BenchmarkResizeHorizontalLinear(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = resizeHorizontalLinear(img, 64)
 	})
 }
 
 func BenchmarkResizeVerticalLinear(b *testing.B) {
-	benchmarkFunc(b, func(img image.Image) {
+	benchmarkImageFunc(b, func(img image.Image) {
 		_ = resizeVerticalLinear(img, 64)
 	})
 }
 
-func benchmarkFunc(b *testing.B, fn func(image.Image)) {
+func benchmarkImageFunc(b *testing.B, fn func(image.Image)) {
 	b.Helper()
 	for _, testcase := range []struct {
 		Path   string
@@ -150,6 +150,94 @@ func benchmarkFunc(b *testing.B, fn func(image.Image)) {
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					fn(img)
+				}
+			})
+		})
+	}
+}
+
+func BenchmarkDecode(b *testing.B) {
+	b.Helper()
+	for _, testcase := range []struct {
+		Path   string
+		Decode func(io.Reader) (image.Image, error)
+	}{
+		{Path: "./test/10-12.jpg", Decode: jpeg.Decode},
+		{Path: "./test/10-13.jpg", Decode: jpeg.Decode},
+		{Path: "./test/10-4.png", Decode: png.Decode},
+		{Path: "./test/10-6.png", Decode: png.Decode},
+		{Path: "./test/10-7.png", Decode: png.Decode},
+		{Path: "./test/11-0-Color-Day.jpg", Decode: jpeg.Decode},
+		{Path: "./test/11-0-Day.jpg", Decode: jpeg.Decode},
+		{
+			Path:   "./test/big-panda.gif",
+			Decode: gif.Decode,
+		},
+		{
+			Path:   "./test/clock-original.gif",
+			Decode: gif.Decode,
+		},
+		{
+			Path:   "./test/test-jpeg.jpg",
+			Decode: jpeg.Decode,
+		},
+		{
+			Path:   "./test/test-png-noalphachannel.png",
+			Decode: png.Decode,
+		},
+		{
+			Path:   "./test/test-png-alphachannel.png",
+			Decode: png.Decode,
+		},
+		{
+			Path:   "./test/rainbow-original.png",
+			Decode: png.Decode,
+		},
+		{
+			Path:   "./test/nb-flag-original.webp",
+			Decode: webp.Decode,
+		},
+	} {
+		file, err := openRead(testcase.Path)
+		if err != nil {
+			panic(err)
+		}
+
+		img, err := testcase.Decode(file)
+		if err != nil {
+			panic(err)
+		}
+
+		info, err := file.Stat()
+		if err != nil {
+			panic(err)
+		}
+
+		file.Close()
+		_ = img
+
+		testname := fmt.Sprintf("ext=%s type=%s size=%d",
+			strings.TrimPrefix(path.Ext(testcase.Path), "."),
+			strings.TrimPrefix(reflect.TypeOf(img).String(), "*image."),
+			info.Size(),
+		)
+
+		b.Run(testname, func(b *testing.B) {
+			b.Helper()
+			b.ResetTimer()
+			b.RunParallel(func(pb *testing.PB) {
+				for pb.Next() {
+					file, err := openRead(testcase.Path)
+					if err != nil {
+						panic(err)
+					}
+
+					_, err = testcase.Decode(file)
+					if err != nil {
+						panic(err)
+					}
+
+					_ = file.Close()
 				}
 			})
 		})

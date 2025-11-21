@@ -884,6 +884,7 @@ func (d *Dereferencer) fetchAccountAvatar(
 				requestUser,
 				existing,
 				nil,
+				true, // async
 			)
 
 			if existing.Description != avatarDescription {
@@ -925,6 +926,7 @@ func (d *Dereferencer) fetchAccountAvatar(
 			RemoteURL:   &latestAcc.AvatarRemoteURL,
 			Description: &avatarDescription,
 		},
+		false, // async
 	)
 	if err != nil {
 		if attachment == nil {
@@ -989,6 +991,7 @@ func (d *Dereferencer) fetchAccountHeader(
 				requestUser,
 				existing,
 				nil,
+				true, // async
 			)
 
 			if err != nil {
@@ -1018,6 +1021,7 @@ func (d *Dereferencer) fetchAccountHeader(
 			RemoteURL:   &latestAcc.HeaderRemoteURL,
 			Description: &headerDescription,
 		},
+		false, // async
 	)
 	if err != nil {
 		if attachment == nil {

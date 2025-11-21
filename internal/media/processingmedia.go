@@ -46,21 +46,15 @@ type ProcessingMedia struct {
 	mgr    *Manager                  // mgr instance (access to db / storage)
 }
 
-// ID returns the ID of the underlying media.
-func (p *ProcessingMedia) ID() string {
-	return p.media.ID // immutable, safe outside mutex.
+// MustLoad blocks until the thumbnail and fullsize image has been processed, and then returns the completed media.
+func (p *ProcessingMedia) Load(ctx context.Context) (*gtsmodel.MediaAttachment, error) {
+	media, _, err := p.load(ctx)
+	return media, err
 }
 
-// LoadAttachment blocks until the thumbnail and
-// fullsize content has been processed, and then
-// returns the attachment.
-//
-// If processing could not be completed fully
-// then an error will be returned. The attachment
-// will still be returned in that case, but it will
-// only be partially complete and should be treated
-// as a placeholder.
-func (p *ProcessingMedia) Load(ctx context.Context) (*gtsmodel.MediaAttachment, error) {
+// MustLoad blocks until the thumbnail and fullsize image has been processed, and then returns the completed
+// media. On context cancelled this will enqueue the load for asynchronous operation by dereference worker.
+func (p *ProcessingMedia) MustLoad(ctx context.Context) (*gtsmodel.MediaAttachment, error) {
 	media, done, err := p.load(ctx)
 	if !done {
 		// On a context-canceled error (marked as !done), requeue for loading.
@@ -72,6 +66,37 @@ func (p *ProcessingMedia) Load(ctx context.Context) (*gtsmodel.MediaAttachment, 
 		})
 	}
 	return media, err
+}
+
+// Placeholder returns a copy of internally stored processing placeholder,
+// returning only the fields that may be known *before* completion, and as
+// such all fields which are safe to concurrently read.
+func (p *ProcessingMedia) Placeholder() *gtsmodel.MediaAttachment {
+	media := new(gtsmodel.MediaAttachment)
+	media.ID = p.media.ID
+	media.AccountID = p.media.AccountID
+	media.StatusID = p.media.StatusID
+	media.ScheduledStatusID = p.media.ScheduledStatusID
+	media.Description = p.media.Description
+	media.Processing = p.media.Processing
+	media.Avatar = p.media.Avatar
+	media.Header = p.media.Header
+	media.Cached = new(bool)
+	media.RemoteURL = p.media.RemoteURL
+	media.Thumbnail.RemoteURL = p.media.Thumbnail.RemoteURL
+	media.Blurhash = p.media.Blurhash
+	media.FileMeta.Focus.X = p.media.FileMeta.Focus.X
+	media.FileMeta.Focus.Y = p.media.FileMeta.Focus.Y
+	media.CreatedAt = p.media.CreatedAt
+
+	// We specifically set placeholder URL values that allow an API user to fetch the appropriate
+	// media, even if we don't know what filetype it is yet. (since we just parse the IDs from URL path).
+	//
+	// This way the API caller can (in the worst case that it hasn't loaded yet) attempt to fetch the media,
+	// then block on ProcessingMedia{}.Load() for the processing entry it gets from a call to the dereferencer.
+	media.Thumbnail.URL = uris.URIForAttachment(media.AccountID, string(TypeAttachment), string(SizeSmall), media.ID, "loading")
+	media.URL = uris.URIForAttachment(media.AccountID, string(TypeAttachment), string(SizeOriginal), media.ID, "loading")
+	return media
 }
 
 // load is the package private form of load() that is wrapped to catch context canceled.

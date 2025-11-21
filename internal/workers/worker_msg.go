@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 
+	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/queue"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
@@ -133,6 +134,9 @@ func (w *MsgWorker[T]) run(ctx context.Context) {
 	if w.Process == nil || w.Queue == nil {
 		panic("not yet initialized")
 	}
+	log.Debugf(ctx, "%p: starting worker", w)
+	defer log.Debugf(ctx, "%p: stopped worker", w)
+	ctx = gtscontext.SetWorker(ctx)
 	util.Must(func() { w.process(ctx) })
 }
 

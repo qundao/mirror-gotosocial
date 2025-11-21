@@ -19,7 +19,6 @@ package cache
 
 import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // Below are cache invalidation hooks between other caches,
@@ -69,6 +68,10 @@ func (c *Caches) OnInvalidateAccount(account *gtsmodel.Account) {
 	// Invalidate this account's Move(s).
 	c.DB.Move.Invalidate("OriginURI", account.URI)
 	c.DB.Move.Invalidate("TargetURI", account.URI)
+
+	// Invalidate cached timeline author entries.
+	c.Timelines.Home.UnprepareByAccountIDs(account.ID)
+	c.Timelines.List.UnprepareByAccountIDs(account.ID)
 }
 
 func (c *Caches) OnInvalidateApplication(app *gtsmodel.Application) {
@@ -284,11 +287,19 @@ func (c *Caches) OnInvalidateMedia(media *gtsmodel.MediaAttachment) {
 		(media.Header != nil && *media.Header) {
 		// Invalidate cache of attaching account.
 		c.DB.Account.Invalidate("ID", media.AccountID)
+
+		// Invalidate cached timeline author entries.
+		c.Timelines.Home.UnprepareByAccountIDs(media.AccountID)
+		c.Timelines.List.UnprepareByAccountIDs(media.AccountID)
 	}
 
 	if media.StatusID != "" {
 		// Invalidate cache of attaching status.
 		c.DB.Status.Invalidate("ID", media.StatusID)
+
+		// Invalidate cached timeline status entries.
+		c.Timelines.Home.UnprepareByStatusIDs(media.StatusID)
+		c.Timelines.List.UnprepareByStatusIDs(media.StatusID)
 	}
 }
 
@@ -298,6 +309,10 @@ func (c *Caches) OnInvalidatePoll(poll *gtsmodel.Poll) {
 
 	// Invalidate cache of poll vote IDs.
 	c.DB.PollVoteIDs.Invalidate(poll.ID)
+
+	// Invalidate cached timeline status entries.
+	c.Timelines.Home.UnprepareByStatusIDs(poll.StatusID)
+	c.Timelines.List.UnprepareByStatusIDs(poll.StatusID)
 }
 
 func (c *Caches) OnInvalidatePollVote(vote *gtsmodel.PollVote) {
@@ -350,7 +365,7 @@ func (c *Caches) OnInvalidateStatus(status *gtsmodel.Status) {
 		c.DB.Poll.Invalidate("ID", status.PollID)
 	}
 
-	if util.PtrOrZero(status.Local) {
+	if status.Local != nil && *status.Local {
 		// Invalidate the local statuses count.
 		c.DB.LocalInstance.Statuses.Store(nil)
 	}

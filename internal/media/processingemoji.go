@@ -44,30 +44,44 @@ type ProcessingEmoji struct {
 	mgr       *Manager          // mgr instance (access to db / storage)
 }
 
-// LoadEmoji blocks until the static and fullsize image has been processed, and then returns the completed emoji.
+// Load blocks until the static and fullsize image has been processed, and then returns the completed emoji.
 func (p *ProcessingEmoji) Load(ctx context.Context) (*gtsmodel.Emoji, error) {
+	emoji, _, err := p.load(ctx)
+	return emoji, err
+}
+
+// MustLoad blocks until the static and fullsize image has been processed, and then returns the completed
+// emoji. On context cancelled this will enqueue the load for asynchronous operation by dereference worker.
+func (p *ProcessingEmoji) MustLoad(ctx context.Context) (*gtsmodel.Emoji, error) {
 	emoji, done, err := p.load(ctx)
 	if !done {
 		// On a context-canceled error (marked as !done), requeue for loading.
 		p.mgr.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
+			log.Warnf(ctx, "reprocessing emoji %s after canceled ctx", p.emoji.ShortcodeDomain())
 			if _, _, err := p.load(ctx); err != nil {
-				log.Errorf(ctx, "error loading emoji: %v", err)
+				log.Errorf(ctx, "error loading emoji %s: %v", p.emoji.ShortcodeDomain(), err)
 			}
 		})
 	}
 	return emoji, err
 }
 
-func (p *ProcessingEmoji) LoadAsync(deferred func()) *gtsmodel.Emoji {
-	p.mgr.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-		if deferred != nil {
-			defer deferred()
-		}
-
-		if _, _, err := p.load(ctx); err != nil {
-			log.Errorf(ctx, "error loading emoji: %v", err)
-		}
-	})
+// Placeholder returns a copy of internally stored processing placeholder,
+// returning only the fields that may be known *before* completion, and as
+// such all fields which are safe to concurrently read.
+func (p *ProcessingEmoji) Placeholder() *gtsmodel.Emoji {
+	emoji := new(gtsmodel.Emoji)
+	emoji.ID = p.emoji.ID
+	emoji.Shortcode = p.emoji.Shortcode
+	emoji.Domain = p.emoji.Domain
+	emoji.Cached = new(bool)
+	emoji.ImageRemoteURL = p.emoji.ImageRemoteURL
+	emoji.ImageStaticRemoteURL = p.emoji.ImageStaticRemoteURL
+	emoji.Disabled = p.emoji.Disabled
+	emoji.VisibleInPicker = p.emoji.VisibleInPicker
+	emoji.CategoryID = p.emoji.CategoryID
+	emoji.UpdatedAt = p.emoji.UpdatedAt
+	emoji.CreatedAt = p.emoji.CreatedAt
 
 	var pathID string
 	if p.newPathID != "" {
@@ -76,29 +90,14 @@ func (p *ProcessingEmoji) LoadAsync(deferred func()) *gtsmodel.Emoji {
 		pathID = p.emoji.ID
 	}
 
-	// Placeholder returns a copy of internally stored processing placeholder,
-	// returning only the fields that may be known *before* completion,
-	// and as such all fields which are safe to concurrently read.
-	placeholder := new(gtsmodel.Emoji)
-	placeholder.ID = p.emoji.ID
-	placeholder.Shortcode = p.emoji.Shortcode
-	placeholder.Domain = p.emoji.Domain
-	placeholder.Cached = new(bool)
-	placeholder.ImageRemoteURL = p.emoji.ImageRemoteURL
-	placeholder.ImageStaticRemoteURL = p.emoji.ImageStaticRemoteURL
-	placeholder.Disabled = p.emoji.Disabled
-	placeholder.VisibleInPicker = p.emoji.VisibleInPicker
-	placeholder.CategoryID = p.emoji.CategoryID
-
-	// We specifically set placeholder path values that allow an API user to fetch the appropriate
+	// We specifically set placeholder URL values that allow an API user to fetch the appropriate
 	// emoji, even if we don't know what filetype it is yet. (since we just parse the IDs from URL path).
 	//
 	// This way the API caller can (in the worst case that it hasn't loaded yet) attempt to fetch the emoji,
 	// then block on ProcessingEmoji{}.Load() for the processing entry it gets from a call to the dereferencer.
-	placeholder.ImageURL = uris.URIForAttachment(p.instAccID, string(TypeEmoji), string(SizeOriginal), pathID, "loading")
-	placeholder.ImageStaticURL = uris.URIForAttachment(p.instAccID, string(TypeEmoji), string(SizeStatic), pathID, "png")
-
-	return placeholder
+	emoji.ImageURL = uris.URIForAttachment(p.instAccID, string(TypeEmoji), string(SizeOriginal), pathID, "loading")
+	emoji.ImageStaticURL = uris.URIForAttachment(p.instAccID, string(TypeEmoji), string(SizeStatic), pathID, "png")
+	return emoji
 }
 
 // load is the package private form of load() that is wrapped to catch context canceled.

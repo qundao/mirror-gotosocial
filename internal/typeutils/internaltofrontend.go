@@ -674,29 +674,19 @@ func AppToAPIAppPublic(app *gtsmodel.Application) *apimodel.Application {
 	}
 }
 
+// zero value media filemeta.
+var zeroSmall gtsmodel.Small
+var zeroOriginal gtsmodel.Original
+
 // AttachmentToAPIAttachment converts a gts model media attacahment into its api representation.
 func AttachmentToAPIAttachment(media *gtsmodel.MediaAttachment) apimodel.Attachment {
 	var api apimodel.Attachment
 	api.Type = media.Type.String()
 	api.ID = media.ID
 
-	// Only add file details if
-	// we have stored locally.
 	if media.File.Path != "" {
+		// Allocate media metadata object.
 		api.Meta = new(apimodel.MediaMeta)
-		api.Meta.Original = apimodel.MediaDimensions{
-			Width:     media.FileMeta.Original.Width,
-			Height:    media.FileMeta.Original.Height,
-			Aspect:    media.FileMeta.Original.Aspect,
-			Size:      toAPISize(media.FileMeta.Original.Width, media.FileMeta.Original.Height),
-			FrameRate: toAPIFrameRate(media.FileMeta.Original.Framerate),
-			Duration:  util.PtrOrZero(media.FileMeta.Original.Duration),
-			Bitrate:   util.PtrOrZero(media.FileMeta.Original.Bitrate),
-		}
-
-		// Copy over local file URL.
-		api.URL = util.Ptr(media.URL)
-		api.TextURL = util.Ptr(media.URL)
 
 		// Set file focus details.
 		// (this doesn't make much sense if media
@@ -706,18 +696,51 @@ func AttachmentToAPIAttachment(media *gtsmodel.MediaAttachment) apimodel.Attachm
 		api.Meta.Focus.X = media.FileMeta.Focus.X
 		api.Meta.Focus.Y = media.FileMeta.Focus.Y
 
-		// Only add thumbnail details if
-		// we have thumbnail stored locally.
-		if media.Thumbnail.Path != "" {
+		// If the URL is set, either the file is currently
+		// processing, or is successfully stored locally.
+		api.TextURL = util.Ptr(media.URL)
+		api.URL = util.Ptr(media.URL)
+
+		// Only add file details if we have any stored.
+		if media.FileMeta.Original != zeroOriginal {
+			api.Meta.Original = apimodel.MediaDimensions{
+				Width:     media.FileMeta.Original.Width,
+				Height:    media.FileMeta.Original.Height,
+				Aspect:    media.FileMeta.Original.Aspect,
+				Size:      toAPISize(media.FileMeta.Original.Width, media.FileMeta.Original.Height),
+				FrameRate: toAPIFrameRate(media.FileMeta.Original.Framerate),
+				Duration:  util.PtrOrZero(media.FileMeta.Original.Duration),
+				Bitrate:   util.PtrOrZero(media.FileMeta.Original.Bitrate),
+			}
+		}
+	}
+
+	if media.Thumbnail.Path != "" {
+		if api.Meta == nil {
+			// Allocate media metadata object.
+			api.Meta = new(apimodel.MediaMeta)
+
+			// Set file focus details.
+			// (this doesn't make much sense if media
+			// has no image, but the API doesn't yet
+			// distinguish between zero values vs. none).
+			api.Meta.Focus = new(apimodel.MediaFocus)
+			api.Meta.Focus.X = media.FileMeta.Focus.X
+			api.Meta.Focus.Y = media.FileMeta.Focus.Y
+		}
+
+		// If thumbnail URL is set, either the file is
+		// currently processing, or is stored locally.
+		api.PreviewURL = util.Ptr(media.Thumbnail.URL)
+
+		// Only add details if we have any stored.
+		if media.FileMeta.Small != zeroSmall {
 			api.Meta.Small = apimodel.MediaDimensions{
 				Width:  media.FileMeta.Small.Width,
 				Height: media.FileMeta.Small.Height,
 				Aspect: media.FileMeta.Small.Aspect,
 				Size:   toAPISize(media.FileMeta.Small.Width, media.FileMeta.Small.Height),
 			}
-
-			// Copy over local thumbnail file URL.
-			api.PreviewURL = util.Ptr(media.Thumbnail.URL)
 		}
 	}
 

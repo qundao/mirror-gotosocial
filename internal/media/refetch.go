@@ -126,7 +126,7 @@ func (m *Manager) RefetchEmojis(ctx context.Context, domain string, dereferenceM
 			continue
 		}
 
-		if _, err := processingEmoji.Load(ctx); err != nil {
+		if _, err := processingEmoji.MustLoad(ctx); err != nil {
 			log.Errorf(ctx, "emoji %s could not be updated because of an error during loading: %s", shortcodeDomain, err)
 			continue
 		}

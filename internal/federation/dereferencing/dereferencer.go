@@ -88,9 +88,9 @@ type Dereferencer struct {
 	intFilter           *interaction.Filter
 
 	// in-progress dereferencing media / emoji
-	derefMedia    map[string]*media.ProcessingMedia
+	derefMedia    keyedList[*media.ProcessingMedia]
 	derefMediaMu  sync.Mutex
-	derefEmojis   map[string]*media.ProcessingEmoji
+	derefEmojis   keyedList[*media.ProcessingEmoji]
 	derefEmojisMu sync.Mutex
 
 	// handshakes marks current in-progress handshakes
@@ -121,8 +121,6 @@ func NewDereferencer(
 		mediaManager:        mediaManager,
 		visFilter:           visFilter,
 		intFilter:           intFilter,
-		derefMedia:          make(map[string]*media.ProcessingMedia),
-		derefEmojis:         make(map[string]*media.ProcessingEmoji),
 		handshakes:          make(map[string][]*url.URL),
 	}
 }

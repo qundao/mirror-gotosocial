@@ -151,6 +151,7 @@ func (w *Worker) run(ctx context.Context) {
 	}
 	log.Debugf(ctx, "%p: starting worker", w)
 	defer log.Debugf(ctx, "%p: stopped worker", w)
+	ctx = gtscontext.SetWorker(ctx)
 	util.Must(func() { w.process(ctx) })
 }
 

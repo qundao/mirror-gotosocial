@@ -44,7 +44,31 @@ const (
 	httpSigPubKeyIDKey
 	dryRunKey
 	httpClientSignFnKey
+	workerKey
 )
+
+// IsWorker returns whether the "worker" context key has been set. This can
+// be used to indicate to functions whether it is being executed by a background
+// worker, or by a foreground goroutine that needs to respond in a timely manner.
+func IsWorker(ctx context.Context) bool {
+	_, ok := ctx.Value(workerKey).(struct{})
+	return ok
+}
+
+// SetWorker sets the "worker" context flag and returns this wrapped context.
+// See IsWorker() for further information on the "worker" context flag.
+func SetWorker(ctx context.Context) context.Context {
+	return workerContext{ctx}
+}
+
+type workerContext struct{ context.Context }
+
+func (ctx workerContext) Value(key any) any {
+	if key == workerKey {
+		return struct{}{}
+	}
+	return ctx.Context.Value(key)
+}
 
 // DryRun returns whether the "dryrun" context key has been set. This can be
 // used to indicate to functions, (that support it), that only a dry-run of

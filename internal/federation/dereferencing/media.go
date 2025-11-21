@@ -25,6 +25,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/media"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
@@ -53,6 +54,7 @@ func (d *Dereferencer) GetMedia(
 	accountID string, // media account owner
 	remoteURL string,
 	info media.AdditionalMediaInfo,
+	async bool,
 ) (
 	*gtsmodel.MediaAttachment,
 	error,
@@ -79,16 +81,19 @@ func (d *Dereferencer) GetMedia(
 			// Get maximum supported remote media size.
 			maxsz := int64(config.GetMediaRemoteMaxSize()) // #nosec G115 -- Already validated.
 
+			// Prepare data function to dereference remote media.
+			data := func(context.Context) (io.ReadCloser, error) {
+				return tsport.DereferenceMedia(ctx, url, maxsz)
+			}
+
 			// Create media with prepared info.
-			return d.mediaManager.CreateMedia(
-				ctx,
+			return d.mediaManager.CreateMedia(ctx,
 				accountID,
-				func(ctx context.Context) (io.ReadCloser, error) {
-					return tsport.DereferenceMedia(ctx, url, maxsz)
-				},
+				data,
 				info,
 			)
 		},
+		async,
 	)
 }
 
@@ -116,6 +121,7 @@ func (d *Dereferencer) RefreshMedia(
 	attach *gtsmodel.MediaAttachment,
 	info media.AdditionalMediaInfo,
 	force bool,
+	async bool,
 ) (
 	*gtsmodel.MediaAttachment,
 	error,
@@ -125,24 +131,8 @@ func (d *Dereferencer) RefreshMedia(
 		return attach, nil
 	}
 
-	// Check blurhash up-to-date.
-	if info.Blurhash != nil &&
-		*info.Blurhash != attach.Blurhash {
-		attach.Blurhash = *info.Blurhash
-		force = true
-	}
-
-	// Check description up-to-date.
-	if info.Description != nil &&
-		*info.Description != attach.Description {
-		attach.Description = *info.Description
-		force = true
-	}
-
-	// Check remote URL up-to-date.
-	if info.RemoteURL != nil &&
-		*info.RemoteURL != attach.RemoteURL {
-		attach.RemoteURL = *info.RemoteURL
+	// Check if media is up-to-date.
+	if !mediaUpToDate(attach, info) {
 		force = true
 	}
 
@@ -174,15 +164,19 @@ func (d *Dereferencer) RefreshMedia(
 			// Get maximum supported remote media size.
 			maxsz := int64(config.GetMediaRemoteMaxSize()) // #nosec G115 -- Already validated.
 
+			// Prepare data function to dereference remote media.
+			data := func(context.Context) (io.ReadCloser, error) {
+				return tsport.DereferenceMedia(ctx, url, maxsz)
+			}
+
 			// Recache media with prepared info,
 			// this will also update media in db.
 			return d.mediaManager.CacheMedia(
 				attach,
-				func(ctx context.Context) (io.ReadCloser, error) {
-					return tsport.DereferenceMedia(ctx, url, maxsz)
-				},
+				data,
 			), nil
 		},
+		async,
 	)
 }
 
@@ -194,6 +188,7 @@ func (d *Dereferencer) updateAttachment(
 	requestUser string,
 	existing *gtsmodel.MediaAttachment, // existing attachment
 	attach *gtsmodel.MediaAttachment, // (optional) changed media
+	async bool,
 ) (
 	*gtsmodel.MediaAttachment, // always set
 	error,
@@ -214,21 +209,27 @@ func (d *Dereferencer) updateAttachment(
 		existing,
 		info,
 		false,
+		async,
 	)
 }
 
 // processingMediaSafely provides concurrency-safe processing of
 // a media with given remote URL string. if a copy of the media is
 // not already being processed, the given 'process' callback will
-// be used to generate new *media.ProcessingMedia{} instance.
+// be used to generate new *media.ProcessingMedia{} instance. async
+// determines whether to load it immediately, or in the background.
+// the provided process function can also optionally return ready
+// media model directly for catching just-cached race conditions.
 func (d *Dereferencer) processMediaSafeley(
 	ctx context.Context,
 	remoteURL string,
 	process func() (*media.ProcessingMedia, error),
+	async bool,
 ) (
-	media *gtsmodel.MediaAttachment,
+	attach *gtsmodel.MediaAttachment,
 	err error,
 ) {
+	var existing bool
 
 	// Acquire map lock.
 	d.derefMediaMu.Lock()
@@ -239,36 +240,65 @@ func (d *Dereferencer) processMediaSafeley(
 	defer unlock()
 
 	// Look for an existing deref in progress.
-	processing, ok := d.derefMedia[remoteURL]
+	processing := d.derefMedia.get(remoteURL)
+	if existing = (processing != nil); !existing {
 
-	if !ok {
-		// Start new processing emoji.
+		// Start new processing media.
 		processing, err = process()
 		if err != nil {
 			return nil, err
 		}
 
-		// Add processing media to hash map.
-		d.derefMedia[remoteURL] = processing
-
-		defer func() {
-			// Remove on finish.
-			d.derefMediaMu.Lock()
-			delete(d.derefMedia, remoteURL)
-			d.derefMediaMu.Unlock()
-		}()
+		// Add processing media to the list.
+		d.derefMedia.put(remoteURL, processing)
 	}
 
 	// Unlock map.
 	unlock()
 
-	// Perform media load operation.
-	media, err = processing.Load(ctx)
-	if err != nil {
-		err = gtserror.Newf("error loading media %s: %w", remoteURL, err)
+	if async {
+		// Acquire a placeholder to return.
+		attach = processing.Placeholder()
 
-		// TODO: in time we should return checkable flags by gtserror.Is___()
-		// which can determine if loading error should allow remaining placeholder.
+		// Enqueue the processing media load logic for background processing.
+		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
+			if !existing {
+				defer func() {
+					// We started the processing,
+					// remove from list on finish.
+					d.derefMediaMu.Lock()
+					d.derefMedia.delete(remoteURL)
+					d.derefMediaMu.Unlock()
+				}()
+			}
+
+			// Perform media load operation.
+			attach, err = processing.Load(ctx)
+			if err != nil {
+				log.Errorf(ctx, "error loading media %s: %v", remoteURL, err)
+			}
+		})
+	} else {
+		if !existing {
+			defer func() {
+				// We started the processing,
+				// remove from list on finish.
+				d.derefMediaMu.Lock()
+				d.derefMedia.delete(remoteURL)
+				d.derefMediaMu.Unlock()
+			}()
+		}
+
+		// Perform media load operation,
+		// falling back to asynchronous
+		// operation on context cancelled.
+		attach, err = processing.MustLoad(ctx)
+		if err != nil {
+
+			// TODO: in time we should return checkable flags by gtserror.Is___()
+			// which can determine if loading error should allow remaining placeholder.
+			err = gtserror.Newf("error loading media %s: %w", remoteURL, err)
+		}
 	}
 
 	return

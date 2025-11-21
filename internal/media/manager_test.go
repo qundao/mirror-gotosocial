@@ -261,7 +261,7 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcess() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the image
@@ -355,7 +355,7 @@ func (suite *ManagerTestSuite) TestPDFProcess() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	suite.Zero(attachment.FileMeta)
@@ -410,7 +410,7 @@ func (suite *ManagerTestSuite) TestSlothVineProcess() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the video
@@ -470,7 +470,7 @@ func (suite *ManagerTestSuite) TestAnimatedGifProcess() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the image
@@ -535,7 +535,7 @@ func (suite *ManagerTestSuite) TestLongerMp4Process() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the video
@@ -595,7 +595,7 @@ func (suite *ManagerTestSuite) TestBirdnestMp4Process() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the video
@@ -655,7 +655,7 @@ func (suite *ManagerTestSuite) TestOpusProcess() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the image
@@ -707,7 +707,7 @@ func (suite *ManagerTestSuite) TestPngNoAlphaChannelProcess() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the image
@@ -763,7 +763,7 @@ func (suite *ManagerTestSuite) TestPngAlphaChannelProcess() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the image
@@ -819,7 +819,7 @@ func (suite *ManagerTestSuite) TestAvifProcess() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the image
@@ -875,7 +875,7 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcessWithCallback() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the image
@@ -953,7 +953,7 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcessWithDiskStorage() {
 
 	// make sure it's got the stuff set on it that we expect
 	// the attachment ID and accountID we expect
-	suite.Equal(processing.ID(), attachment.ID)
+	suite.Equal(processing.Placeholder().ID, attachment.ID)
 	suite.Equal(accountID, attachment.AccountID)
 
 	// file meta should be correctly derived from the image
@@ -1034,14 +1034,14 @@ func (suite *ManagerTestSuite) TestSmallSizedMediaTypeDetection_issue2263() {
 			suite.NoError(err)
 
 			// fetch the attachment id from the processing media
-			attachment, err := suite.db.GetAttachmentByID(ctx, processing.ID())
+			attachment, err := suite.db.GetAttachmentByID(ctx, processing.Placeholder().ID)
 			if err != nil {
 				suite.FailNow(err.Error())
 			}
 
 			// make sure it's got the stuff set on it that we expect
 			// the attachment ID and accountID we expect
-			suite.Equal(processing.ID(), attachment.ID)
+			suite.Equal(processing.Placeholder().ID, attachment.ID)
 			suite.Equal(accountID, attachment.AccountID)
 
 			actual := attachment.File.ContentType
