@@ -352,6 +352,22 @@ func Printf(s string, a ...interface{}) {
 	logf(context.Background(), UNSET, nil, s, a...)
 }
 
+// a note on design implementation here:
+//
+// logf contains the main "meat" of our logging package. everything
+// goes through here. we also know that logging configuration won't
+// be changed outside of initialization, so we can do away with any
+// concurrency protection on e.g. writer, formatting, etc.
+//
+// logf should be complex enough that it doesn't get inlined, but
+// to be sure we include a compiler tag to prevent it. we do this
+// so that *callers* of logf can instead perform the simple level
+// checking / other bits, and hopefully be inlined themselves. this
+// that then means all log level checking can easily be inlined into
+// their calling locations, and so save on function calls to logf()
+// when not needed in heavily used DEBUG / TRACE logging, instead
+// only performing boolean operations which themselves are inlined.
+//
 //go:noinline
 func logf(ctx context.Context, lvl LEVEL, fields []kv.Field, msg string, args ...interface{}) {
 	var out *os.File
