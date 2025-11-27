@@ -15,44 +15,32 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+//go:build !nooidc
+
 package oidc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
+	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"golang.org/x/oauth2"
 )
 
-const (
-	// CallbackPath is the API path for receiving callback tokens from external OIDC providers
-	CallbackPath = "/auth/callback"
-)
-
-// IDP contains logic for parsing an OIDC access code into a set of claims by calling an external OIDC provider.
-type IDP interface {
-	// HandleCallback accepts a context (pass the context from the http.Request), and an oauth2 code as returned from a successful
-	// login through an OIDC provider. It uses the code to request a token from the OIDC provider, which should contain an id_token
-	// with a set of claims.
-	//
-	// Note that this function *does not* verify state. That should be handled by the caller *before* this function is called.
-	HandleCallback(ctx context.Context, code string) (*Claims, gtserror.WithCode)
-	// AuthCodeURL returns the proper redirect URL for this IDP, for redirecting requesters to the correct OIDC endpoint.
-	AuthCodeURL(state string) string
-}
-
-type idp struct {
+// IDP contains logic for parsing an OIDC access code into
+// a set of claims by calling an external OIDC provider.
+type IDP struct {
 	oauth2Config oauth2.Config
 	provider     *oidc.Provider
 	oidcConf     *oidc.Config
 }
 
 // NewIDP returns a new IDP configured with the given config.
-func NewIDP(ctx context.Context) (IDP, error) {
-	// validate config fields
+func NewIDP(ctx context.Context) (*IDP, error) {
 	idpName := config.GetOIDCIdpName()
 	if idpName == "" {
 		return nil, fmt.Errorf("not set: IDPName")
@@ -114,9 +102,60 @@ func NewIDP(ctx context.Context) (IDP, error) {
 		oidcConf.SkipIssuerCheck = true
 	}
 
-	return &idp{
+	return &IDP{
 		oauth2Config: oauth2Config,
 		oidcConf:     oidcConf,
 		provider:     provider,
 	}, nil
+}
+
+// HandleCallback accepts a context (pass the context from the http.Request), and an oauth2 code as returned from a successful
+// login through an OIDC provider. It uses the code to request a token from the OIDC provider, which should contain an id_token
+// with a set of claims.
+//
+// Note that this function *does not* verify state. That should be handled by the caller *before* this function is called.
+func (i *IDP) HandleCallback(ctx context.Context, code string) (*Claims, gtserror.WithCode) {
+	if code == "" {
+		err := errors.New("code was empty string")
+		return nil, gtserror.NewErrorBadRequest(err, err.Error())
+	}
+
+	log.Debug(ctx, "exchanging code for oauth2token")
+	oauth2Token, err := i.oauth2Config.Exchange(ctx, code)
+	if err != nil {
+		err := fmt.Errorf("error exchanging code for oauth2token: %s", err)
+		return nil, gtserror.NewErrorInternalError(err)
+	}
+
+	log.Debug(ctx, "extracting id_token")
+	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
+	if !ok {
+		err := errors.New("no id_token in oauth2token")
+		return nil, gtserror.NewErrorBadRequest(err, err.Error())
+	}
+	log.Debugf(ctx, "raw id token: %s", rawIDToken)
+
+	// Parse and verify ID Token payload.
+	log.Debug(ctx, "verifying id_token")
+	idTokenVerifier := i.provider.Verifier(i.oidcConf)
+	idToken, err := idTokenVerifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		err = fmt.Errorf("could not verify id token: %s", err)
+		return nil, gtserror.NewErrorUnauthorized(err, err.Error())
+	}
+
+	log.Debug(ctx, "extracting claims from id_token")
+	claims := &Claims{}
+	if err := idToken.Claims(claims); err != nil {
+		err := fmt.Errorf("could not parse claims from idToken: %s", err)
+		return nil, gtserror.NewErrorInternalError(err, err.Error())
+	}
+
+	return claims, nil
+}
+
+// AuthCodeURL returns the proper redirect URL for this IDP,
+// for redirecting requesters to the correct OIDC endpoint.
+func (i *IDP) AuthCodeURL(state string) string {
+	return i.oauth2Config.AuthCodeURL(state)
 }

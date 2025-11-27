@@ -70,7 +70,7 @@ const (
 type Module struct {
 	state     *state.State
 	processor *processing.Processor
-	idp       oidc.IDP
+	idp       *oidc.IDP
 }
 
 // New returns an Auth module which provides
@@ -80,7 +80,7 @@ type Module struct {
 func New(
 	state *state.State,
 	processor *processing.Processor,
-	idp oidc.IDP,
+	idp *oidc.IDP,
 ) *Module {
 	return &Module{
 		state:     state,

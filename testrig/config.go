@@ -28,7 +28,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/language"
 	"code.superseriousbusiness.org/gotosocial/internal/media/ffmpeg"
 	"codeberg.org/gruf/go-bytesize"
-	"github.com/coreos/go-oidc/v3/oidc"
 )
 
 func init() {
@@ -154,7 +153,7 @@ func testDefaults() config.Configuration {
 		OIDCIssuer:           "",
 		OIDCClientID:         "",
 		OIDCClientSecret:     "",
-		OIDCScopes:           []string{oidc.ScopeOpenID, "profile", "email", "groups"},
+		OIDCScopes:           []string{"openid", "profile", "email", "groups"},
 		OIDCLinkExisting:     false,
 		OIDCAdminGroups:      []string{"adminRole"},
 		OIDCAllowedGroups:    []string{"allowedRole"},

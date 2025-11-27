@@ -52,7 +52,7 @@ type AuthStandardTestSuite struct {
 	federator    *federation.Federator
 	processor    *processing.Processor
 	emailSender  email.Sender
-	idp          oidc.IDP
+	idp          *oidc.IDP
 
 	// standard suite models
 	testTokens       map[string]*gtsmodel.Token

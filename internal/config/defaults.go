@@ -22,7 +22,6 @@ import (
 
 	"code.superseriousbusiness.org/gotosocial/internal/language"
 	"codeberg.org/gruf/go-bytesize"
-	"github.com/coreos/go-oidc/v3/oidc"
 )
 
 // Defaults contains a populated Configuration with reasonable defaults. Note that
@@ -122,7 +121,7 @@ var Defaults = Configuration{
 	OIDCIssuer:           "",
 	OIDCClientID:         "",
 	OIDCClientSecret:     "",
-	OIDCScopes:           []string{oidc.ScopeOpenID, "profile", "email", "groups"},
+	OIDCScopes:           []string{"openid", "profile", "email", "groups"},
 	OIDCLinkExisting:     false,
 
 	SMTPHost:               "",

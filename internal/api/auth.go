@@ -68,7 +68,7 @@ func (a *Auth) Route(r *router.Router, m ...gin.HandlerFunc) {
 func NewAuth(
 	state *state.State,
 	p *processing.Processor,
-	idp oidc.IDP,
+	idp *oidc.IDP,
 	routerSession *gtsmodel.RouterSession,
 	sessionName string,
 	cookiePolicy apiutil.CookiePolicy,

@@ -122,12 +122,13 @@ func (m *Module) CallbackGETHandler(c *gin.Context) {
 		return
 	}
 
-	user, errWithCode := m.fetchUserForClaims(c.Request.Context(), claims, net.IP(c.ClientIP()), app.ID)
+	user, errWithCode := m.fetchUserForClaims(c.Request.Context(), claims)
 	if errWithCode != nil {
 		m.mustClearSession(s)
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 		return
 	}
+
 	if user == nil {
 		// no user exists yet - let's ask them for their preferred username
 		instance, errWithCode := m.processor.InstanceGetV1(c.Request.Context())
@@ -263,7 +264,7 @@ func (m *Module) FinalizePOSTHandler(c *gin.Context) {
 	c.Redirect(http.StatusFound, "/oauth"+OauthAuthorizePath)
 }
 
-func (m *Module) fetchUserForClaims(ctx context.Context, claims *oidc.Claims, ip net.IP, appID string) (*gtsmodel.User, gtserror.WithCode) {
+func (m *Module) fetchUserForClaims(ctx context.Context, claims *oidc.Claims) (*gtsmodel.User, gtserror.WithCode) {
 	if claims.Sub == "" {
 		err := errors.New("no sub claim found - is your provider OIDC compliant?")
 		return nil, gtserror.NewErrorBadRequest(err, err.Error())

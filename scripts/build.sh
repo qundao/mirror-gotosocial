@@ -22,6 +22,7 @@ GO_GCFLAGS=${GO_GCFLAGS-}
 # - nosqlite:       disables compiling-in sqlite support                           (reduced binary size)
 # - nopostgres:     disables compiling-in postgres support                         (reduced binary size)
 # - nos3:           disables compiling-in S3 storage support                       (reduced binary size)
+# - nooidc:         disables compiling-in OIDC support                             (reduced binary size)
 # - noerrcaller:    disables caller function prefix in errors                      (slightly better performance, at cost of err readability)
 # - debug:          enables /debug/pprof endpoint                                  (adds debug, at mild performance cost)
 # - debugenv:       enables /debug/pprof endpoint if DEBUG=1 env during runtime    (adds debug, at mild performance cost)
