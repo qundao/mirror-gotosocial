@@ -29,7 +29,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
-	"code.superseriousbusiness.org/gotosocial/internal/util/xslices"
 )
 
 // notifyPendingReply notifies the account replied-to
@@ -555,55 +554,6 @@ func (s *Surface) notifySignup(ctx context.Context, newUser *gtsmodel.User) erro
 			nil,
 		); err != nil {
 			errs.Appendf("error notifying moderator %s: %w", mod.ID, err)
-			continue
-		}
-	}
-
-	return errs.Combine()
-}
-
-func (s *Surface) notifyStatusEdit(
-	ctx context.Context,
-	status *gtsmodel.Status,
-	edit *gtsmodel.StatusEdit,
-) error {
-	// Get local-only interactions (we can't/don't notify remotes).
-	interactions, err := s.State.DB.GetStatusInteractions(ctx, status.ID, true)
-	if err != nil && !errors.Is(err, db.ErrNoEntries) {
-		return gtserror.Newf("db error getting status interactions: %w", err)
-	}
-
-	// Deduplicate interactions by account ID,
-	// we don't need to notify someone twice
-	// if they've both boosted *and* replied
-	// to an edited status, for example.
-	interactions = xslices.DeduplicateFunc(
-		interactions,
-		func(v gtsmodel.Interaction) string {
-			return v.GetAccount().ID
-		},
-	)
-
-	// Notify each account that's
-	// interacted with the status.
-	var errs gtserror.MultiError
-	for _, i := range interactions {
-		targetAcct := i.GetAccount()
-		if targetAcct.ID == status.AccountID {
-			// Don't notify an account
-			// if they've interacted
-			// with their *own* status.
-			continue
-		}
-
-		if err := s.Notify(ctx,
-			gtsmodel.NotificationUpdate,
-			targetAcct,
-			status.Account,
-			status,
-			edit,
-		); err != nil {
-			errs.Appendf("error notifying status edit: %w", err)
 			continue
 		}
 	}

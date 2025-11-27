@@ -1291,51 +1291,8 @@ func (p *fediAPI) UpdateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		log.Errorf(ctx, "error refreshing status: %v", err)
 	}
 
-	if status.Poll != nil && status.Poll.Closing {
-
-		// If the latest status has a newly closed poll, at least compared
-		// to the existing version, then notify poll close to all voters.
-		if err := p.surface.notifyPollClose(ctx, status); err != nil {
-			log.Errorf(ctx, "error sending poll notification: %v", err)
-		}
-	}
-
-	// Notify any *new* mentions added
-	// to this status by the editor.
-	for _, mention := range status.Mentions {
-		// Check if we've seen
-		// this mention already.
-		if !mention.IsNew {
-			// Already seen
-			// it, skip.
-			continue
-		}
-
-		// Haven't seen this mention
-		// yet, notify it if necessary.
-		mention.Status = status
-		if err := p.surface.notifyMention(ctx, mention); err != nil {
-			log.Errorf(ctx, "error notifying mention: %v", err)
-		}
-	}
-
-	if len(status.EditIDs) > 0 {
-		// Ensure edits are fully populated for this status before anything.
-		if err := p.surface.State.DB.PopulateStatusEdits(ctx, status); err != nil {
-			log.Error(ctx, "error populating updated status edits: %v")
-
-			// Then send notifications of a status edit
-			// to any local interactors of the status.
-		} else if err := p.surface.notifyStatusEdit(ctx,
-			status,
-			status.Edits[len(status.Edits)-1], // latest
-		); err != nil {
-			log.Errorf(ctx, "error notifying status edit: %v", err)
-		}
-	}
-
-	// Push message that the status has been edited to streams.
-	if err := p.surface.timelineStatusUpdate(ctx, status); err != nil {
+	// Stream and notify relevant local users that the status has been edited.
+	if err := p.surface.timelineAndNotifyStatusUpdate(ctx, status); err != nil {
 		log.Errorf(ctx, "error streaming status edit: %v", err)
 	}
 
