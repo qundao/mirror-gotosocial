@@ -247,7 +247,7 @@ codeberg.org/gruf/go-fastcopy
 # codeberg.org/gruf/go-fastpath/v2 v2.0.1
 ## explicit; go 1.20
 codeberg.org/gruf/go-fastpath/v2
-# codeberg.org/gruf/go-ffmpreg v0.6.15
+# codeberg.org/gruf/go-ffmpreg v0.6.16
 ## explicit; go 1.23.0
 codeberg.org/gruf/go-ffmpreg/embed
 codeberg.org/gruf/go-ffmpreg/wasm
