@@ -53,6 +53,40 @@ func (suite *StatusBoostTestSuite) TestBoostOfBoost() {
 	suite.Equal(targetStatus1.ID, boost2.Reblog.ID)
 }
 
+func (suite *StatusBoostTestSuite) TestBoostUnboost() {
+	var (
+		ctx      = suite.T().Context()
+		acct     = suite.testAccounts["local_account_1"]
+		app      = suite.testApplications["application_1"]
+		statusID = suite.testStatuses["admin_account_status_1"].ID
+	)
+
+	// Boost the status.
+	_, err := suite.status.BoostCreate(ctx, acct, app, statusID)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Check status is boosted by the caller.
+	status, err := suite.status.Get(ctx, acct, statusID)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	if !status.Reblogged {
+		suite.FailNow("", "expected reblogged=true, got false")
+	}
+
+	// Unboost that status.
+	// Check it's not boosted by the caller.
+	status, err = suite.status.BoostRemove(ctx, acct, app, statusID)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	if status.Reblogged {
+		suite.FailNow("", "expected reblogged=false, got true")
+	}
+}
+
 func TestStatusBoostTestSuite(t *testing.T) {
 	suite.Run(t, new(StatusBoostTestSuite))
 }
