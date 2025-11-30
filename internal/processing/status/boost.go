@@ -210,7 +210,15 @@ func (p *Processor) BoostRemove(
 		})
 	}
 
-	return p.c.GetAPIStatus(ctx, requester, target)
+	// For client convenience, mark the status as unboosted
+	// even though side effects probably haven't completed yet.
+	unboostedStatus, errWithCode := p.c.GetAPIStatus(ctx, requester, target)
+	if errWithCode != nil {
+		return nil, errWithCode
+	}
+	unboostedStatus.Reblogged = false
+
+	return unboostedStatus, nil
 }
 
 // StatusBoostedBy returns a slice of accounts that have boosted the given status, filtered according to privacy settings.
