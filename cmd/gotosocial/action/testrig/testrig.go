@@ -237,7 +237,7 @@ func Start(ctx context.Context) error {
 	})
 
 	// build router modules
-	var idp oidc.IDP
+	var idp *oidc.IDP
 	if config.GetOIDCEnabled() {
 		idp, err = oidc.NewIDP(ctx)
 		if err != nil {

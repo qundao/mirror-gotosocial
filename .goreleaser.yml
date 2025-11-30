@@ -37,8 +37,21 @@ builds:
       - netgo
       - osusergo
       - static_build
-      - kvformat
       - timetzdata
+      - nomsgpack
+      - stdlibjson
+      - >-
+        {{ if and (index .Env "NOOTEL") (.Env.NOOTEL) }}nootel{{ end }}
+      - >-
+        {{ if and (index .Env "NOSQLITE") (.Env.NOSQLITE) }}nosqlite{{ end }}
+      - >-
+        {{ if and (index .Env "NOPOSTGRES") (.Env.NOPOSTGRES) }}nopostgres{{ end }}
+      - >-
+        {{ if and (index .Env "NOS3") (.Env.NOS3) }}nos3{{ end }}
+      - >-
+        {{ if and (index .Env "NOOIDC") (.Env.NOOIDC) }}nooidc{{ end }}
+      - >-
+        {{ if and (index .Env "NOERRCALLER") (.Env.NOERRCALLER) }}noerrcaller{{ end }}
       - >-
         {{ if and (index .Env "DEBUG") (.Env.DEBUG) }}debugenv{{ end }}
     env:
@@ -66,9 +79,22 @@ builds:
       - netgo
       - osusergo
       - static_build
-      - kvformat
       - timetzdata
-      - nowasm
+      - nomsgpack
+      - stdlibjson
+      - nowasm # <-- set the nowasm flag
+      - >-
+        {{ if and (index .Env "NOOTEL") (.Env.NOOTEL) }}nootel{{ end }}
+      - >-
+        {{ if and (index .Env "NOSQLITE") (.Env.NOSQLITE) }}nosqlite{{ end }}
+      - >-
+        {{ if and (index .Env "NOPOSTGRES") (.Env.NOPOSTGRES) }}nopostgres{{ end }}
+      - >-
+        {{ if and (index .Env "NOS3") (.Env.NOS3) }}nos3{{ end }}
+      - >-
+        {{ if and (index .Env "NOOIDC") (.Env.NOOIDC) }}nooidc{{ end }}
+      - >-
+        {{ if and (index .Env "NOERRCALLER") (.Env.NOERRCALLER) }}noerrcaller{{ end }}
       - >-
         {{ if and (index .Env "DEBUG") (.Env.DEBUG) }}debugenv{{ end }}
     env:

@@ -26,12 +26,12 @@ import (
 
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/log"
-	"codeberg.org/gruf/go-storage/disk"
+	"codeberg.org/gruf/go-storage"
 )
 
-// Driver wraps a disk.DiskStorage to
-// provide optimized write operations.
-type Driver struct{ Storage *disk.DiskStorage }
+// Driver wraps a disk or memory storage.Storage
+// to provide optimized write operations.
+type Driver struct{ Storage storage.Storage }
 
 // PutFile: see PutFile() in storage.go.
 func (d *Driver) PutFile(ctx context.Context, key, filepath, _ string) (int64, error) {
