@@ -846,10 +846,6 @@ func (p *clientAPI) UndoAnnounce(ctx context.Context, cMsg *messages.FromClientA
 		return gtserror.Newf("%T not parseable as *gtsmodel.Status", cMsg.GTSModel)
 	}
 
-	if err := p.state.DB.DeleteStatusByID(ctx, status.ID); err != nil {
-		return gtserror.Newf("db error deleting status: %w", err)
-	}
-
 	// Delete the boost wrapper status from timelines.
 	p.surface.deleteStatusFromTimelines(ctx, status.ID)
 

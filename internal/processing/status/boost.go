@@ -199,26 +199,41 @@ func (p *Processor) BoostRemove(
 		return nil, gtserror.NewErrorInternalError(err)
 	}
 
-	if boost != nil {
-		// Status was boosted. Process unboost side effects asynchronously.
-		p.state.Workers.Client.Queue.Push(&messages.FromClientAPI{
-			APObjectType:   ap.ActivityAnnounce,
-			APActivityType: ap.ActivityUndo,
-			GTSModel:       boost,
-			Origin:         requester,
-			Target:         target.Account,
-		})
-	}
-
-	// For client convenience, mark the status as unboosted
-	// even though side effects probably haven't completed yet.
-	unboostedStatus, errWithCode := p.c.GetAPIStatus(ctx, requester, target)
-	if errWithCode != nil {
+	// Convert the target status to an API status.
+	apiStatus, errWithCode := p.c.GetAPIStatus(ctx,
+		requester,
+		target,
+	)
+	if err != nil {
 		return nil, errWithCode
 	}
-	unboostedStatus.Reblogged = false
 
-	return unboostedStatus, nil
+	if boost == nil {
+		// Status wasn't boosted,
+		// simply return here.
+		return apiStatus, nil
+	}
+
+	// Delete boost wrapper status from the database.
+	err = p.state.DB.DeleteStatusByID(ctx, boost.ID)
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		err := gtserror.Newf("db error deleting status: %w", err)
+		return nil, gtserror.NewErrorInternalError(err)
+	}
+
+	// Status was boosted. Process unboost side effects asynchronously.
+	p.state.Workers.Client.Queue.Push(&messages.FromClientAPI{
+		APObjectType:   ap.ActivityAnnounce,
+		APActivityType: ap.ActivityUndo,
+		GTSModel:       boost,
+		Origin:         requester,
+		Target:         target.Account,
+	})
+
+	// Unmark status as boosted.
+	apiStatus.Reblogged = false
+
+	return apiStatus, nil
 }
 
 // StatusBoostedBy returns a slice of accounts that have boosted the given status, filtered according to privacy settings.
