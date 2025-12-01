@@ -35,7 +35,7 @@ import (
 // target account, filtered by visibility according to the requesting account.
 func (p *Processor) StatusesGet(
 	ctx context.Context,
-	requestingAccount *gtsmodel.Account,
+	requester *gtsmodel.Account,
 	targetAccountID string,
 	limit int,
 	excludeReplies bool,
@@ -46,8 +46,8 @@ func (p *Processor) StatusesGet(
 	mediaOnly bool,
 	publicOnly bool,
 ) (*apimodel.PageableResponse, gtserror.WithCode) {
-	if requestingAccount != nil {
-		blocked, err := p.state.DB.IsEitherBlocked(ctx, requestingAccount.ID, targetAccountID)
+	if requester != nil {
+		blocked, err := p.state.DB.IsEitherBlocked(ctx, requester.ID, targetAccountID)
 		if err != nil {
 			return nil, gtserror.NewErrorInternalError(err)
 		}
@@ -90,17 +90,20 @@ func (p *Processor) StatusesGet(
 		prevMinIDValue = statuses[0].ID
 	)
 
-	// Filtering + serialization process is the same for
+	// Filtering + serialization process is same for
 	// both pinned status queries and 'normal' ones.
-	filtered, err := p.visFilter.StatusesVisible(ctx, requestingAccount, statuses)
+	filtered, err := p.visFilter.StatusesVisible(ctx,
+		requester,
+		statuses,
+	)
 	if err != nil {
 		return nil, gtserror.NewErrorInternalError(err)
 	}
 
 	for _, status := range filtered {
-		// ...
+		// Apply status filtering in account context to each of the statuses.
 		filtered, hide, err := p.statusFilter.StatusFilterResultsInContext(ctx,
-			requestingAccount,
+			requester,
 			status,
 			gtsmodel.FilterContextAccount,
 		)
@@ -115,7 +118,10 @@ func (p *Processor) StatusesGet(
 		}
 
 		// Convert filtered statuses to API statuses.
-		item, err := p.converter.StatusToAPIStatus(ctx, status, requestingAccount)
+		item, err := p.converter.StatusToAPIStatus(ctx,
+			status,
+			requester,
+		)
 		if err != nil {
 			log.Errorf(ctx, "error convering to api status: %v", err)
 			continue
@@ -124,6 +130,7 @@ func (p *Processor) StatusesGet(
 		// Set any filter results.
 		item.Filtered = filtered
 
+		// Append item to ret slice.
 		items = append(items, item)
 	}
 
