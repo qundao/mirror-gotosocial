@@ -13,11 +13,11 @@ closes #(another issue)
 
 Please put an x inside each checkbox to indicate that you've read and followed it: `[ ]` -> `[x]`
 
-If this is a documentation change, only the first checkbox must be filled (you can delete the others if you want).
+If this is a documentation change, only the first two checkboxes must be filled (you can delete the others if you want).
 
 - [ ] I/we have read the [GoToSocial contribution guidelines](https://codeberg.org/superseriousbusiness/gotosocial/src/branch/main/CONTRIBUTING.md).
+- [ ] I/we have not used so-called 'AI' to create the proposed changes.
 - [ ] I/we have discussed the proposed changes already, either in an issue on the repository, or in the Matrix chat.
-- [ ] I/we have not leveraged AI to create the proposed changes.
 - [ ] I/we have performed a self-review of added code.
 - [ ] I/we have written code that is legible and maintainable by others.
 - [ ] I/we have commented the added code, particularly in hard-to-understand areas.
