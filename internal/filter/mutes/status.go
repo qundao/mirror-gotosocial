@@ -165,6 +165,12 @@ func (f *Filter) getStatusMuteDetails(
 		next = inReplyTo
 	}
 
+	// If requester is owner of the status,
+	// don't mark it as muted (hidden) to them.
+	if requester.ID == status.AccountID {
+		details.mute = false
+	}
+
 	return details, nil
 }
 

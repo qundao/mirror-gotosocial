@@ -160,6 +160,12 @@ func (f *Filter) getStatusFilterResults(
 		return results, nil
 	}
 
+	// Shortcut to check up-front for owner
+	// of their own status, i.e. no filtering.
+	if status.AccountID == requester.ID {
+		return results, nil
+	}
+
 	// Check if status is boost.
 	if status.BoostOfID != "" {
 		if status.BoostOf == nil {

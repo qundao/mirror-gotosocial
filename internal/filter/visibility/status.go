@@ -96,6 +96,11 @@ func (f *Filter) isStatusVisible(
 		return false, gtserror.Newf("error populating status %s: %w", status.ID, err)
 	}
 
+	// Shortcut to check up-front for owner of their own status.
+	if requester != nil && status.AccountID == requester.ID {
+		return true, nil
+	}
+
 	// Check whether status accounts are visible to the requester.
 	acctsVisible, err := f.areStatusAccountsVisible(ctx, requester, status)
 	if err != nil {
@@ -113,8 +118,8 @@ func (f *Filter) isStatusVisible(
 	}
 
 	if requester == nil {
-		// Use a different visibility
-		// heuristic for unauthed requests.
+		// Use different visibility heuristics
+		// when dealing with unauthed requests.
 		return f.isStatusVisibleUnauthed(status), nil
 	}
 
@@ -139,11 +144,6 @@ func (f *Filter) isStatusVisible(
 		From this point down we know the request
 		is of visibility followers-only or below.
 	*/
-
-	if requester.ID == status.AccountID {
-		// Author can always see their own status.
-		return true, nil
-	}
 
 	if status.MentionsAccount(requester.ID) {
 		// Status mentions the requesting account.
