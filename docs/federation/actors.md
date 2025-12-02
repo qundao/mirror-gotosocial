@@ -4,9 +4,9 @@
 
 GoToSocial serves most accounts as the ActivityStreams `Person` type described [here](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-person).
 
-Accounts that users have selected to mark as bot accounts, however, will use the `Application` type described [here](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-application).
+Accounts that users have selected to mark as bot accounts, however, will use the `Service` type described [here](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-service).
 
-The "instance service" account, which occasionally makes requests to remote endpoints on the instance's behalf, uses the `Service` type described [here](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-service). Typically, remote instances will only see this actor making http-signed requests for media files.
+The "instance" account, which occasionally makes requests to remote endpoints on the instance's behalf, uses the `Application` type described [here](https://www.w3.org/TR/activitystreams-vocabulary/#dfn-application). Typically, remote instances will only see this actor making occasional http-signed requests for media files.
 
 If desired, this type distinction can be used by remote servers to distinguish between "regular" user accounts and other types. Typically, this is done using a "bot" flag on the web and/or client API.
 

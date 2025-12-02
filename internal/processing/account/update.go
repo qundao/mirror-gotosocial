@@ -84,9 +84,9 @@ func (p *Processor) Update(ctx context.Context, account *gtsmodel.Account, form 
 
 	if bot := form.Bot; bot != nil {
 		if *bot {
-			// Mark account as an Application.
-			// See: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-application
-			account.ActorType = gtsmodel.AccountActorTypeApplication
+			// Mark account as a Service.
+			// See: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-service
+			account.ActorType = gtsmodel.AccountActorTypeService
 		} else {
 			// Mark account as a Person.
 			// See: https://www.w3.org/TR/activitystreams-vocabulary/#dfn-person

@@ -274,7 +274,7 @@ func (a *adminDB) CreateInstanceAccount(ctx context.Context) error {
 		PrivateKey:            key,
 		PublicKey:             &key.PublicKey,
 		PublicKeyURI:          newAccountURIs.PublicKeyURI,
-		ActorType:             gtsmodel.AccountActorTypeService,
+		ActorType:             gtsmodel.AccountActorTypeApplication,
 		URI:                   newAccountURIs.UserURI,
 		InboxURI:              newAccountURIs.InboxURI,
 		OutboxURI:             newAccountURIs.OutboxURI,

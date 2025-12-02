@@ -307,7 +307,7 @@ func NewTestAccounts() map[string]*gtsmodel.Account {
 			FollowersURI:                 "http://localhost:8080/users/localhost:8080/followers",
 			FollowingURI:                 "http://localhost:8080/users/localhost:8080/following",
 			FeaturedCollectionURI:        "http://localhost:8080/users/localhost:8080/collections/featured",
-			ActorType:                    gtsmodel.AccountActorTypeService,
+			ActorType:                    gtsmodel.AccountActorTypeApplication,
 			PrivateKey:                   &rsa.PrivateKey{},
 			PublicKey:                    &rsa.PublicKey{},
 			HidesToPublicFromUnauthedWeb: util.Ptr(false),
