@@ -738,6 +738,69 @@ func (suite *FromFediAPITestSuite) TestUndoAnnounce() {
 	}
 }
 
+func (suite *FromFediAPITestSuite) TestUndoFollow() {
+	var (
+		ctx            = suite.T().Context()
+		testStructs    = testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+		requestingAcct = suite.testAccounts["remote_account_1"]
+		receivingAcct  = suite.testAccounts["local_account_1"]
+	)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Put a notification in the db as though
+	// remote_account_1 had follow requested local_account_1.
+	notif := &gtsmodel.Notification{
+		ID:               "01F8PY8RHWRQZV038T4E8T9YK8",
+		CreatedAt:        testrig.TimeMustParse("2022-05-14T16:21:09+02:00"),
+		UpdatedAt:        testrig.TimeMustParse("2022-05-14T16:21:09+02:00"),
+		NotificationType: gtsmodel.NotificationFollowRequest,
+		OriginAccountID:  "01F8MH5ZK5VRH73AKHQM6Y9VNX",
+		OriginAccount:    requestingAcct,
+		TargetAccountID:  "01F8MH1H7YV1Z7D2C8K2730QBF",
+		TargetAccount:    receivingAcct,
+	}
+	if err := testStructs.State.DB.PutNotification(ctx, notif); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Hold a follow in memory as though remote_account_1
+	// has now undone the follow request.
+	follow := &gtsmodel.Follow{
+		ID:              "01F8PY8RHWRQZV038T4E8T9YK8",
+		CreatedAt:       testrig.TimeMustParse("2022-05-14T16:21:09+02:00"),
+		UpdatedAt:       testrig.TimeMustParse("2022-05-14T16:21:09+02:00"),
+		AccountID:       "01F8MH5ZK5VRH73AKHQM6Y9VNX",
+		Account:         requestingAcct,
+		TargetAccountID: "01F8MH1H7YV1Z7D2C8K2730QBF",
+		TargetAccount:   receivingAcct,
+		ShowReblogs:     util.Ptr(true),
+		URI:             "https://fossbros-anonymous.io/users/foss_satan/follows/01F8PY8RHWRQZV038T4E8T9YK8",
+		Notify:          util.Ptr(false),
+	}
+
+	// Process the undo message, passing the follow.
+	err := testStructs.Processor.Workers().ProcessFromFediAPI(ctx, &messages.FromFediAPI{
+		APObjectType:   ap.ActivityFollow,
+		APActivityType: ap.ActivityUndo,
+		GTSModel:       follow,
+		Receiving:      receivingAcct,
+		Requesting:     requestingAcct,
+	})
+	suite.NoError(err)
+
+	// Wait for side effects to trigger:
+	// the notification should be deleted.
+	if !testrig.WaitFor(func() bool {
+		_, err := testStructs.State.DB.GetNotificationByID(
+			gtscontext.SetBarebones(ctx),
+			notif.ID,
+		)
+		return errors.Is(err, db.ErrNoEntries)
+	}) {
+		suite.FailNow("timed out waiting for notif to be removed")
+	}
+}
+
 func (suite *FromFediAPITestSuite) TestUpdateNote() {
 	var (
 		ctx            = suite.T().Context()
