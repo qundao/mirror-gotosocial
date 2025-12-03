@@ -213,15 +213,26 @@ archives:
       - gotosocial
     files:
     # standard release files
-    - LICENSE
-    - README.md
-    - CHANGELOG*
+    - src: LICENSE
+      info:
+        mode: 0644
+    - src: README.md
+      info:
+        mode: 0644
     # web stuff minus source
-    - web/assets
-    - web/template
+    - src: web/assets
+      info:
+        mode: 0644
+    - src: web/template
+      info:
+        mode: 0644
     # example config files
-    - example/config.yaml
-    - example/gotosocial.service
+    - src: example/config.yaml
+      info:
+        mode: 0644
+    - src: example/gotosocial.service
+      info:
+        mode: 0644
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 \"v1\") }}{{ .Amd64 }}{{ end }}"
   # NOWASM BUILD
   -
@@ -230,23 +241,40 @@ archives:
       - gotosocial_nowasm
     files:
     # standard release files
-    - LICENSE
-    - README.md
-    - CHANGELOG*
+    - src: LICENSE
+      info:
+        mode: 0644
+    - src: README.md
+      info:
+        mode: 0644
     # web stuff minus source
-    - web/assets
-    - web/template
+    - src: web/assets
+      info:
+        mode: 0644
+    - src: web/template
+      info:
+        mode: 0644
     # example config files
-    - example/config.yaml
-    - example/gotosocial.service
+    - src: example/config.yaml
+      info:
+        mode: 0644
+    - src: example/gotosocial.service
+      info:
+        mode: 0644
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}{{ with .Arm }}v{{ . }}{{ end }}{{ with .Mips }}_{{ . }}{{ end }}{{ if not (eq .Amd64 \"v1\") }}{{ .Amd64 }}{{ end }}_nowasm"
   -
     id: web-assets
     files:
-    - LICENSE
+    - src: LICENSE
+      info:
+        mode: 0644
     # just the web stuff minus source
-    - web/assets
-    - web/template
+    - src: web/assets
+      info:
+        mode: 0644
+    - src: web/template
+      info:
+        mode: 0644
     meta: true
     name_template: "{{ .ProjectName }}_{{ .Version }}_web-assets"
 
