@@ -39,6 +39,12 @@ const (
 	withUTF8LinkExpected       = "<p>here's a link with utf-8 characters in it: <a href=\"https://example.org/s%C3%B6me_url\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">https://example.org/söme_url</a></p>"
 	withFunkyTags              = "#hashtag1 pee #hashtag2\u200Bpee #hashtag3|poo #hashtag4\uFEFFpoo"
 	withFunkyTagsExpected      = "<p><a href=\"http://localhost:8080/tags/hashtag1\" class=\"mention hashtag\" rel=\"tag nofollow noreferrer noopener\" target=\"_blank\">#<span>hashtag1</span></a> pee <a href=\"http://localhost:8080/tags/hashtag2\" class=\"mention hashtag\" rel=\"tag nofollow noreferrer noopener\" target=\"_blank\">#<span>hashtag2</span></a>\u200bpee <a href=\"http://localhost:8080/tags/hashtag3\" class=\"mention hashtag\" rel=\"tag nofollow noreferrer noopener\" target=\"_blank\">#<span>hashtag3</span></a>|poo <a href=\"http://localhost:8080/tags/hashtag4\" class=\"mention hashtag\" rel=\"tag nofollow noreferrer noopener\" target=\"_blank\">#<span>hashtag4</span></a>\ufeffpoo</p>"
+	withWhitespace             = `boobs
+ test  
+   aa  a a
+boobs are groovy
+  boobs are groovy`
+	withWhitespaceExpected = "<p>boobs<br>\u00a0test<br>\u00a0\u00a0\u00a0aa \u00a0a a<br>boobs are groovy<br>\u00a0\u00a0boobs are groovy</p>"
 )
 
 type PlainTestSuite struct {
@@ -148,6 +154,11 @@ func (suite *PlainTestSuite) TestFunkyTags() {
 	suite.Equal("hashtag2", tags[1].Name)
 	suite.Equal("hashtag3", tags[2].Name)
 	suite.Equal("hashtag4", tags[3].Name)
+}
+
+func (suite *PlainTestSuite) TestWhitespace() {
+	formatted := suite.FromPlain(withWhitespace)
+	suite.Equal(withWhitespaceExpected, formatted.HTML)
 }
 
 func (suite *PlainTestSuite) TestDeriveMultiple() {

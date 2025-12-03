@@ -48,6 +48,7 @@ const (
 	emojiShortcode           = `\w{1,30}`                                                // Pattern for emoji shortcodes. maximumEmojiShortcodeLength = 30
 	emojiFinder              = `(?:\b)?:(` + emojiShortcode + `):(?:\b)?`                // Extract all emoji shortcodes from a text.
 	emojiValidator           = `^` + emojiShortcode + `$`                                // Validate a single emoji shortcode.
+	doubleSpaceFinder        = `(?:\b)?(?:\s|^) (?:\b)?`                                 // Extract all double whitespaces from a text.
 	usernameStrict           = `^[a-z0-9_]{1,64}$`                                       // Pattern for usernames on THIS instance. maximumUsernameLength = 64
 	usernameRelaxed          = `[a-z0-9_\.]{1,}`                                         // Relaxed version of username that can match instance accounts too.
 	misskeyReportNotesFinder = `(?m)(?:^Note: ((?:http|https):\/\/.*)$)`                 // Extract reported Note URIs from the text of a Misskey report/flag.
@@ -98,6 +99,9 @@ var (
 	// EmojiFinder extracts emoji strings from a piece of text.
 	// See: https://regex101.com/r/478XGM/1
 	EmojiFinder = regexp.MustCompile(emojiFinder)
+
+	// DoubleSpaceFinder extracts double whitespaces from a piece of text.
+	DoubleSpaceFinder = regexp.MustCompile(doubleSpaceFinder)
 
 	// Username can be used to validate usernames of new signups on this instance.
 	Username = regexp.MustCompile(usernameStrict)

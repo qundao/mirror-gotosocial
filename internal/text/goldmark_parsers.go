@@ -279,3 +279,78 @@ func (p *emojiParser) Parse(
 		),
 	)
 }
+
+/*
+	SIGNIFICANT WHITESPACE STUFF
+*/
+
+type doubleSpace struct {
+	ast.BaseInline
+	Segment text.Segment
+}
+
+var kindDoubleSpace = ast.NewNodeKind("DoubleSpace")
+
+func (n *doubleSpace) Kind() ast.NodeKind {
+	return kindDoubleSpace
+}
+
+func (n *doubleSpace) Dump(source []byte, level int) {
+	fmt.Printf("%sDoubleSpace: %s\n", strings.Repeat("    ", level), string(n.Segment.Value(source)))
+}
+
+// newDoubleSpace creates a goldmark ast.Node
+// from a text.Segment. The contained
+// segment is used in rendering.
+func newDoubleSpace(s text.Segment) *doubleSpace {
+	return &doubleSpace{
+		BaseInline: ast.BaseInline{},
+		Segment:    s,
+	}
+}
+
+type doubleSpaceParser struct{}
+
+// DoubleSpace parsing is triggered
+// by whitespace or line beginning.
+func (p *doubleSpaceParser) Trigger() []byte {
+	return []byte{' '}
+}
+
+func (p *doubleSpaceParser) Parse(
+	_ ast.Node,
+	block text.Reader,
+	_ parser.Context,
+) ast.Node {
+	line, segment := block.PeekLine()
+
+	// Ascertain location of double space in the
+	// line that starts with the trigger bytes.
+	loc := regexes.DoubleSpaceFinder.FindIndex(line)
+	if loc == nil || loc[0] != 0 {
+		// Noop if not found or
+		// not found at start.
+		return nil
+	}
+
+	// If we don't have a whitespace or newline
+	// before this whitespace then we don't care.
+	before := block.PrecendingCharacter()
+	if !(before == ' ' || before == '\n') {
+		return nil
+	}
+
+	// Advance the block to the
+	// end of the double space.
+	block.Advance(loc[1])
+
+	// doubleSpace ast.Node spans
+	// from the beginning of this
+	// segment up to the last
+	// character of the double space.
+	return newDoubleSpace(
+		segment.WithStop(
+			segment.Start + loc[1],
+		),
+	)
+}

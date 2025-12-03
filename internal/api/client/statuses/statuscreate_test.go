@@ -950,7 +950,7 @@ func (suite *StatusCreateTestSuite) TestPostNewStatusWithEmoji() {
   },
   "bookmarked": false,
   "card": null,
-  "content": "<p>here is a rainbow emoji a few times! :rainbow: :rainbow: :rainbow:<br>here's an emoji that isn't in the db: :test_emoji:</p>",
+  "content": "<p>here is a rainbow emoji a few times! :rainbow: :rainbow: :rainbow:<br> here's an emoji that isn't in the db: :test_emoji:</p>",
   "content_type": "text/plain",
   "created_at": "right the hell just now babyee",
   "edited_at": null,

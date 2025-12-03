@@ -114,7 +114,6 @@ func normalizeContent(rawContent interface{}) string {
 	// TODO: sanitize differently based on mediaType.
 	// https://www.w3.org/TR/activitystreams-vocabulary/#dfn-mediatype
 	content = text.SanitizeHTML(content)
-	content = text.MinifyHTML(content)
 	return content
 }
 
@@ -249,7 +248,6 @@ func NormalizeIncomingSummary(item WithSummary, rawJSON map[string]interface{}) 
 	// Summary should be HTML encoded:
 	// https://www.w3.org/TR/activitystreams-vocabulary/#dfn-summary
 	summary = text.SanitizeHTML(summary)
-	summary = text.MinifyHTML(summary)
 
 	// Set normalized summary property from the raw string; this
 	// will replace any existing summary property on the item.

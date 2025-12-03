@@ -68,6 +68,7 @@ func (cr *customRenderer) RegisterFuncs(reg renderer.NodeRendererFuncRegisterer)
 	reg.Register(kindMention, cr.renderMention)
 	reg.Register(kindHashtag, cr.renderHashtag)
 	reg.Register(kindEmoji, cr.renderEmoji)
+	reg.Register(kindDoubleSpace, cr.renderDoubleSpace)
 }
 
 func (cr *customRenderer) Extend(markdown goldmark.Markdown) {
@@ -88,6 +89,7 @@ func (cr *customRenderer) Extend(markdown goldmark.Markdown) {
 			mdutil.Prioritized(new(emojiParser), prio),
 			mdutil.Prioritized(new(mentionParser), prio),
 			mdutil.Prioritized(new(hashtagParser), prio),
+			mdutil.Prioritized(new(doubleSpaceParser), prio),
 		))
 	}
 
@@ -422,4 +424,41 @@ func (cr *customRenderer) handleEmoji(text string) string {
 	}()
 
 	return text
+}
+
+/*
+	SIGNIFICANT WHITESPACE
+	RENDERING STUFF
+*/
+
+func (cr *customRenderer) renderDoubleSpace(
+	w mdutil.BufWriter,
+	source []byte,
+	node ast.Node,
+	entering bool,
+) (ast.WalkStatus, error) {
+	if !entering {
+		return ast.WalkSkipChildren, nil
+	}
+
+	// This function is registered
+	// only for kindDoubleSpace, and
+	// should not be called for
+	// any other node type.
+	n := node.(*doubleSpace)
+
+	// Text is either a single space (which occurred
+	// after a newline), or two spaces in a row.
+	text := string(n.Segment.Value(source))
+
+	// Replace whitespace with non-breaking space.
+	text = strings.ReplaceAll(text, " ", "&nbsp;")
+
+	// Write updated text into HTML.
+	if _, err := w.WriteString(text); err != nil {
+		// We don't have much recourse if this fails.
+		log.Errorf(cr.ctx, "error writing HTML: %s", err)
+	}
+
+	return ast.WalkSkipChildren, nil
 }

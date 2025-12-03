@@ -200,8 +200,32 @@ func (suite *NormalizeTestSuite) getAccountable() (vocab.ActivityStreamsPerson, 
 	return t.(vocab.ActivityStreamsPerson), raw
 }
 
+func (suite *NormalizeTestSuite) getStatusableWithWhitespace() (vocab.ActivityStreamsNote, map[string]any) {
+	t, raw := suite.jsonToType(`{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "id": "https://example.org/users/some_username/statuses/115655198369330106",
+  "type": "Note",
+  "inReplyTo": "https://stinky.horse/users/choadie_foster/statuses/01KBHW0PFPW5KS4KZDS75QVNY4",
+  "published": "2025-12-03T10:37:55Z",
+  "url": "https://example.org/@some_username/115655198369330106",
+  "attributedTo": "https://example.org/users/some_username",
+  "to": [
+    "https://example.org/users/some_username/followers"
+  ],
+  "cc": [
+    "https://stinky.horse/users/choadie_foster"
+  ],
+  "content": "<p><span class=\"h-card\" translate=\"no\"><a href=\"https://stinky.horse/@choadie_foster\" class=\"u-url mention\">@<span>choadie_foster</span></a></span> </p><p>indent some lines</p><p>  like this</p><p>and leave space between some words</p><p>    like    this<br />            so much whitespace, what is this, mastodon</p>",
+  "contentMap": {
+    "en": "<p><span class=\"h-card\" translate=\"no\"><a href=\"https://stinky.horse/@choadie_foster\" class=\"u-url mention\">@<span>choadie_foster</span></a></span> </p><p>indent some lines</p><p>  like this</p><p>and leave space between some words</p><p>    like    this<br />            so much whitespace, what is this, mastodon</p>"
+  }
+}`)
+
+	return t.(vocab.ActivityStreamsNote), raw
+}
+
 func (suite *NormalizeTestSuite) TestNormalizeActivityObject() {
-	note, rawNote := suite.getStatusable()
+	note, raw := suite.getStatusable()
 	content := ap.ExtractContent(note)
 	suite.Equal(
 		`update: As of this morning there are now more than 7 million Mastodon users, most from the <a class="hashtag" data-tag="twittermigration" href="https://example.org/tag/twittermigration" rel="tag ugc">#TwitterMigration%3C/a%3E.%3Cbr%3E%3Cbr%3EIn%20fact,%20100,000%20new%20accounts%20have%20been%20created%20since%20last%20night.%3Cbr%3E%3Cbr%3ESince%20last%20night&%2339;s%20spike%208,000-12,000%20new%20accounts%20are%20being%20created%20every%20hour.%3Cbr%3E%3Cbr%3EYesterday,%20I%20estimated%20that%20Mastodon%20would%20have%208%20million%20users%20by%20the%20end%20of%20the%20week.%20That%20might%20happen%20a%20lot%20sooner%20if%20this%20trend%20continues.`,
@@ -219,23 +243,23 @@ func (suite *NormalizeTestSuite) TestNormalizeActivityObject() {
 		note,
 	)
 
-	ap.NormalizeIncomingActivity(create, map[string]interface{}{"object": rawNote})
+	ap.NormalizeIncomingActivity(create, map[string]interface{}{"object": raw})
 	content = ap.ExtractContent(note)
 
 	suite.Equal(
-		`UPDATE: As of this morning there are now more than 7 million Mastodon users, most from the <a class="hashtag" href="https://example.org/tag/twittermigration" rel="tag ugc nofollow noreferrer noopener" target="_blank">#TwitterMigration</a>.<br><br>In fact, 100,000 new accounts have been created since last night.<br><br>Since last night's spike 8,000-12,000 new accounts are being created every hour.<br><br>Yesterday, I estimated that Mastodon would have 8 million users by the end of the week. That might happen a lot sooner if this trend continues.`,
+		`UPDATE: As of this morning there are now more than 7 million Mastodon users, most from the <a class="hashtag" href="https://example.org/tag/twittermigration" rel="tag ugc nofollow noreferrer noopener" target="_blank">#TwitterMigration</a>.<br><br>In fact, 100,000 new accounts have been created since last night.<br><br>Since last night&#39;s spike 8,000-12,000 new accounts are being created every hour.<br><br>Yesterday, I estimated that Mastodon would have 8 million users by the end of the week. That might happen a lot sooner if this trend continues.`,
 		content.Content,
 	)
 
 	// Content map entry should now be extractable.
 	suite.Equal(
-		`UPDATE: As of this morning there are now more than 7 million Mastodon users, most from the <a class="hashtag" href="https://example.org/tag/twittermigration" rel="tag ugc nofollow noreferrer noopener" target="_blank">#TwitterMigration</a>.<br><br>In fact, 100,000 new accounts have been created since last night.<br><br>Since last night's spike 8,000-12,000 new accounts are being created every hour.<br><br>Yesterday, I estimated that Mastodon would have 8 million users by the end of the week. That might happen a lot sooner if this trend continues.`,
+		`UPDATE: As of this morning there are now more than 7 million Mastodon users, most from the <a class="hashtag" href="https://example.org/tag/twittermigration" rel="tag ugc nofollow noreferrer noopener" target="_blank">#TwitterMigration</a>.<br><br>In fact, 100,000 new accounts have been created since last night.<br><br>Since last night&#39;s spike 8,000-12,000 new accounts are being created every hour.<br><br>Yesterday, I estimated that Mastodon would have 8 million users by the end of the week. That might happen a lot sooner if this trend continues.`,
 		content.ContentMap["en"],
 	)
 }
 
 func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsOneAttachment() {
-	note, rawNote := suite.getStatusableWithOneAttachment()
+	note, raw := suite.getStatusableWithOneAttachment()
 
 	// Without normalization, the 'name' field of
 	// the attachment(s) should be all jacked up.
@@ -257,7 +281,7 @@ func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsOneAttachment
 }`, suite.typeToJson(note))
 
 	// Normalize it!
-	ap.NormalizeIncomingAttachments(note, rawNote)
+	ap.NormalizeIncomingAttachments(note, raw)
 
 	// After normalization, the 'name' field of the
 	// attachment should no longer be all jacked up.
@@ -280,7 +304,7 @@ func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsOneAttachment
 }
 
 func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsOneAttachmentEmbedded() {
-	note, rawNote := suite.getStatusableWithOneAttachmentEmbedded()
+	note, raw := suite.getStatusableWithOneAttachmentEmbedded()
 
 	// Without normalization, the 'name' field of
 	// the attachment(s) should be all jacked up.
@@ -302,7 +326,7 @@ func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsOneAttachment
 }`, suite.typeToJson(note))
 
 	// Normalize it!
-	ap.NormalizeIncomingAttachments(note, rawNote)
+	ap.NormalizeIncomingAttachments(note, raw)
 
 	// After normalization, the 'name' field of the
 	// attachment should no longer be all jacked up.
@@ -325,7 +349,7 @@ func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsOneAttachment
 }
 
 func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsMultipleAttachments() {
-	note, rawNote := suite.getStatusableWithMultipleAttachments()
+	note, raw := suite.getStatusableWithMultipleAttachments()
 
 	// Without normalization, the 'name' field of
 	// the attachment(s) should be all jacked up.
@@ -364,7 +388,7 @@ func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsMultipleAttac
 }`, suite.typeToJson(note))
 
 	// Normalize it!
-	ap.NormalizeIncomingAttachments(note, rawNote)
+	ap.NormalizeIncomingAttachments(note, raw)
 
 	// After normalization, the 'name' field of the
 	// attachment should no longer be all jacked up.
@@ -404,26 +428,26 @@ func (suite *NormalizeTestSuite) TestNormalizeStatusableAttachmentsMultipleAttac
 }
 
 func (suite *NormalizeTestSuite) TestNormalizeAccountableSummary() {
-	accountable, rawAccount := suite.getAccountable()
+	accountable, raw := suite.getAccountable()
 	suite.Equal(`about: I'm a #Barbie%20%23girl%20in%20a%20%23Barbie%20%23world%0ALife%20in%20plastic,%20it%27s%20fantastic%0AYou%20can%20brush%20my%20hair,%20undress%20me%20everywhere%0AImagination,%20life%20is%20your%20creation%0AI%27m%20a%20blonde%20bimbo%20girl%0AIn%20a%20fantasy%20world%0ADress%20me%20up,%20make%20it%20tight%0AI%27m%20your%20dolly%0AYou%27re%20my%20doll,%20rock%20and%20roll%0AFeel%20the%20glamour%20in%20pink%0AKiss%20me%20here,%20touch%20me%20there%0AHanky%20panky`, ap.ExtractSummary(accountable))
 
-	ap.NormalizeIncomingSummary(accountable, rawAccount)
-	suite.Equal(`about: I'm a #Barbie #girl in a #Barbie #world
-Life in plastic, it's fantastic
+	ap.NormalizeIncomingSummary(accountable, raw)
+	suite.Equal(`about: I&#39;m a #Barbie #girl in a #Barbie #world
+Life in plastic, it&#39;s fantastic
 You can brush my hair, undress me everywhere
 Imagination, life is your creation
-I'm a blonde bimbo girl
+I&#39;m a blonde bimbo girl
 In a fantasy world
 Dress me up, make it tight
-I'm your dolly
-You're my doll, rock and roll
+I&#39;m your dolly
+You&#39;re my doll, rock and roll
 Feel the glamour in pink
 Kiss me here, touch me there
 Hanky panky`, ap.ExtractSummary(accountable))
 }
 
 func (suite *NormalizeTestSuite) TestNormalizeAccountableFields() {
-	accountable, rawAccount := suite.getAccountable()
+	accountable, raw := suite.getAccountable()
 	fields := ap.ExtractFields(accountable)
 
 	// Dodgy field.
@@ -439,7 +463,7 @@ func (suite *NormalizeTestSuite) TestNormalizeAccountableFields() {
 	suite.Equal(`world`, fields[2].Value)
 
 	// Normalize 'em.
-	ap.NormalizeIncomingFields(accountable, rawAccount)
+	ap.NormalizeIncomingFields(accountable, raw)
 
 	// Dodgy field should be removed.
 	fields = ap.ExtractFields(accountable)
@@ -455,19 +479,27 @@ func (suite *NormalizeTestSuite) TestNormalizeAccountableFields() {
 }
 
 func (suite *NormalizeTestSuite) TestNormalizeStatusableSummary() {
-	statusable, rawAccount := suite.getStatusableWithWeirdSummaryAndName()
+	statusable, raw := suite.getStatusableWithWeirdSummaryAndName()
 	suite.Equal(`warning: #WEIRD%20%23SUMMARY%20;;;;a;;a;asv%20%20%20%20khop8273987(*%5E&%5E)`, ap.ExtractSummary(statusable))
 
-	ap.NormalizeIncomingSummary(statusable, rawAccount)
-	suite.Equal(`warning: #WEIRD #SUMMARY ;;;;a;;a;asv khop8273987(*^&^)`, ap.ExtractSummary(statusable))
+	ap.NormalizeIncomingSummary(statusable, raw)
+	suite.Equal(`warning: #WEIRD #SUMMARY ;;;;a;;a;asv    khop8273987(*^&amp;^)`, ap.ExtractSummary(statusable))
 }
 
 func (suite *NormalizeTestSuite) TestNormalizeStatusableName() {
-	statusable, rawAccount := suite.getStatusableWithWeirdSummaryAndName()
+	statusable, raw := suite.getStatusableWithWeirdSummaryAndName()
 	suite.Equal(`warning: #WEIRD%20%23nameEE%20;;;;a;;a;asv%20%20%20%20khop8273987(*%5E&%5E)`, ap.ExtractName(statusable))
 
-	ap.NormalizeIncomingName(statusable, rawAccount)
+	ap.NormalizeIncomingName(statusable, raw)
 	suite.Equal(`WARNING: #WEIRD #nameEE ;;;;a;;a;asv    khop8273987(*^&^)`, ap.ExtractName(statusable))
+}
+
+func (suite *NormalizeTestSuite) TestNormalizeStatusableWhitespace() {
+	statusable, raw := suite.getStatusableWithWhitespace()
+	suite.Equal(`<p><span class="h-card" translate="no"><a href="https://stinky.horse/@choadie_foster" class="u-url mention">@<span>choadie_foster</span></a></span> </p><p>indent some lines</p><p>  like this</p><p>and leave space between some words</p><p>    like    this<br />            so much whitespace, what is this, mastodon</p>`, ap.ExtractContent(statusable).Content)
+
+	ap.NormalizeIncomingContent(statusable, raw)
+	suite.Equal(`<p><span class="h-card"><a href="https://stinky.horse/@choadie_foster" class="u-url mention" rel="nofollow noreferrer noopener" target="_blank">@<span>choadie_foster</span></a></span> </p><p>indent some lines</p><p>  like this</p><p>and leave space between some words</p><p>    like    this<br/>            so much whitespace, what is this, mastodon</p>`, ap.ExtractContent(statusable).Content)
 }
 
 func TestNormalizeTestSuite(t *testing.T) {
