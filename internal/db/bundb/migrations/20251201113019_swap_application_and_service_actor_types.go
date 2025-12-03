@@ -46,15 +46,13 @@ func init() {
 			// To ensure we only update our own accounts,
 			// and not other remote accounts or the instance
 			// account, join on the users table.
+			subQ := tx.NewSelect().Table("users").Column("account_id")
 			if _, err := tx.NewUpdate().
-				Table("accounts").
-				Set("? = ?", bun.Ident("actor_type"), gtsmodel.AccountActorTypeService).
+				With("_users", subQ).
 				TableExpr("? AS ?", bun.Ident("accounts"), bun.Ident("account")).
-				Join(
-					"INNER JOIN ? AS ? ON ? = ?",
-					bun.Ident("users"), bun.Ident("user"),
-					bun.Ident("account.id"), bun.Ident("user.account_id"),
-				).
+				Table("_users").
+				Set("? = ?", bun.Ident("actor_type"), gtsmodel.AccountActorTypeService).
+				Where("? = ?", bun.Ident("account.id"), bun.Ident("_users.account_id")).
 				Where("? = ?", bun.Ident("account.actor_type"), gtsmodel.AccountActorTypeApplication).
 				Exec(ctx); err != nil {
 				return err
