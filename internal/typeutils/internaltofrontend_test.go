@@ -2986,7 +2986,7 @@ func (suite *InternalToFrontendTestSuite) TestRelationshipFollowRequested() {
 	suite.Equal(`{
   "id": "01F8MH5NBDF2MV7CTC4Q5128HF",
   "following": false,
-  "showing_reblogs": false,
+  "showing_reblogs": true,
   "notifying": false,
   "followed_by": false,
   "blocking": false,

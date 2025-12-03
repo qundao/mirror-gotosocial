@@ -23,7 +23,9 @@ import (
 
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
+	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -90,6 +92,47 @@ func (suite *FollowTestSuite) TestUpdateExistingFollowChangeNotifySetReblogs() {
 	}
 
 	suite.True(relationship.ShowingReblogs)
+	suite.True(relationship.Notifying)
+}
+
+func (suite *FollowTestSuite) TestUpdateExistingFollowReqChangeNotify() {
+	var (
+		ctx            = suite.T().Context()
+		requestingAcct = suite.testAccounts["local_account_1"]
+		targetAcct     = suite.testAccounts["remote_account_1"]
+	)
+
+	// Put a follow request in the database as though
+	// local_account_1 has follow requested remote_account_1.
+	followReq := &gtsmodel.FollowRequest{
+		ID:              "01F8PY8RHWRQZV038T4E8T9YK8",
+		CreatedAt:       testrig.TimeMustParse("2022-05-14T16:21:09+02:00"),
+		UpdatedAt:       testrig.TimeMustParse("2022-05-14T16:21:09+02:00"),
+		AccountID:       requestingAcct.ID,
+		Account:         requestingAcct,
+		TargetAccountID: targetAcct.ID,
+		TargetAccount:   targetAcct,
+		ShowReblogs:     util.Ptr(true),
+		URI:             "https://fossbros-anonymous.io/users/foss_satan/follows/01F8PY8RHWRQZV038T4E8T9YK8",
+		Notify:          util.Ptr(false),
+	}
+	if err := suite.state.DB.PutFollowRequest(ctx, followReq); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Change Notify on the follow req.
+	relationship, err := suite.accountProcessor.FollowCreate(
+		ctx,
+		requestingAcct,
+		&apimodel.AccountFollowRequest{
+			ID:     targetAcct.ID,
+			Notify: util.Ptr(true),
+		},
+	)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
 	suite.True(relationship.Notifying)
 }
 

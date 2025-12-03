@@ -52,10 +52,30 @@ func (r *relationshipDB) GetRelationship(ctx context.Context, requestingAccount 
 	}
 
 	if follow != nil {
-		// follow exists so we can fill these fields out...
+		// Follow exists so we can
+		// fill additional fields out.
 		rel.Following = true
 		rel.ShowingReblogs = *follow.ShowReblogs
 		rel.Notifying = *follow.Notify
+	} else {
+		// Follow doesn't exist,
+		// see if follow request does.
+		followReq, err := r.GetFollowRequest(
+			gtscontext.SetBarebones(ctx),
+			requestingAccount,
+			targetAccount,
+		)
+		if err != nil && !errors.Is(err, db.ErrNoEntries) {
+			return nil, gtserror.Newf("error fetching follow request: %w", err)
+		}
+
+		// Follow req exists so we can
+		// fill additional fields out.
+		if followReq != nil {
+			rel.Requested = true
+			rel.ShowingReblogs = *followReq.ShowReblogs
+			rel.Notifying = *followReq.Notify
+		}
 	}
 
 	// check if the target follows the requesting
@@ -65,15 +85,6 @@ func (r *relationshipDB) GetRelationship(ctx context.Context, requestingAccount 
 	)
 	if err != nil {
 		return nil, gtserror.Newf("error checking followedBy: %w", err)
-	}
-
-	// check if requesting has follow requested target
-	rel.Requested, err = r.IsFollowRequested(ctx,
-		requestingAccount,
-		targetAccount,
-	)
-	if err != nil {
-		return nil, gtserror.Newf("error checking requested: %w", err)
 	}
 
 	// check if target has follow requested requesting
