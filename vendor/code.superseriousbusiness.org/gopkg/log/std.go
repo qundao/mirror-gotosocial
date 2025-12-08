@@ -18,17 +18,27 @@
 package log
 
 import (
-	"code.superseriousbusiness.org/gotosocial/internal/log/level"
+	"log"
+
+	"codeberg.org/gruf/go-byteutil"
+	"codeberg.org/gruf/go-kv/v2"
 )
 
-type LEVEL = level.LEVEL
+// NewStdLogger returns a new standard library
+// log.Logger instance that will write output
+// to this library's logging functions at 'lvl'.
+func NewStdLogger(lvl LEVEL) *log.Logger {
+	return log.New(stdLogWriter{lvl: lvl}, "", 0)
+}
 
-const (
-	PANIC = level.PANIC
-	ERROR = level.ERROR
-	WARN  = level.WARN
-	INFO  = level.INFO
-	DEBUG = level.DEBUG
-	TRACE = level.TRACE
-	UNSET = level.UNSET
-)
+type stdLogWriter struct{ lvl LEVEL }
+
+func (w stdLogWriter) Write(b []byte) (int, error) {
+	if w.lvl < state.level {
+		logf(nil, w.lvl, kv.Fields{
+			{K: "caller", V: Caller(5)},
+			{K: "msg", V: byteutil.B2S(b)},
+		}, "")
+	}
+	return len(b), nil
+}

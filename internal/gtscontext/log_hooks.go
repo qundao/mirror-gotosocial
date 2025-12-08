@@ -20,7 +20,7 @@ package gtscontext
 import (
 	"context"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gopkg/log"
 	"codeberg.org/gruf/go-kv/v2"
 )
 
@@ -28,14 +28,15 @@ func init() {
 	// Add our required logging hooks on application initialization.
 	//
 	// Request ID middleware hook.
-	log.Hook(func(ctx context.Context, kvs []kv.Field) []kv.Field {
+	log.AddHook(func(ctx context.Context, kvs []kv.Field) []kv.Field {
 		if id := RequestID(ctx); id != "" {
 			return append(kvs, kv.Field{K: "requestID", V: id})
 		}
 		return kvs
 	})
+
 	// Public Key ID middleware hook.
-	log.Hook(func(ctx context.Context, kvs []kv.Field) []kv.Field {
+	log.AddHook(func(ctx context.Context, kvs []kv.Field) []kv.Field {
 		if id := OutgoingPublicKeyID(ctx); id != "" {
 			return append(kvs, kv.Field{K: "pubKeyID", V: id})
 		}

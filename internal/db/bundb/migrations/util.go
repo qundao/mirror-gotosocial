@@ -26,10 +26,10 @@ import (
 	"strconv"
 	"strings"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"codeberg.org/gruf/go-byteutil"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"

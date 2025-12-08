@@ -20,10 +20,10 @@ package cache
 import (
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/cache/headerfilter"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"codeberg.org/gruf/go-cache/v3/ttl"
 )
 

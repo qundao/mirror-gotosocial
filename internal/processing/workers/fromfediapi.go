@@ -31,9 +31,9 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
 	"codeberg.org/gruf/go-kv/v2"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/account"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/common"
@@ -69,7 +69,7 @@ func (p *Processor) ProcessFromFediAPI(ctx context.Context, fMsg *messages.FromF
 
 	// Include GTSModel in logs if appropriate.
 	if fMsg.GTSModel != nil &&
-		log.Level() >= log.DEBUG {
+		log.Level() <= log.DEBUG {
 		fields = append(fields, kv.Field{
 			"model", fMsg.GTSModel,
 		})

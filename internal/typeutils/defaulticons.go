@@ -23,9 +23,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 const defaultHeaderPath = "/assets/default_header.webp"

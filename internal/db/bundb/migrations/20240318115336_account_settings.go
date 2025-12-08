@@ -20,9 +20,9 @@ package migrations
 import (
 	"context"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	oldgtsmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20230328203024_migration_fix"
 	newgtsmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20240318115336_account_settings"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 
 	"github.com/uptrace/bun"

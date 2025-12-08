@@ -21,7 +21,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gopkg/log"
 )
 
 // preloader provides a means of synchronising the

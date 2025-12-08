@@ -21,7 +21,7 @@ import (
 	"context"
 	"time"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gopkg/log"
 	"codeberg.org/gruf/go-kv/v2"
 	"github.com/uptrace/bun"
 )
@@ -49,7 +49,7 @@ func (queryHook) AfterQuery(ctx context.Context, event *bun.QueryEvent) {
 			Warn("SLOW DATABASE QUERY")
 
 	// On trace log query info.
-	case log.Level() >= log.TRACE:
+	case log.Level() <= log.TRACE:
 		log.TraceKVs(ctx, kv.Fields{
 			{K: "duration", V: dur},
 			{K: "query", V: event.Query},

@@ -20,16 +20,27 @@ package format
 import (
 	"time"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log/level"
+	"code.superseriousbusiness.org/gopkg/log/level"
+
 	"codeberg.org/gruf/go-byteutil"
 	"codeberg.org/gruf/go-caller"
 	"codeberg.org/gruf/go-kv/v2"
 	"codeberg.org/gruf/go-kv/v2/format"
 )
 
-var args = format.DefaultArgs()
+type Logfmt struct {
+	Base
+	format.Args
+}
 
-type Logfmt struct{ Base }
+func NewLogfmt(timefmt string) FormatFunc {
+	if timefmt == "" {
+		timefmt = DefaultTimeFormat
+	}
+	return (&Logfmt{Base: Base{
+		TimeFormat: timefmt,
+	}}).Format
+}
 
 func (fmt *Logfmt) Format(buf *byteutil.Buffer, stamp time.Time, pc uintptr, lvl level.LEVEL, kvs []kv.Field, msg string) {
 	if fmt.TimeFormat != "" {
@@ -55,7 +66,7 @@ func (fmt *Logfmt) Format(buf *byteutil.Buffer, stamp time.Time, pc uintptr, lvl
 	for _, field := range kvs {
 		kv.AppendQuoteString(buf, field.K)
 		buf.B = append(buf.B, '=')
-		buf.B = format.Global.Append(buf.B, field.V, args)
+		buf.B = format.Global.Append(buf.B, field.V, fmt.Args)
 		buf.B = append(buf.B, ' ')
 	}
 

@@ -20,8 +20,8 @@ package migrations
 import (
 	"context"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	gtsmodel "code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/uptrace/bun"
 )
 

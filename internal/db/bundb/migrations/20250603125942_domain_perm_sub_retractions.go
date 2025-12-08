@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20250603125942_domain_perm_sub_retractions"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gopkg/log"
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"github.com/uptrace/bun"
 )
 

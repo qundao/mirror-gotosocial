@@ -21,8 +21,8 @@ import (
 	"context"
 	"reflect"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	gtsmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20241113152126_add_status_edits"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 
 	"github.com/uptrace/bun"
 )

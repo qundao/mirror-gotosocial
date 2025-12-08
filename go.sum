@@ -6,6 +6,8 @@ code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0 h1:r9uq8StaSHYKJ
 code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0/go.mod h1:IK1OlR6APjVB3E9tuYGvf0qXMrwP+TrzcHS5rf4wffQ=
 code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0 h1:I512jiIeXDC4//2BeSPrRM2ZS4wpBKUaPeTPxakMNGA=
 code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0/go.mod h1:SNHomXNW88o1pFfLHpD4KsCZLfcr4z5dm+xcX5SV10A=
+code.superseriousbusiness.org/gopkg v0.0.0-20251207012115-5bde591107ab h1:r2VNq/e/DRw9ye1nmjEpefxChbO15bDZT/+mAem7wzI=
+code.superseriousbusiness.org/gopkg v0.0.0-20251207012115-5bde591107ab/go.mod h1:Z1iZKc6srZaG4P8ifVQkziLtK3iQ1Yz/m5BOy1yX1V8=
 code.superseriousbusiness.org/httpsig v1.5.0 h1:jw/qc//yYWSoOYytTZXHvW7yh8kceCipNIBfUeXQghA=
 code.superseriousbusiness.org/httpsig v1.5.0/go.mod h1:i2AKpj/WbA/o/UTvia9TAREzt0jP1AH3T1Uxjyhdzlw=
 code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384 h1:eJzULGUyhHGk2DdQxX/jbH9FKZOyoIF90p3dzukCfLA=

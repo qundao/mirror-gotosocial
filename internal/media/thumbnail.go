@@ -26,8 +26,8 @@ import (
 	"io"
 	"strings"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/buckket/go-blurhash"
 	"golang.org/x/image/webp"
 )

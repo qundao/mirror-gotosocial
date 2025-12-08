@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	terminator "code.superseriousbusiness.org/exif-terminator"
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 // clearMetadata performs our best-attempt at cleaning metadata from

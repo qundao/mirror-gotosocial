@@ -20,9 +20,9 @@ package migrations
 import (
 	"context"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	old_gtsmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20241121121623_enum_strings_to_ints"
 	new_gtsmodel "code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 
 	"github.com/uptrace/bun"

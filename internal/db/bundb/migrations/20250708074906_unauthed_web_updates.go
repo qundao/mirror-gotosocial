@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"reflect"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20250708074906_unauthed_web_updates/common"
 	newmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20250708074906_unauthed_web_updates/new"
 	oldmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20250708074906_unauthed_web_updates/old"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/uptrace/bun"
 )
 

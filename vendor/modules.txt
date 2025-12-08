@@ -210,6 +210,12 @@ code.superseriousbusiness.org/go-jpeg-image-structure/v2
 # code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0
 ## explicit; go 1.12
 code.superseriousbusiness.org/go-png-image-structure/v2
+# code.superseriousbusiness.org/gopkg v0.0.0-20251207012115-5bde591107ab
+## explicit; go 1.24.6
+code.superseriousbusiness.org/gopkg/log
+code.superseriousbusiness.org/gopkg/log/format
+code.superseriousbusiness.org/gopkg/log/level
+code.superseriousbusiness.org/gopkg/xslices
 # code.superseriousbusiness.org/httpsig v1.5.0
 ## explicit; go 1.21
 code.superseriousbusiness.org/httpsig

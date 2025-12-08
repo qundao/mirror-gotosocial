@@ -15,31 +15,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package level
+package log
 
-// LEVEL defines a level of logging.
-type LEVEL uint8
+import (
+	"unsafe"
 
-// Logging levels.
-const (
-	PANIC LEVEL = 1
-	ERROR LEVEL = 100
-	WARN  LEVEL = 150
-	INFO  LEVEL = 200
-	DEBUG LEVEL = 250
-	TRACE LEVEL = 254
-	UNSET LEVEL = ^LEVEL(0)
+	"codeberg.org/gruf/go-byteutil"
+	"codeberg.org/gruf/go-mempool"
 )
 
-func (lvl LEVEL) String() string {
-	return strings[lvl]
+// memory pool of log buffers.
+var bufpool mempool.UnsafePool
+
+// getBuf acquires a buffer from memory pool.
+func getBuf() *byteutil.Buffer {
+	buf := (*byteutil.Buffer)(bufpool.Get())
+	if buf == nil {
+		buf = new(byteutil.Buffer)
+		buf.B = make([]byte, 0, 512)
+	}
+	return buf
 }
 
-var strings = [int(UNSET) + 1]string{
-	TRACE: "TRACE",
-	DEBUG: "DEBUG",
-	INFO:  "INFO",
-	WARN:  "WARN",
-	ERROR: "ERROR",
-	PANIC: "PANIC",
+// putBuf places (after resetting) buffer back in
+// memory pool, dropping if capacity too large.
+func putBuf(buf *byteutil.Buffer) {
+	if cap(buf.B) > int(^uint16(0)) {
+		return // drop large buffer
+	}
+	buf.B = buf.B[:0]
+	ptr := unsafe.Pointer(buf)
+	bufpool.Put(ptr)
 }

@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 
 	"code.superseriousbusiness.org/httpsig"
 	"github.com/gin-gonic/gin"

@@ -21,8 +21,8 @@ import (
 	"context"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 // StatusHomeTimelineable checks if given status should be included

@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"time"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gopkg/log"
 )
 
 const (

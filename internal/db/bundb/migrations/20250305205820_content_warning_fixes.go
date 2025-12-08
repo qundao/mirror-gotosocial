@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"reflect"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	newmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20250305205820_content_warning_fixes"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/uptrace/bun"
 )
 

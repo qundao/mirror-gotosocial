@@ -21,10 +21,10 @@ import (
 	"context"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/cmd/gotosocial/action"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 // check function conformance.

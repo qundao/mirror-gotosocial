@@ -22,9 +22,9 @@ import (
 	"net/url"
 	"strings"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/language"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/miekg/dns"
 )
 

@@ -21,8 +21,8 @@ import (
 	"context"
 	"encoding/json"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/stream"
 	"codeberg.org/gruf/go-byteutil"
 )

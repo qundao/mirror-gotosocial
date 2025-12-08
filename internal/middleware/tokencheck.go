@@ -20,8 +20,8 @@ package middleware
 import (
 	"net/http"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/oauth"
 	"code.superseriousbusiness.org/oauth2/v4"
 	"github.com/gin-gonic/gin"

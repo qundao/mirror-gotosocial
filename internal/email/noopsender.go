@@ -21,8 +21,8 @@ import (
 	"bytes"
 	"text/template"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 // NewNoopSender returns a no-op email sender that will just execute the given sendCallback

@@ -15,15 +15,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package log_test
+package gtslog_test
 
 import (
 	"fmt"
 	"regexp"
 	"testing"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gotosocial/internal/gtslog"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/mcuadros/go-syslog.v2"
@@ -70,13 +71,13 @@ func (suite *SyslogTestSuite) TestSyslog() {
 
 func (suite *SyslogTestSuite) TestSyslogDisableTimestamp() {
 	// Get the current format.
-	timefmt := log.TimeFormat()
+	timefmt := gtslog.GetTimeFormat()
 
 	// Set an empty timestamp.
-	log.SetTimeFormat("")
+	gtslog.SetTimeFormat("")
 
 	// Set old timestamp on return.
-	defer log.SetTimeFormat(timefmt)
+	defer gtslog.SetTimeFormat(timefmt)
 
 	log.Error(nil, "this is a test of the emergency broadcast system!")
 
@@ -91,7 +92,7 @@ func (suite *SyslogTestSuite) TestSyslogLongMessage() {
 	prefix := fmt.Sprintf(`timestamp="02/01/2006 15:04:05.000" func=%s level=ERROR msg="`, funcName)
 
 	entry := <-suite.syslogChannel
-	regex := fmt.Sprintf(`timestamp=.* func=.* level=ERROR msg="%s`, longMessage[:2048-len(prefix)])
+	regex := fmt.Sprintf(`timestamp=.* func=.* level=ERROR msg="%s ?`, longMessage[:2048-len(prefix)])
 	suite.Regexp(regexp.MustCompile(regex), entry["content"])
 }
 

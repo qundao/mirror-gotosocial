@@ -18,9 +18,9 @@
 package testrig
 
 import (
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/email"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 // NewEmailSender returns a noop email sender that won't make any remote calls.

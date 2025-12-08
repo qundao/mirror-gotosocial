@@ -31,9 +31,9 @@ import (
 	"os"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/db/postgres"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/uptrace/bun/dialect/pgdialect"

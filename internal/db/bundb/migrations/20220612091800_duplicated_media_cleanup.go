@@ -23,9 +23,9 @@ import (
 	"errors"
 	"fmt"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"codeberg.org/gruf/go-storage"
 	"codeberg.org/gruf/go-storage/disk"
 	"github.com/uptrace/bun"

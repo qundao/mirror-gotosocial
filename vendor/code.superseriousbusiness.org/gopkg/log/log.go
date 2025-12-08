@@ -20,74 +20,63 @@ package log
 import (
 	"context"
 	"fmt"
-	"log/syslog"
 	"os"
 	"runtime"
 	"time"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log/format"
-	"code.superseriousbusiness.org/gotosocial/internal/log/level"
-	"code.superseriousbusiness.org/gotosocial/internal/util/xslices"
+	"code.superseriousbusiness.org/gopkg/log/format"
+	"code.superseriousbusiness.org/gopkg/log/level"
+	"code.superseriousbusiness.org/gopkg/xslices"
 	"codeberg.org/gruf/go-kv/v2"
 )
 
-var (
-	// loglvl is the currently
-	// set logging output.
-	loglvl = level.UNSET
-
-	// appendFormat stores log
-	// entry formatting function.
-	appendFormat = (&format.Logfmt{
-		Base: format.Base{TimeFormat: timefmt},
-	}).Format
-
-	// syslog output, only set if enabled.
-	sysout *syslog.Writer
-
-	// timefmt is the logging time format used.
-	timefmt = `02/01/2006 15:04:05.000`
-
-	// ctxhooks allows modifying log content based on context.
-	ctxhooks []func(context.Context, []kv.Field) []kv.Field
-)
-
-// Hook adds the given hook to the global logger context hooks stack.
-func Hook(hook func(ctx context.Context, kvs []kv.Field) []kv.Field) {
-	ctxhooks = append(ctxhooks, hook)
+var state = struct {
+	level  level.LEVEL
+	hooks  []func(context.Context, []kv.Field) []kv.Field
+	format format.FormatFunc
+	output func(lvl level.LEVEL, line []byte)
+}{
+	level:  level.UNSET,
+	hooks:  nil,
+	format: format.NewLogfmt(""),
+	output: func(_ level.LEVEL, line []byte) {
+		_, _ = os.Stdout.Write(line)
+	},
 }
 
-// Level returns the currently set log.
+// Level returns the
+// currently set log.
 func Level() LEVEL {
-	return loglvl
+	return state.level
 }
 
 // SetLevel sets the max logging.
 func SetLevel(lvl LEVEL) {
-	loglvl = lvl
+	state.level = lvl
 }
 
-// TimeFormat returns the currently-set timestamp format.
-func TimeFormat() string {
-	return timefmt
-}
-
-// SetTimeFormat sets the timestamp format to the given string.
-func SetTimeFormat(format string) {
-	timefmt = format
-}
-
-// SetJSON enables / disables JSON log output formatting.
-func SetJSON(enabled bool) {
-	if enabled {
-		var fmt format.JSON
-		fmt.TimeFormat = timefmt
-		appendFormat = fmt.Format
-	} else {
-		var fmt format.Logfmt
-		fmt.TimeFormat = timefmt
-		appendFormat = fmt.Format
+// AddHook adds the given hook to the logger context hooks stack.
+func AddHook(hook func(ctx context.Context, kvs []kv.Field) []kv.Field) {
+	if hook == nil {
+		return
 	}
+	state.hooks = append(state.hooks, hook)
+}
+
+// SetFormat sets the given format func for logger.
+func SetFormat(fn format.FormatFunc) {
+	if fn == nil {
+		return
+	}
+	state.format = fn
+}
+
+// SetOutput sets the given output func for logger.
+func SetOutput(fn func(lvl LEVEL, line []byte)) {
+	if fn == nil {
+		fn = func(LEVEL, []byte) {}
+	}
+	state.output = fn
 }
 
 // New starts a new log entry.
@@ -101,7 +90,7 @@ func WithContext(ctx context.Context) Entry {
 }
 
 // WithField returns a new prepared Entry{} with key-value field.
-func WithField(key string, value interface{}) Entry {
+func WithField(key string, value any) Entry {
 	return Entry{kvs: []kv.Field{{K: key, V: value}}}
 }
 
@@ -111,24 +100,24 @@ func WithFields(fields ...kv.Field) Entry {
 }
 
 // Trace will log formatted args as 'msg' field to the log at TRACE level.
-func Trace(ctx context.Context, a ...interface{}) {
-	if TRACE > loglvl {
+func Trace(ctx context.Context, a ...any) {
+	if TRACE < state.level {
 		return
 	}
 	logf(ctx, TRACE, nil, "", a...)
 }
 
 // Tracef will log format string as 'msg' field to the log at TRACE level.
-func Tracef(ctx context.Context, s string, a ...interface{}) {
-	if TRACE > loglvl {
+func Tracef(ctx context.Context, s string, a ...any) {
+	if TRACE < state.level {
 		return
 	}
 	logf(ctx, TRACE, nil, s, a...)
 }
 
 // TraceKV will log the one key-value field to the log at TRACE level.
-func TraceKV(ctx context.Context, key string, value interface{}) {
-	if TRACE > loglvl {
+func TraceKV(ctx context.Context, key string, value any) {
+	if TRACE < state.level {
 		return
 	}
 	logf(ctx, TRACE, []kv.Field{{K: key, V: value}}, "")
@@ -136,31 +125,31 @@ func TraceKV(ctx context.Context, key string, value interface{}) {
 
 // TraceKVs will log key-value fields to the log at TRACE level.
 func TraceKVs(ctx context.Context, kvs ...kv.Field) {
-	if TRACE > loglvl {
+	if TRACE < state.level {
 		return
 	}
 	logf(ctx, TRACE, kvs, "")
 }
 
 // Debug will log formatted args as 'msg' field to the log at DEBUG level.
-func Debug(ctx context.Context, a ...interface{}) {
-	if DEBUG > loglvl {
+func Debug(ctx context.Context, a ...any) {
+	if DEBUG < state.level {
 		return
 	}
 	logf(ctx, DEBUG, nil, "", a...)
 }
 
 // Debugf will log format string as 'msg' field to the log at DEBUG level.
-func Debugf(ctx context.Context, s string, a ...interface{}) {
-	if DEBUG > loglvl {
+func Debugf(ctx context.Context, s string, a ...any) {
+	if DEBUG < state.level {
 		return
 	}
 	logf(ctx, DEBUG, nil, s, a...)
 }
 
 // DebugKV will log the one key-value field to the log at DEBUG level.
-func DebugKV(ctx context.Context, key string, value interface{}) {
-	if DEBUG > loglvl {
+func DebugKV(ctx context.Context, key string, value any) {
+	if DEBUG < state.level {
 		return
 	}
 	logf(ctx, DEBUG, []kv.Field{{K: key, V: value}}, "")
@@ -168,31 +157,31 @@ func DebugKV(ctx context.Context, key string, value interface{}) {
 
 // DebugKVs will log key-value fields to the log at DEBUG level.
 func DebugKVs(ctx context.Context, kvs ...kv.Field) {
-	if DEBUG > loglvl {
+	if DEBUG < state.level {
 		return
 	}
 	logf(ctx, DEBUG, kvs, "")
 }
 
 // Info will log formatted args as 'msg' field to the log at INFO level.
-func Info(ctx context.Context, a ...interface{}) {
-	if INFO > loglvl {
+func Info(ctx context.Context, a ...any) {
+	if INFO < state.level {
 		return
 	}
 	logf(ctx, INFO, nil, "", a...)
 }
 
 // Infof will log format string as 'msg' field to the log at INFO level.
-func Infof(ctx context.Context, s string, a ...interface{}) {
-	if INFO > loglvl {
+func Infof(ctx context.Context, s string, a ...any) {
+	if INFO < state.level {
 		return
 	}
 	logf(ctx, INFO, nil, s, a...)
 }
 
 // InfoKV will log the one key-value field to the log at INFO level.
-func InfoKV(ctx context.Context, key string, value interface{}) {
-	if INFO > loglvl {
+func InfoKV(ctx context.Context, key string, value any) {
+	if INFO < state.level {
 		return
 	}
 	logf(ctx, INFO, []kv.Field{{K: key, V: value}}, "")
@@ -200,31 +189,31 @@ func InfoKV(ctx context.Context, key string, value interface{}) {
 
 // InfoKVs will log key-value fields to the log at INFO level.
 func InfoKVs(ctx context.Context, kvs ...kv.Field) {
-	if INFO > loglvl {
+	if INFO < state.level {
 		return
 	}
 	logf(ctx, INFO, kvs, "")
 }
 
 // Warn will log formatted args as 'msg' field to the log at WARN level.
-func Warn(ctx context.Context, a ...interface{}) {
-	if WARN > loglvl {
+func Warn(ctx context.Context, a ...any) {
+	if WARN < state.level {
 		return
 	}
 	logf(ctx, WARN, nil, "", a...)
 }
 
 // Warnf will log format string as 'msg' field to the log at WARN level.
-func Warnf(ctx context.Context, s string, a ...interface{}) {
-	if WARN > loglvl {
+func Warnf(ctx context.Context, s string, a ...any) {
+	if WARN < state.level {
 		return
 	}
 	logf(ctx, WARN, nil, s, a...)
 }
 
 // WarnKV will log the one key-value field to the log at WARN level.
-func WarnKV(ctx context.Context, key string, value interface{}) {
-	if WARN > loglvl {
+func WarnKV(ctx context.Context, key string, value any) {
+	if WARN < state.level {
 		return
 	}
 	logf(ctx, WARN, []kv.Field{{K: key, V: value}}, "")
@@ -232,31 +221,31 @@ func WarnKV(ctx context.Context, key string, value interface{}) {
 
 // WarnKVs will log key-value fields to the log at WARN level.
 func WarnKVs(ctx context.Context, kvs ...kv.Field) {
-	if WARN > loglvl {
+	if WARN < state.level {
 		return
 	}
 	logf(ctx, WARN, kvs, "")
 }
 
 // Error will log formatted args as 'msg' field to the log at ERROR level.
-func Error(ctx context.Context, a ...interface{}) {
-	if ERROR > loglvl {
+func Error(ctx context.Context, a ...any) {
+	if ERROR < state.level {
 		return
 	}
 	logf(ctx, ERROR, nil, "", a...)
 }
 
 // Errorf will log format string as 'msg' field to the log at ERROR level.
-func Errorf(ctx context.Context, s string, a ...interface{}) {
-	if ERROR > loglvl {
+func Errorf(ctx context.Context, s string, a ...any) {
+	if ERROR < state.level {
 		return
 	}
 	logf(ctx, ERROR, nil, s, a...)
 }
 
 // ErrorKV will log the one key-value field to the log at ERROR level.
-func ErrorKV(ctx context.Context, key string, value interface{}) {
-	if ERROR > loglvl {
+func ErrorKV(ctx context.Context, key string, value any) {
+	if ERROR < state.level {
 		return
 	}
 	logf(ctx, ERROR, []kv.Field{{K: key, V: value}}, "")
@@ -264,7 +253,7 @@ func ErrorKV(ctx context.Context, key string, value interface{}) {
 
 // ErrorKVs will log key-value fields to the log at ERROR level.
 func ErrorKVs(ctx context.Context, kvs ...kv.Field) {
-	if ERROR > loglvl {
+	if ERROR < state.level {
 		return
 	}
 	logf(ctx, ERROR, kvs, "")
@@ -272,9 +261,9 @@ func ErrorKVs(ctx context.Context, kvs ...kv.Field) {
 
 // Panic will log formatted args as 'msg' field to the log at PANIC level.
 // This will then call panic causing the application to crash.
-func Panic(ctx context.Context, a ...interface{}) {
+func Panic(ctx context.Context, a ...any) {
 	defer panic(fmt.Sprint(a...))
-	if PANIC > loglvl {
+	if PANIC < state.level {
 		return
 	}
 	logf(ctx, PANIC, nil, "", a...)
@@ -282,9 +271,9 @@ func Panic(ctx context.Context, a ...interface{}) {
 
 // Panicf will log format string as 'msg' field to the log at PANIC level.
 // This will then call panic causing the application to crash.
-func Panicf(ctx context.Context, s string, a ...interface{}) {
+func Panicf(ctx context.Context, s string, a ...any) {
 	defer panic(fmt.Sprintf(s, a...))
-	if PANIC > loglvl {
+	if PANIC < state.level {
 		return
 	}
 	logf(ctx, PANIC, nil, s, a...)
@@ -292,9 +281,9 @@ func Panicf(ctx context.Context, s string, a ...interface{}) {
 
 // PanicKV will log the one key-value field to the log at PANIC level.
 // This will then call panic causing the application to crash.
-func PanicKV(ctx context.Context, key string, value interface{}) {
+func PanicKV(ctx context.Context, key string, value any) {
 	defer panic(kv.Field{K: key, V: value}.String())
-	if PANIC > loglvl {
+	if PANIC < state.level {
 		return
 	}
 	logf(ctx, PANIC, []kv.Field{{K: key, V: value}}, "")
@@ -304,31 +293,31 @@ func PanicKV(ctx context.Context, key string, value interface{}) {
 // This will then call panic causing the application to crash.
 func PanicKVs(ctx context.Context, kvs ...kv.Field) {
 	defer panic(kv.Fields(kvs).String())
-	if PANIC > loglvl {
+	if PANIC < state.level {
 		return
 	}
 	logf(ctx, PANIC, kvs, "")
 }
 
 // Log will log formatted args as 'msg' field to the log at given level.
-func Log(ctx context.Context, lvl LEVEL, a ...interface{}) { //nolint:revive
-	if lvl > loglvl {
+func Log(ctx context.Context, lvl LEVEL, a ...any) { //nolint:revive
+	if lvl < state.level {
 		return
 	}
 	logf(ctx, lvl, nil, "", a...)
 }
 
 // Logf will log format string as 'msg' field to the log at given level.
-func Logf(ctx context.Context, lvl LEVEL, s string, a ...interface{}) { //nolint:revive
-	if lvl > loglvl {
+func Logf(ctx context.Context, lvl LEVEL, s string, a ...any) { //nolint:revive
+	if lvl < state.level {
 		return
 	}
 	logf(ctx, lvl, nil, s, a...)
 }
 
 // LogKV will log the one key-value field to the log at given level.
-func LogKV(ctx context.Context, lvl LEVEL, key string, value interface{}) { //nolint:revive
-	if lvl > loglvl {
+func LogKV(ctx context.Context, lvl LEVEL, key string, value any) { //nolint:revive
+	if lvl < state.level {
 		return
 	}
 	logf(ctx, lvl, []kv.Field{{K: key, V: value}}, "")
@@ -336,20 +325,30 @@ func LogKV(ctx context.Context, lvl LEVEL, key string, value interface{}) { //no
 
 // LogKVs will log key-value fields to the log at given level.
 func LogKVs(ctx context.Context, lvl LEVEL, kvs ...kv.Field) { //nolint:revive
-	if lvl > loglvl {
+	if lvl < state.level {
 		return
 	}
 	logf(ctx, lvl, kvs, "")
 }
 
-// Print will log formatted args to the stdout log output.
-func Print(a ...interface{}) {
-	logf(context.Background(), UNSET, nil, "", a...)
+// Print will log formatted args to the log output.
+func Print(a ...any) {
+	logf(nil, UNSET, nil, "", a...)
 }
 
-// Printf will log format string to the stdout log output.
-func Printf(s string, a ...interface{}) {
-	logf(context.Background(), UNSET, nil, s, a...)
+// Printf will log format string to the log output.
+func Printf(s string, a ...any) {
+	logf(nil, UNSET, nil, s, a...)
+}
+
+// PrintKV will log the one key-value field to the log.
+func PrintKV(key string, value any) {
+	logf(nil, UNSET, []kv.Field{{K: key, V: value}}, "")
+}
+
+// PrintKVs will log key-value fields to the log.
+func PrintKVs(kvs ...kv.Field) {
+	logf(nil, UNSET, kvs, "")
 }
 
 // a note on design implementation here:
@@ -369,16 +368,7 @@ func Printf(s string, a ...interface{}) {
 // only performing boolean operations which themselves are inlined.
 //
 //go:noinline
-func logf(ctx context.Context, lvl LEVEL, fields []kv.Field, msg string, args ...interface{}) {
-	var out *os.File
-
-	// Split errors to stderr,
-	// all else goes to stdout.
-	if lvl <= ERROR {
-		out = os.Stderr
-	} else {
-		out = os.Stdout
-	}
+func logf(ctx context.Context, lvl LEVEL, fields []kv.Field, msg string, args ...any) {
 
 	// Get log stamp.
 	now := time.Now()
@@ -391,12 +381,12 @@ func logf(ctx context.Context, lvl LEVEL, fields []kv.Field, msg string, args ..
 	buf := getBuf()
 	defer putBuf(buf)
 
-	if ctx != nil {
-		// Ensure fields have space for context hooks.
-		fields = xslices.GrowJust(fields, len(ctxhooks))
+	if ctx != nil && len(state.hooks) > 0 {
+		// Ensure fields have space for our context hooks.
+		fields = xslices.GrowJust(fields, len(state.hooks))
 
-		// Pass context through hooks.
-		for _, hook := range ctxhooks {
+		// Pass context through our hooks.
+		for _, hook := range state.hooks {
 			fields = hook(ctx, fields)
 		}
 	}
@@ -417,7 +407,7 @@ func logf(ctx context.Context, lvl LEVEL, fields []kv.Field, msg string, args ..
 
 	// Append formatted
 	// entry to buffer.
-	appendFormat(buf,
+	state.format(buf,
 		now,
 		pcs[0],
 		lvl,
@@ -430,32 +420,6 @@ func logf(ctx context.Context, lvl LEVEL, fields []kv.Field, msg string, args ..
 		buf.B = append(buf.B, '\n')
 	}
 
-	if sysout != nil {
-		// Write log entry to syslog
-		logsys(lvl, buf.String())
-	}
-
-	// Write to output file.
-	_, _ = out.Write(buf.B)
-}
-
-// logsys will log given msg at given severity to the syslog.
-// Max length: https://www.rfc-editor.org/rfc/rfc5424.html#section-6.1
-func logsys(lvl LEVEL, msg string) {
-	if max := 2048; len(msg) > max {
-		// Truncate up to max
-		msg = msg[:max]
-	}
-	switch lvl {
-	case TRACE, DEBUG:
-		_ = sysout.Debug(msg)
-	case INFO:
-		_ = sysout.Info(msg)
-	case WARN:
-		_ = sysout.Warning(msg)
-	case ERROR:
-		_ = sysout.Err(msg)
-	case PANIC:
-		_ = sysout.Crit(msg)
-	}
+	// Write to output func.
+	state.output(lvl, buf.B)
 }

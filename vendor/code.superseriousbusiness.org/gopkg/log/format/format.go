@@ -21,7 +21,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log/level"
+	"code.superseriousbusiness.org/gopkg/log/level"
+
 	"codeberg.org/gruf/go-byteutil"
 	"codeberg.org/gruf/go-kv/v2"
 )
@@ -31,6 +32,10 @@ var (
 	_ FormatFunc = (*Logfmt)(nil).Format
 	_ FormatFunc = (*JSON)(nil).Format
 )
+
+// DefaultTimeFormat is the default time format
+// string used when an empty string is passed.
+const DefaultTimeFormat = `02/01/2006 15:04:05.000`
 
 // FormatFunc defines a function capable of formatting a log entry (args = 1+) to a given buffer (args = 0).
 type FormatFunc func(buf *byteutil.Buffer, stamp time.Time, pc uintptr, lvl level.LEVEL, kvs []kv.Field, msg string) //nolint:revive

@@ -22,8 +22,8 @@ import (
 	"math/big"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"codeberg.org/gruf/go-kv/v2"
 	"github.com/oklog/ulid"
 )

@@ -27,7 +27,7 @@ import (
 	"path"
 	"time"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/workers"
 	"code.superseriousbusiness.org/gotosocial/internal/state"

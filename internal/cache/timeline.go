@@ -20,8 +20,8 @@ package cache
 import (
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/cache/timeline"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 type TimelineCaches struct {

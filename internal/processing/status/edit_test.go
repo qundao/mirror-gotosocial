@@ -23,11 +23,11 @@ import (
 	"testing"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/xslices"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
-	"code.superseriousbusiness.org/gotosocial/internal/util/xslices"
 	"github.com/stretchr/testify/suite"
 )
 

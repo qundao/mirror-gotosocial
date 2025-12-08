@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"sync"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gopkg/log"
 	"codeberg.org/gruf/go-byteutil"
 	"codeberg.org/gruf/go-fastcopy"
 	"github.com/gin-gonic/gin"

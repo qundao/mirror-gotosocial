@@ -27,9 +27,9 @@ import (
 	"strings"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/db/sqlite"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"codeberg.org/gruf/go-bytesize"
 	"github.com/google/uuid"
 	"github.com/uptrace/bun/dialect/sqlitedialect"

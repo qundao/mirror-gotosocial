@@ -23,8 +23,8 @@ import (
 	gohtml "html"
 	"strings"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/regexes"
 	"codeberg.org/gruf/go-byteutil"
 	"github.com/k3a/html2text"

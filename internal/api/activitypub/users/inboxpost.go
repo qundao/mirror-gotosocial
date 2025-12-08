@@ -20,9 +20,9 @@ package users
 import (
 	"net/http"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/gin-gonic/gin"
 
 	errorsv2 "codeberg.org/gruf/go-errors/v2"

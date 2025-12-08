@@ -38,9 +38,9 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"go.opentelemetry.io/otel/trace"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 const (
@@ -75,13 +75,14 @@ func InitializeTracing(ctx context.Context) error {
 		propagation.Baggage{},
 	))
 
-	log.Hook(func(ctx context.Context, kvs []kv.Field) []kv.Field {
+	log.AddHook(func(ctx context.Context, kvs []kv.Field) []kv.Field {
 		span := trace.SpanFromContext(ctx)
 		if span != nil && span.SpanContext().HasTraceID() {
 			return append(kvs, kv.Field{K: "traceID", V: span.SpanContext().TraceID().String()})
 		}
 		return kvs
 	})
+
 	return nil
 }
 

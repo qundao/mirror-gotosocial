@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	oldmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20250106114512_replace_statuses_updatedat_with_editedat"
 	newmodel "code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect"
 )

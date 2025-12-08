@@ -21,10 +21,10 @@ import (
 	"context"
 	"fmt"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 // GetCustomEmojis returns a list of all useable local custom emojis stored on this instance.

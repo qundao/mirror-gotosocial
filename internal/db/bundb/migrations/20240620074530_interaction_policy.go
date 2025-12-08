@@ -20,7 +20,7 @@ package migrations
 import (
 	"context"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gopkg/log"
 
 	newmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20240620074530_interaction_policy/new"
 	oldmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20240620074530_interaction_policy/old"

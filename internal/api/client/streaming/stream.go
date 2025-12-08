@@ -24,11 +24,11 @@ import (
 	"slices"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	streampkg "code.superseriousbusiness.org/gotosocial/internal/stream"
 
 	"github.com/gin-gonic/gin"

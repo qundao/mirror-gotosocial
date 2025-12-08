@@ -18,23 +18,25 @@
 package testrig
 
 import (
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
+	"code.superseriousbusiness.org/gotosocial/internal/gtslog"
 	"gopkg.in/mcuadros/go-syslog.v2"
 	"gopkg.in/mcuadros/go-syslog.v2/format"
 )
 
 // InitTestLog sets the global logger to trace level for logging
 func InitTestLog() {
-	log.SetTimeFormat(config.GetLogTimestampFormat())
+	gtslog.SetTimeFormat(config.GetLogTimestampFormat())
+
 	// Set the global log level from configuration
-	if err := log.ParseLevel(config.GetLogLevel()); err != nil {
+	if err := gtslog.ParseLevel(config.GetLogLevel()); err != nil {
 		log.Panicf(nil, "error parsing log level: %v", err)
 	}
 
 	if config.GetSyslogEnabled() {
 		// Enable logging to syslog
-		if err := log.EnableSyslog(
+		if err := gtslog.EnableSyslog(
 			config.GetSyslogProtocol(),
 			config.GetSyslogAddress(),
 		); err != nil {

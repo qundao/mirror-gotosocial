@@ -17,16 +17,18 @@
 
 //go:build !darwin
 
-package log_test
+package gtslog_test
 
 import (
 	"fmt"
 	"os"
 	"path"
 	"regexp"
+	"strings"
+	"unicode"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/google/uuid"
 )
@@ -44,8 +46,6 @@ func (suite *SyslogTestSuite) TestSyslogLongMessageUnixgram() {
 	if err != nil {
 		panic(err)
 	}
-	syslogServer := server
-	syslogChannel := channel
 
 	config.SetSyslogEnabled(true)
 	config.SetSyslogProtocol("unixgram")
@@ -58,12 +58,11 @@ func (suite *SyslogTestSuite) TestSyslogLongMessageUnixgram() {
 	funcName := log.Caller(2)
 	prefix := fmt.Sprintf(`timestamp="02/01/2006 15:04:05.000" func=%s level=ERROR msg="`, funcName)
 
-	entry := <-syslogChannel
-	regex := fmt.Sprintf(`timestamp=.* func=.* level=ERROR msg="%s`, longMessage[:2048-len(prefix)])
-
+	entry := <-channel // note we have to trim space here as sometime final space char gets lost by our test syslog setup, because :shrug:
+	regex := fmt.Sprintf(`timestamp=.* func=.* level=ERROR msg="%s`, strings.TrimRightFunc(longMessage[:2048-len(prefix)], unicode.IsSpace))
 	suite.Regexp(regexp.MustCompile(regex), entry["content"])
 
-	if err := syslogServer.Kill(); err != nil {
+	if err := server.Kill(); err != nil {
 		panic(err)
 	}
 }

@@ -38,7 +38,6 @@ func ToAny[T any](in []T) []any {
 // which simply guarantees extra through append() which
 // may allocate more than necessary extra size.
 func GrowJust[T any](in []T, size int) []T {
-
 	if cap(in)-len(in) < size {
 		// Reallocate enough for in + size.
 		in2 := make([]T, len(in), len(in)+size)

@@ -30,6 +30,7 @@ import (
 
 	"code.superseriousbusiness.org/activity/streams"
 	typepublickey "code.superseriousbusiness.org/activity/streams/impl/w3idsecurityv1/type_publickey"
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
@@ -37,7 +38,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/httpsig"
 	"codeberg.org/gruf/go-kv/v2"
 )

@@ -23,6 +23,7 @@ import (
 	"slices"
 	"strings"
 
+	"code.superseriousbusiness.org/gopkg/xslices"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
@@ -30,7 +31,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/internal/paging"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
-	"code.superseriousbusiness.org/gotosocial/internal/util/xslices"
 )
 
 func (p *Processor) DomainLimitsGet(ctx context.Context, page *paging.Page) (*apimodel.PageableResponse, gtserror.WithCode) {

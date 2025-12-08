@@ -22,13 +22,23 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"code.superseriousbusiness.org/gotosocial/internal/log/level"
+	"code.superseriousbusiness.org/gopkg/log/level"
+
 	"codeberg.org/gruf/go-byteutil"
 	"codeberg.org/gruf/go-caller"
 	"codeberg.org/gruf/go-kv/v2"
 )
 
 type JSON struct{ Base }
+
+func NewJSON(timefmt string) FormatFunc {
+	if timefmt == "" {
+		timefmt = DefaultTimeFormat
+	}
+	return (&JSON{Base: Base{
+		TimeFormat: timefmt,
+	}}).Format
+}
 
 func (fmt *JSON) Format(buf *byteutil.Buffer, stamp time.Time, pc uintptr, lvl level.LEVEL, kvs []kv.Field, msg string) {
 	// Prepend opening JSON brace.

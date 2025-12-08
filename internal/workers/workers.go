@@ -20,8 +20,8 @@ package workers
 import (
 	"runtime"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/scheduler"
 	"code.superseriousbusiness.org/gotosocial/internal/transport/delivery"

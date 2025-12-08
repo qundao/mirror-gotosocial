@@ -25,8 +25,8 @@ import (
 	"io"
 	"os"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 	transmodel "code.superseriousbusiness.org/gotosocial/internal/trans/model"
 )
 

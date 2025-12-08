@@ -36,7 +36,7 @@ func (e Entry) WithContext(ctx context.Context) Entry {
 }
 
 // WithField appends key-value field to Entry{}.
-func (e Entry) WithField(key string, value interface{}) Entry {
+func (e Entry) WithField(key string, value any) Entry {
 	e.kvs = append(e.kvs, kv.Field{K: key, V: value})
 	return e
 }
@@ -48,80 +48,80 @@ func (e Entry) WithFields(kvs ...kv.Field) Entry {
 }
 
 // Trace will log formatted args as 'msg' field to the log at TRACE level.
-func (e Entry) Trace(a ...interface{}) {
-	if TRACE > loglvl {
+func (e Entry) Trace(a ...any) {
+	if TRACE < state.level {
 		return
 	}
 	logf(e.ctx, TRACE, e.kvs, "", a...)
 }
 
 // Tracef will log format string as 'msg' field to the log at TRACE level.
-func (e Entry) Tracef(s string, a ...interface{}) {
-	if TRACE > loglvl {
+func (e Entry) Tracef(s string, a ...any) {
+	if TRACE < state.level {
 		return
 	}
 	logf(e.ctx, TRACE, e.kvs, s, a...)
 }
 
 // Debug will log formatted args as 'msg' field to the log at DEBUG level.
-func (e Entry) Debug(a ...interface{}) {
-	if DEBUG > loglvl {
+func (e Entry) Debug(a ...any) {
+	if DEBUG < state.level {
 		return
 	}
 	logf(e.ctx, DEBUG, e.kvs, "", a...)
 }
 
 // Debugf will log format string as 'msg' field to the log at DEBUG level.
-func (e Entry) Debugf(s string, a ...interface{}) {
-	if DEBUG > loglvl {
+func (e Entry) Debugf(s string, a ...any) {
+	if DEBUG < state.level {
 		return
 	}
 	logf(e.ctx, DEBUG, e.kvs, s, a...)
 }
 
 // Info will log formatted args as 'msg' field to the log at INFO level.
-func (e Entry) Info(a ...interface{}) {
-	if INFO > loglvl {
+func (e Entry) Info(a ...any) {
+	if INFO < state.level {
 		return
 	}
 	logf(e.ctx, INFO, e.kvs, "", a...)
 }
 
 // Infof will log format string as 'msg' field to the log at INFO level.
-func (e Entry) Infof(s string, a ...interface{}) {
-	if INFO > loglvl {
+func (e Entry) Infof(s string, a ...any) {
+	if INFO < state.level {
 		return
 	}
 	logf(e.ctx, INFO, e.kvs, s, a...)
 }
 
 // Warn will log formatted args as 'msg' field to the log at WARN level.
-func (e Entry) Warn(a ...interface{}) {
-	if WARN > loglvl {
+func (e Entry) Warn(a ...any) {
+	if WARN < state.level {
 		return
 	}
 	logf(e.ctx, WARN, e.kvs, "", a...)
 }
 
 // Warnf will log format string as 'msg' field to the log at WARN level.
-func (e Entry) Warnf(s string, a ...interface{}) {
-	if WARN > loglvl {
+func (e Entry) Warnf(s string, a ...any) {
+	if WARN < state.level {
 		return
 	}
 	logf(e.ctx, WARN, e.kvs, s, a...)
 }
 
 // Error will log formatted args as 'msg' field to the log at ERROR level.
-func (e Entry) Error(a ...interface{}) {
-	if ERROR > loglvl {
+func (e Entry) Error(a ...any) {
+	if ERROR < state.level {
 		return
 	}
 	logf(e.ctx, ERROR, e.kvs, "", a...)
 }
 
 // Errorf will log format string as 'msg' field to the log at ERROR level.
-func (e Entry) Errorf(s string, a ...interface{}) {
-	if ERROR > loglvl {
+func (e Entry) Errorf(s string, a ...any) {
+	if ERROR < state.level {
 		return
 	}
 	logf(e.ctx, ERROR, e.kvs, s, a...)
@@ -129,9 +129,9 @@ func (e Entry) Errorf(s string, a ...interface{}) {
 
 // Panic will log formatted args as 'msg' field to the log at PANIC level.
 // This will then call panic causing the application to crash.
-func (e Entry) Panic(a ...interface{}) {
+func (e Entry) Panic(a ...any) {
 	defer panic(fmt.Sprint(a...))
-	if PANIC > loglvl {
+	if PANIC < state.level {
 		return
 	}
 	logf(e.ctx, PANIC, e.kvs, "", a...)
@@ -139,36 +139,36 @@ func (e Entry) Panic(a ...interface{}) {
 
 // Panicf will log format string as 'msg' field to the log at PANIC level.
 // This will then call panic causing the application to crash.
-func (e Entry) Panicf(s string, a ...interface{}) {
+func (e Entry) Panicf(s string, a ...any) {
 	defer panic(fmt.Sprintf(s, a...))
-	if PANIC > loglvl {
+	if PANIC < state.level {
 		return
 	}
 	logf(e.ctx, PANIC, e.kvs, s, a...)
 }
 
 // Log will log formatted args as 'msg' field to the log at given level.
-func (e Entry) Log(lvl LEVEL, a ...interface{}) {
-	if lvl > loglvl {
+func (e Entry) Log(lvl LEVEL, a ...any) {
+	if lvl < state.level {
 		return
 	}
 	logf(e.ctx, lvl, e.kvs, "", a...)
 }
 
 // Logf will log format string as 'msg' field to the log at given level.
-func (e Entry) Logf(lvl LEVEL, s string, a ...interface{}) {
-	if lvl > loglvl {
+func (e Entry) Logf(lvl LEVEL, s string, a ...any) {
+	if lvl < state.level {
 		return
 	}
 	logf(e.ctx, lvl, e.kvs, s, a...)
 }
 
-// Print will log formatted args to the stdout log output.
-func (e Entry) Print(a ...interface{}) {
+// Print will log formatted args to the log output.
+func (e Entry) Print(a ...any) {
 	logf(e.ctx, UNSET, e.kvs, "", a...)
 }
 
-// Printf will log format string to the stdout log output.
-func (e Entry) Printf(s string, a ...interface{}) {
+// Printf will log format string to the log output.
+func (e Entry) Printf(s string, a ...any) {
 	logf(e.ctx, UNSET, e.kvs, s, a...)
 }

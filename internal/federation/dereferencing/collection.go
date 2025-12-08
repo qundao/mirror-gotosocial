@@ -22,9 +22,9 @@ import (
 	"net/url"
 
 	"code.superseriousbusiness.org/activity/streams/vocab"
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/log"
 )
 
 // dereferenceCollectionPage returns the activitystreams Collection at the specified IRI, or an error if something goes wrong.
