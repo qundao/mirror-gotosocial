@@ -18,6 +18,7 @@
 package admin_test
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -105,6 +106,33 @@ func (suite *MediaCleanupTestSuite) TestMediaCleanupNotOldEnough() {
 
 	// the media should still be cached
 	suite.True(*prunedAttachment.Cached)
+}
+
+func (suite *MediaCleanupTestSuite) TestMediaCleanupNegative() {
+	testAttachment := suite.testAttachments["remote_account_1_status_1_attachment_1"]
+	suite.True(*testAttachment.Cached)
+
+	// Set up the request
+	recorder := httptest.NewRecorder()
+	ctx := suite.newContext(
+		recorder,
+		http.MethodPost,
+		[]byte("{\"remote_cache_days\": -10}"),
+		admin.MediaCleanupPath,
+		"application/json",
+	)
+
+	// Call the handler
+	suite.adminModule.MediaCleanupPOSTHandler(ctx)
+
+	// We should have Bad Request
+	// because our request SUCKED.
+	suite.Equal(http.StatusBadRequest, recorder.Code)
+	b, err := io.ReadAll(recorder.Body)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.Equal(`{"error":"Bad Request: invalid value for remote_cache_days; value was -10, cannot be less than 0"}`, string(b))
 }
 
 func TestMediaCleanupTestSuite(t *testing.T) {

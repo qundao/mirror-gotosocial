@@ -8909,7 +8909,7 @@ paths:
             operationId: mediaCleanup
             parameters:
                 - description: |-
-                    Number of days of remote media to keep. Native values will be treated as 0.
+                    Number of days of remote media to keep.
                     If value is not specified, the value of media-remote-cache-days in the server config will be used.
                   format: int64
                   in: query
@@ -8949,6 +8949,54 @@ paths:
                 - OAuth2 Bearer:
                     - admin:write
             summary: Clean up remote media older than the specified number of days.
+            tags:
+                - admin
+    /api/v1/admin/media_purge:
+        post:
+            consumes:
+                - application/json
+                - application/xml
+                - application/x-www-form-urlencoded
+            operationId: mediaPurge
+            parameters:
+                - description: Domain to purge media from.
+                  in: query
+                  name: domain
+                  type: string
+                  x-go-name: Domain
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: Echos the domain requested. The purge is performed asynchronously after the request completes.
+                "400":
+                    description: bad request
+                    schema:
+                        $ref: '#/definitions/error'
+                "401":
+                    description: unauthorized
+                    schema:
+                        $ref: '#/definitions/error'
+                "403":
+                    description: forbidden
+                    schema:
+                        $ref: '#/definitions/error'
+                "404":
+                    description: not found
+                    schema:
+                        $ref: '#/definitions/error'
+                "406":
+                    description: not acceptable
+                    schema:
+                        $ref: '#/definitions/error'
+                "500":
+                    description: internal server error
+                    schema:
+                        $ref: '#/definitions/error'
+            security:
+                - OAuth2 Bearer:
+                    - admin:write
+            summary: Purge all media (attachments, avatars, headers, emojis) from the given domain, completely removing them from storage.
             tags:
                 - admin
     /api/v1/admin/media_refetch:

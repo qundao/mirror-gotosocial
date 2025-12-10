@@ -93,7 +93,7 @@ func (l *list) ListAttachmentPaths(ctx context.Context) error {
 
 	for {
 		// Get next page of media attachments up to max ID.
-		medias, err := l.state.DB.GetAttachments(ctx, &page)
+		medias, err := l.state.DB.GetAttachments(ctx, "", &page)
 		if err != nil && !errors.Is(err, db.ErrNoEntries) {
 			return fmt.Errorf("failed to fetch media from database: %w", err)
 		}

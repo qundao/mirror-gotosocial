@@ -224,7 +224,7 @@ func (m *mediaDB) DeleteAttachment(ctx context.Context, id string) error {
 	return err
 }
 
-func (m *mediaDB) GetAttachments(ctx context.Context, page *paging.Page) ([]*gtsmodel.MediaAttachment, error) {
+func (m *mediaDB) GetAttachments(ctx context.Context, accountID string, page *paging.Page) ([]*gtsmodel.MediaAttachment, error) {
 	maxID := page.GetMax()
 	limit := page.GetLimit()
 
@@ -235,8 +235,12 @@ func (m *mediaDB) GetAttachments(ctx context.Context, page *paging.Page) ([]*gts
 		Column("id").
 		Order("id DESC")
 
+	if accountID != "" {
+		q = q.Where("? = ?", bun.Ident("account_id"), accountID)
+	}
+
 	if maxID != "" {
-		q = q.Where("id < ?", maxID)
+		q = q.Where("? < ?", bun.Ident("id"), maxID)
 	}
 
 	if limit != 0 {

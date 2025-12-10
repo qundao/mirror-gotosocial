@@ -109,6 +109,41 @@ func (suite *MediaTestSuite) TestUncacheRemote() {
 	suite.False(*uncachedAttachment.Cached)
 }
 
+func (suite *MediaTestSuite) TestPurgeRemote() {
+	var (
+		ctx = suite.T().Context()
+	)
+
+	for _, t := range []struct {
+		domain   string
+		expected int
+	}{
+		{
+			domain:   "fossbros-anonymous.io",
+			expected: 1,
+		},
+		{
+			domain:   "example.org",
+			expected: 3,
+		},
+		{
+			domain:   "thequeenisstillalive.technology",
+			expected: 1,
+		},
+	} {
+		count, err := suite.cleaner.Media().PurgeRemote(ctx, t.domain)
+		if err != nil {
+			suite.FailNow(err.Error())
+		}
+		if count != t.expected {
+			suite.Fail("",
+				"purge %s expected %d, got %d",
+				t.domain, t.expected, count,
+			)
+		}
+	}
+}
+
 func (suite *MediaTestSuite) TestUncacheRemoteDry() {
 	ctx := suite.T().Context()
 

@@ -19,11 +19,13 @@
 
 import React from "react";
 import Cleanup from "./cleanup";
+import Purge from "./purge";
 
 export default function Media() {
 	return (
 		<div className="admin-actions-media">
 			<Cleanup />
+			<Purge />
 		</div>
 	);
 }

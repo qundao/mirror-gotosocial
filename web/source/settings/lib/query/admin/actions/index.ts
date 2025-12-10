@@ -31,6 +31,16 @@ const extended = gtsApi.injectEndpoints({
 			})
 		}),
 
+		mediaPurge: build.mutation({
+			query: (domain) => ({
+				method: "POST",
+				url: `/api/v1/admin/media_purge`,
+				params: {
+					domain: domain,
+				}
+			})
+		}),
+
 		instanceKeysExpire: build.mutation({
 			query: (domain) => ({
 				method: "POST",
@@ -57,6 +67,11 @@ const extended = gtsApi.injectEndpoints({
 const useMediaCleanupMutation = extended.useMediaCleanupMutation;
 
 /**
+ * POST to /api/v1/admin/media_purge to trigger media purge.
+ */
+const useMediaPurgeMutation = extended.useMediaPurgeMutation;
+
+/**
  * POST to /api/v1/admin/domain_keys_expire to expire domain keys for the given domain.
  */
 const useInstanceKeysExpireMutation = extended.useInstanceKeysExpireMutation;
@@ -68,6 +83,7 @@ const useSendTestEmailMutation = extended.useSendTestEmailMutation;
 
 export {
 	useMediaCleanupMutation,
+	useMediaPurgeMutation,
 	useInstanceKeysExpireMutation,
 	useSendTestEmailMutation,
 };

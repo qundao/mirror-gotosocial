@@ -61,6 +61,7 @@ const (
 	AccountsApprovePath                      = AccountsPathWithID + "/approve"
 	AccountsRejectPath                       = AccountsPathWithID + "/reject"
 	MediaCleanupPath                         = BasePath + "/media_cleanup"
+	MediaPurgePath                           = BasePath + "/media_purge"
 	MediaRefetchPath                         = BasePath + "/media_refetch"
 	ReportsPath                              = BasePath + "/reports"
 	ReportsPathWithID                        = ReportsPath + "/:" + apiutil.IDKey
@@ -165,6 +166,7 @@ func (m *Module) Route(attachHandler func(method string, path string, f ...gin.H
 
 	// media stuff
 	attachHandler(http.MethodPost, MediaCleanupPath, m.MediaCleanupPOSTHandler)
+	attachHandler(http.MethodPost, MediaPurgePath, m.MediaPurgePOSTHandler)
 	attachHandler(http.MethodPost, MediaRefetchPath, m.MediaRefetchPOSTHandler)
 
 	// reports stuff

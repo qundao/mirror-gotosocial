@@ -193,9 +193,17 @@ type AdminActionResponse struct {
 //
 // swagger:parameters mediaCleanup
 type MediaCleanupRequest struct {
-	// Number of days of remote media to keep. Native values will be treated as 0.
+	// Number of days of remote media to keep.
 	// If value is not specified, the value of media-remote-cache-days in the server config will be used.
 	RemoteCacheDays *int `form:"remote_cache_days" json:"remote_cache_days" xml:"remote_cache_days"`
+}
+
+// MediaPurgeRequest models admin media purge parameters
+//
+// swagger:parameters mediaPurge
+type MediaPurgeRequest struct {
+	// Domain to purge media from.
+	Domain string `form:"domain" json:"domain" xml:"domain"`
 }
 
 // AdminSendTestEmailRequest models a test email send request (woah).

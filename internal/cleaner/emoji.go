@@ -28,6 +28,8 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/paging"
+	"code.superseriousbusiness.org/gotosocial/internal/storage"
+	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // Emoji encompasses a set of
@@ -58,6 +60,16 @@ func (e *Emoji) LogUncacheRemote(ctx context.Context, olderThan time.Time) {
 		log.Error(ctx, err)
 	} else {
 		log.Infof(ctx, "uncached: %d", n)
+	}
+}
+
+// LogPurgeRemote performs Emoji.PurgeRemote(...), logging the start and outcome.
+func (e *Emoji) LogPurgeRemote(ctx context.Context, domain string) {
+	log.Infof(ctx, "start purge domain: %s", domain)
+	if n, err := e.PurgeRemote(ctx, domain); err != nil {
+		log.Error(ctx, err)
+	} else {
+		log.Infof(ctx, "purged: %d", n)
 	}
 }
 
@@ -134,6 +146,91 @@ func (e *Emoji) UncacheRemote(ctx context.Context, olderThan time.Time) (int, er
 				// Update
 				// count.
 				total++
+			}
+		}
+	}
+
+	return total, nil
+}
+
+// PurgeRemote stubs + uncaches all remote emojis from the given domain.
+// Context will be checked for `gtscontext.DryRun()` in order to actually perform the action.
+func (e *Emoji) PurgeRemote(ctx context.Context, domain string) (int, error) {
+	var (
+		total              int
+		maxShortcodeDomain string
+		emojis             []*gtsmodel.Emoji
+		err                error
+	)
+
+	for {
+		// Get (next) page of emojum
+		// from the target domain.
+		emojis, err = e.state.DB.GetEmojisBy(
+			gtscontext.SetBarebones(ctx),
+			domain,
+			true, // includeDisabled
+			true, // includeEnabled
+			"",   // shortcode
+			maxShortcodeDomain,
+			"", // minShortcodeDomain
+			selectLimit,
+		)
+		if err != nil && !errors.Is(err, db.ErrNoEntries) {
+			err := gtserror.Newf("db error: %w", err)
+			return total, gtserror.NewErrorInternalError(err)
+		}
+
+		count := len(emojis)
+		if count == 0 {
+			// We're done.
+			break
+		}
+
+		// Prepare next page.
+		maxShortcodeDomain = emojis[count-1].ShortcodeDomain()
+
+		total += count
+		if gtscontext.DryRun(ctx) {
+			// If this is a dry run, just increment
+			// the total by the emoji count
+			// without actually doing anything.
+			continue
+		}
+
+		for _, emoji := range emojis {
+			if emoji.ImagePath != "" {
+				// Ensure emoji file at path is deleted from storage.
+				err := e.state.Storage.Delete(ctx, emoji.ImagePath)
+				if err != nil && !storage.IsNotFound(err) {
+					log.Errorf(ctx, "error deleting %s: %v", emoji.ImagePath, err)
+				}
+			}
+
+			if emoji.ImageStaticPath != "" {
+				// Ensure emoji static file at path is deleted from storage.
+				err := e.state.Storage.Delete(ctx, emoji.ImageStaticPath)
+				if err != nil && !storage.IsNotFound(err) {
+					log.Errorf(ctx, "error deleting %s: %v", emoji.ImageStaticPath, err)
+				}
+			}
+
+			// Unset fields.
+			emoji.ImageStaticContentType = ""
+			emoji.ImageStaticFileSize = 0
+			emoji.ImageStaticPath = ""
+			emoji.ImageStaticURL = ""
+			emoji.ImageContentType = ""
+			emoji.ImageFileSize = 0
+			emoji.ImagePath = ""
+			emoji.ImageURL = ""
+
+			// Ensure marked as not cached.
+			emoji.Cached = util.Ptr(false)
+
+			// Update.
+			if err := e.state.DB.UpdateEmoji(ctx, emoji); err != nil {
+				return total, gtserror.Newf("db error updating emoji: %w", err)
 			}
 		}
 	}

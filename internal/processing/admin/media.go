@@ -49,18 +49,37 @@ func (p *Processor) MediaRefetch(ctx context.Context, requestingAccount *gtsmode
 	return nil
 }
 
-// MediaPrune triggers a non-blocking prune of unused media, orphaned, uncaching remote and fixing cache states.
-func (p *Processor) MediaPrune(ctx context.Context, mediaRemoteCacheDays int) gtserror.WithCode {
-	if mediaRemoteCacheDays < 0 {
-		err := fmt.Errorf("MediaPrune: invalid value for mediaRemoteCacheDays prune: value was %d, cannot be less than 0", mediaRemoteCacheDays)
-		return gtserror.NewErrorBadRequest(err, err.Error())
-	}
+// MediaPrune triggers a non-blocking prune of unused
+// media, orphaned, uncaching remote and fixing cache states.
+func (p *Processor) MediaPrune(
+	ctx context.Context,
+	remoteCacheDays int,
+) gtserror.WithCode {
 
+	// Start background task
+	// performing media cleanup.
 	go func() {
-		// Start background task performing all media cleanup tasks.
 		ctx := gtscontext.WithValues(context.Background(), ctx)
-		p.cleaner.Media().AllAndFix(ctx, mediaRemoteCacheDays)
-		p.cleaner.Emoji().AllAndFix(ctx, mediaRemoteCacheDays)
+		p.cleaner.Media().AllAndFix(ctx, remoteCacheDays)
+		p.cleaner.Emoji().AllAndFix(ctx, remoteCacheDays)
+	}()
+
+	return nil
+}
+
+// MediaPurge triggers a non-blocking purge of all
+// media attachments + emojis from the given domain.
+func (p *Processor) MediaPurge(
+	ctx context.Context,
+	domain string,
+) gtserror.WithCode {
+
+	// Start background task
+	// performing media purge.
+	go func() {
+		ctx := gtscontext.WithValues(context.Background(), ctx)
+		p.cleaner.Media().LogPurgeRemote(ctx, domain)
+		p.cleaner.Emoji().LogPurgeRemote(ctx, domain)
 	}()
 
 	return nil

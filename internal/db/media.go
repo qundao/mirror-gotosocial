@@ -43,7 +43,8 @@ type Media interface {
 	DeleteAttachment(ctx context.Context, id string) error
 
 	// GetAttachments fetches media attachments up to a given max ID, and at most limit.
-	GetAttachments(ctx context.Context, page *paging.Page) ([]*gtsmodel.MediaAttachment, error)
+	// AccountID is optional and can be provided to specify only attachments from given account.
+	GetAttachments(ctx context.Context, accountID string, page *paging.Page) ([]*gtsmodel.MediaAttachment, error)
 
 	// GetRemoteAttachments fetches media attachments with a non-empty domain, up to a given max ID, and at most limit.
 	GetRemoteAttachments(ctx context.Context, page *paging.Page) ([]*gtsmodel.MediaAttachment, error)

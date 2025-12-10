@@ -24,16 +24,13 @@ import (
 
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
-	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"github.com/gin-gonic/gin"
 )
 
-// MediaCleanupPOSTHandler swagger:operation POST /api/v1/admin/media_cleanup mediaCleanup
+// MediaPurgePOSTHandler swagger:operation POST /api/v1/admin/media_purge mediaPurge
 //
-// Clean up remote media older than the specified number of days.
-//
-// Also cleans up unused headers + avatars from the media cache and prunes orphaned items from storage.
+// Purge all media (attachments, avatars, headers, emojis) from the given domain, completely removing them from storage.
 //
 //	---
 //	tags:
@@ -54,8 +51,8 @@ import (
 //	responses:
 //		'200':
 //			description: >-
-//				Echos the number of days requested.
-//				The cleanup is performed asynchronously after the request completes.
+//				Echos the domain requested.
+//				The purge is performed asynchronously after the request completes.
 //		'400':
 //			schema:
 //				"$ref": "#/definitions/error"
@@ -80,7 +77,7 @@ import (
 //			schema:
 //				"$ref": "#/definitions/error"
 //			description: internal server error
-func (m *Module) MediaCleanupPOSTHandler(c *gin.Context) {
+func (m *Module) MediaPurgePOSTHandler(c *gin.Context) {
 	authed, errWithCode := apiutil.TokenAuth(c,
 		true, true, true, true,
 		apiutil.ScopeAdminWrite,
@@ -101,29 +98,25 @@ func (m *Module) MediaCleanupPOSTHandler(c *gin.Context) {
 		return
 	}
 
-	form := new(apimodel.MediaCleanupRequest)
+	form := new(apimodel.MediaPurgeRequest)
 	if err := c.ShouldBind(form); err != nil {
 		apiutil.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGetV1)
 		return
 	}
 
-	// Normalize remoteCacheDays.
-	var remoteCacheDays int
-	if form.RemoteCacheDays == nil {
-		remoteCacheDays = config.GetMediaRemoteCacheDays()
-	} else if remoteCacheDays = *form.RemoteCacheDays; remoteCacheDays < 0 {
-		text := fmt.Sprintf("invalid value for remote_cache_days; value was %d, cannot be less than 0", remoteCacheDays)
+	if form.Domain == "" {
+		const text = "domain parameter must be set"
 		apiutil.ErrorHandler(c, gtserror.NewErrorBadRequest(errors.New(text), text), m.processor.InstanceGetV1)
 		return
 	}
 
-	if errWithCode := m.processor.Admin().MediaPrune(
+	if errWithCode := m.processor.Admin().MediaPurge(
 		c.Request.Context(),
-		remoteCacheDays,
+		form.Domain,
 	); errWithCode != nil {
 		apiutil.ErrorHandler(c, errWithCode, m.processor.InstanceGetV1)
 		return
 	}
 
-	apiutil.JSON(c, http.StatusOK, remoteCacheDays)
+	apiutil.JSON(c, http.StatusOK, form.Domain)
 }
