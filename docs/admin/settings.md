@@ -34,6 +34,14 @@ Clicking on the username of the reported account opens that account in the 'Acco
 
 You can use this section to search for an account and perform moderation actions on it.
 
+### Domain Limits
+
+![Detail view of one domain limit](../public/admin-settings-domain-limits.png)
+
+In the domain limits section you can create, delete, and review domain limits.
+
+For more details on domain limits, please see the [domain limits documentation](./domain_limits.md).
+
 ### Domain Permissions
 
 ![List of suspended instances, with a field to filter/add new blocks. Below is a link to the bulk import/export interface](../public/admin-settings-federation.png)

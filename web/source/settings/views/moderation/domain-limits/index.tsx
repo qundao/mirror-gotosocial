@@ -54,37 +54,15 @@ export default function DomainLimitsOverview() {
 					off federation entirely. For example, you can use a domain limit to mute all accounts on a given domain except for ones people
 					on your instance follow, and/or to mark all media from a given domain as "sensitive", etc. When you create a domain limit, it
 					extends to all subdomains as well, so limiting 'example.com' also limits 'social.example.com'. 
-					
-					{/* TODO: remove the following warning when stuff gets properly implemented. */}
-					{
-						<>
-							<br/>
-							<br/>
-							<div className="info">
-								<i className="fa fa-fw fa-exclamation-circle" aria-hidden="true"></i>
-								<b>
-									Though you can already experiment with creating, updating, and deleting domain limits, the backend code
-									for making them actually do stuff is still work-in-progress, and will be finished on the way to v0.21.0.
-								</b>
-							</div>
-						</>
-					}
-					
-					{/*
-						TODO: uncomment this when the docs are written.
-						<>
-							<br/>
-							<br/>
-							<a
-								href="https://docs.gotosocial.org/en/stable/admin/domain_limits/"
-								target="_blank"
-								className="docslink"
-								rel="noreferrer"
-							>
-								Learn more about domain limits (opens in a new tab)
-							</a>
-						</>
-					*/}
+					<br/>
+					<a
+						href="https://docs.gotosocial.org/en/stable/admin/domain_limits/"
+						target="_blank"
+						className="docslink"
+						rel="noreferrer"
+					>
+						Learn more about domain limits (opens in a new tab)
+					</a>
 				</p>
 			</div>
 			<FilterableDomainActionsList
