@@ -219,7 +219,7 @@ Disallow: /nodeinfo/
 `
 
 	// MD5 hash of basic robots.txt.
-	RobotsTxtETag = `7b6b498f7381ac33cb3efb34c68f662d`
+	RobotsTxtETag = `40616dc8ff4c38fc25fd3daae53357ee`
 	// MD5 hash of robots.txt with NodeInfo disallowed.
-	RobotsTxtDisallowNodeInfoETag = `6d21be573d502581a3bf7271b7e63fc8`
+	RobotsTxtDisallowNodeInfoETag = `c2c1e5cceb09d0801708dadd3fa42a49`
 )
