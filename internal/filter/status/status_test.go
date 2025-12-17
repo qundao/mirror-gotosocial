@@ -196,6 +196,46 @@ func (suite *StatusFilterTestSuite) testFilteredStatusWithHashtag(wholeword, boo
 	suite.NotEmpty(filtered)
 }
 
+func (suite *StatusFilterTestSuite) TestDomainLimitFilteredStatus() {
+	ctx := suite.T().Context()
+	requester := suite.testAccounts["local_account_1"]
+	status := suite.testStatuses["remote_account_1_status_1"]
+
+	// Filter should be triggered as there's a Warn statuses
+	// policy on the domain limit, and zork doesn't follow satan.
+	filtered, hide, err := suite.filter.StatusFilterResultsInContext(ctx,
+		requester,
+		status,
+		gtsmodel.FilterContextHome,
+	)
+	suite.NoError(err)
+	suite.False(hide)
+	suite.NotEmpty(filtered)
+
+	// Have zork follow satan now.
+	follow := &gtsmodel.Follow{
+		ID:              "01K4STEH5NWAXBZ4TFNGQQQ984",
+		CreatedAt:       testrig.TimeMustParse("2022-05-14T13:21:09+02:00"),
+		UpdatedAt:       testrig.TimeMustParse("2022-05-14T13:21:09+02:00"),
+		AccountID:       "01F8MH1H7YV1Z7D2C8K2730QBF",
+		TargetAccountID: "01F8MH5ZK5VRH73AKHQM6Y9VNX",
+		URI:             "http://localhost:8080/users/the_mighty_zork/follow/01G1TK3PQKFW1BQZ9WVYRTFECK",
+	}
+	if err := suite.state.DB.PutFollow(ctx, follow); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Filter should NOT be triggered this time.
+	filtered, hide, err = suite.filter.StatusFilterResultsInContext(ctx,
+		requester,
+		status,
+		gtsmodel.FilterContextHome,
+	)
+	suite.NoError(err)
+	suite.False(hide)
+	suite.Empty(filtered)
+}
+
 func TestStatusFilterTestSuite(t *testing.T) {
 	suite.Run(t, new(StatusFilterTestSuite))
 }

@@ -28,6 +28,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
 // StatusFilterResultsInContext returns status filtering results, limited
@@ -223,7 +224,7 @@ func (f *Filter) getStatusFilterResults(
 
 			// Wrap matches in frontend API model.
 			apiResult = &apimodel.FilterResult{
-				Filter: toAPIFilterV2(filter),
+				Filter: (*typeutils.FilterToAPIFilterV2(filter)),
 
 				KeywordMatches: keywordMatches,
 				StatusMatches:  statusMatches,
@@ -280,6 +281,42 @@ func (f *Filter) getStatusFilterResults(
 		if filter.Contexts.Account() {
 			const key = cache.KeyContextAccount
 			results[key] = append(results[key], result)
+		}
+	}
+
+	// If requester doesn't follow the author, check if this status is from a
+	// domain that's limited, as we may need to apply an ad-hoc warn / hide filter.
+	following, err := f.state.DB.IsFollowing(ctx, requester.ID, status.AccountID)
+	if err != nil {
+		return results, gtserror.Newf("db error checking following: %w", err)
+	}
+
+	if !following {
+		// Check if account's domain has domain limits.
+		limit, err := f.state.DB.MatchDomainLimit(ctx,
+			status.Account.Domain)
+		if err != nil {
+			return results, gtserror.Newf("error matching domain limit: %w", err)
+		}
+
+		if limit.StatusesFilter() {
+			// Wrap limit in filter result cache model.
+			result := cache.StatusFilterResult{
+				Result: &apimodel.FilterResult{
+					Filter:         *typeutils.DomainLimitToAPIFilterV2(limit),
+					KeywordMatches: []string{limit.Domain},
+				},
+			}
+
+			// Append domain limit result to apply
+			// in HOME, PUBLIC and THREAD contexts.
+			for _, key := range [3]int{
+				cache.KeyContextHome,
+				cache.KeyContextPublic,
+				cache.KeyContextThread,
+			} {
+				results[key] = append(results[key], result)
+			}
 		}
 	}
 

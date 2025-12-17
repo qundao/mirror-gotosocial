@@ -29,8 +29,8 @@ type muteDetails struct {
 	notif bool
 
 	// mute expiry times.
-	muteExpiry  time.Time
-	notifExpiry time.Time
+	muteExpiry  expiryTime
+	notifExpiry expiryTime
 }
 
 // noauth is a placeholder ID used in cache lookups
@@ -43,3 +43,48 @@ type Filter struct{ state *state.State }
 
 // NewFilter returns a new Filter interface that will use the provided state.
 func NewFilter(state *state.State) *Filter { return &Filter{state: state} }
+
+// expiryTime wraps a time.Time{}
+// to also handle the case of zero
+// value indicating "never expires",
+// and tracking this as appropriate.
+type expiryTime struct {
+	time.Time
+	never bool
+}
+
+// Update will update the expiryTime{} according
+// to passed time, handling the case of an already
+// set 'never' flag, newly setting it if necessary,
+// or simply incrementing if 't' is after current.
+func (e *expiryTime) Update(t time.Time) {
+	if e.never {
+		return
+	}
+	if e.Time.IsZero() {
+		e.Never()
+		return
+	}
+	switch {
+	case e.never:
+		// never expires
+
+	case t.IsZero():
+		// set time to
+		// ever expire
+		e.Never()
+
+	case t.After(e.Time):
+		// increment
+		// expiry time
+		e.Time = t
+	}
+}
+
+// Never will set the 'never' flag
+// in expiryTime{} to true preventing
+// any further time incrementation.
+func (e *expiryTime) Never() {
+	e.Time = time.Time{}
+	e.never = true
+}

@@ -1990,7 +1990,7 @@ func NewTestDomainLimits() map[string]*gtsmodel.DomainLimit {
 			MediaPolicy:        gtsmodel.MediaPolicyMarkSensitive,
 			FollowsPolicy:      gtsmodel.FollowsPolicyRejectNonMutual,
 			StatusesPolicy:     gtsmodel.StatusesPolicyFilterWarn,
-			AccountsPolicy:     gtsmodel.AccountsPolicyMute,
+			AccountsPolicy:     gtsmodel.AccountsPolicyNoAction,
 			ContentWarning:     "potentially annoying post ahead",
 		},
 	}

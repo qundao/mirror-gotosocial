@@ -578,9 +578,10 @@ func (c *Caches) initDomainLimit() {
 			{Fields: "ID"},
 			{Fields: "Domain"},
 		},
-		MaxSize:   cap,
-		IgnoreErr: ignoreErrors,
-		Copy:      copyF,
+		MaxSize:    cap,
+		IgnoreErr:  ignoreErrors,
+		Copy:       copyF,
+		Invalidate: c.OnInvalidateDomainLimit,
 	})
 }
 

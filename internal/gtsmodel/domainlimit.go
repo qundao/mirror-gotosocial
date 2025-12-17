@@ -148,6 +148,14 @@ const (
 	StatusesPolicyFilterHide StatusesPolicy = 3
 )
 
+// StatusesFilter returns true if this
+// domain limit is not nil and its
+// StatusesPolicy says that statuses
+// should be filtered (warn or hide).
+func (l *DomainLimit) StatusesFilter() bool {
+	return l != nil && (l.StatusesPolicy == StatusesPolicyFilterWarn || l.StatusesPolicy == StatusesPolicyFilterHide)
+}
+
 type AccountsPolicy enumType
 
 const (
@@ -161,3 +169,10 @@ const (
 	// accounts from the limited domain.
 	AccountsPolicyMute AccountsPolicy = 2
 )
+
+// AccountsMute returns true if this domain
+// limit is not nil and its AccountsPolicy
+// says that accounts should be muted.
+func (l *DomainLimit) AccountsMute() bool {
+	return l != nil && l.AccountsPolicy == AccountsPolicyMute
+}

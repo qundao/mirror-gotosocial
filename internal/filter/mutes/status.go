@@ -47,7 +47,7 @@ func (f *Filter) StatusNotificationsMuted(ctx context.Context, requester *gtsmod
 	return details.Notifications && !details.NotificationExpired(time.Now()), nil
 }
 
-// StatusMuteDetails returns mute details about the given status for the given requesting account.
+// StatusMuteDetails returns cached mute details about the given status for the given requesting account.
 func (f *Filter) StatusMuteDetails(ctx context.Context, requester *gtsmodel.Account, status *gtsmodel.Status) (*cache.CachedMute, error) {
 
 	// For requester ID use a
@@ -82,9 +82,9 @@ func (f *Filter) StatusMuteDetails(ctx context.Context, requester *gtsmodel.Acco
 			ThreadID:           status.ThreadID,
 			RequesterID:        requesterID,
 			Mute:               details.mute,
-			MuteExpiry:         details.muteExpiry,
+			MuteExpiry:         details.muteExpiry.Time,
 			Notifications:      details.notif,
-			NotificationExpiry: details.notifExpiry,
+			NotificationExpiry: details.notifExpiry.Time,
 		}, nil
 	}, requesterID, status.ID)
 	if err != nil {
@@ -183,6 +183,23 @@ func (f *Filter) loadOneStatusMuteDetails(
 	status *gtsmodel.Status,
 	details *muteDetails,
 ) error {
+	// Check if the author of the status, or the boostee (if applicable)
+	// are from a domain with a limit enforcing AccountsPolicy = mute.
+	mutedByLimit, err := f.isStatusMutedByDomainLimit(ctx, requester, status)
+	if err != nil {
+		return err
+	}
+
+	if mutedByLimit {
+		// Set mute to true but leave
+		// notifs alone as these aren't
+		// muted by domain limits.
+		details.mute = true
+
+		// Limit mutes never expire.
+		details.muteExpiry.Never()
+	}
+
 	// Look for mutes against related status accounts
 	// by requester (e.g. author, mention targets etc).
 	userMutes, err := f.getStatusRelatedUserMutes(ctx,
@@ -194,27 +211,19 @@ func (f *Filter) loadOneStatusMuteDetails(
 	}
 
 	for _, mute := range userMutes {
-		// Set as muted!
+		// Toggle as muted!
 		details.mute = true
+
+		// Update mute expiry time if non-zero.
+		details.muteExpiry.Update(mute.ExpiresAt)
 
 		// Set notifications as
 		// muted if flag is set.
 		if *mute.Notifications {
 			details.notif = true
-		}
 
-		// Check for expiry data given.
-		if !mute.ExpiresAt.IsZero() {
-
-			// Update mute details expiry time if later.
-			if mute.ExpiresAt.After(details.muteExpiry) {
-				details.muteExpiry = mute.ExpiresAt
-			}
-
-			// Update notif details expiry time if later.
-			if mute.ExpiresAt.After(details.notifExpiry) {
-				details.notifExpiry = mute.ExpiresAt
-			}
+			// Update notif expiry time if non-zero.
+			details.notifExpiry.Update(mute.ExpiresAt)
 		}
 	}
 
@@ -323,4 +332,104 @@ func (f *Filter) getStatusRelatedUserMutes(
 	}
 
 	return mutes, nil
+}
+
+// isStatusMutedByDomainLimit returns whether status
+// is muted according to any domain limits that exist
+// between requester and status author / boostee.
+func (f *Filter) isStatusMutedByDomainLimit(
+	ctx context.Context,
+	requester *gtsmodel.Account,
+	status *gtsmodel.Status,
+) (bool, error) {
+	var err error
+
+	// Make sure account is loaded
+	// as we need its account domain.
+	if status.Account == nil {
+		status.Account, err = f.state.DB.GetAccountByID(
+			gtscontext.SetBarebones(ctx),
+			status.AccountID,
+		)
+		if err != nil {
+			return false, gtserror.Newf("db error getting account %s: %w", status.AccountID, err)
+		}
+	}
+
+	// Check if account's domain has domain limits.
+	limit, err := f.state.DB.MatchDomainLimit(ctx,
+		status.Account.Domain)
+	if err != nil {
+		return false, gtserror.Newf("error matching domain limit: %w", err)
+	}
+
+	if limit.AccountsMute() {
+		// If the domain limit does have a mute policy
+		// on accounts, the mute only applies if the
+		// requester does not follow the author.
+		following, err := f.state.DB.IsFollowing(ctx,
+			requester.ID,
+			status.AccountID,
+		)
+		if err != nil {
+			return false, gtserror.Newf("db error checking following: %w", err)
+		}
+
+		if !following {
+			// Account's domain is muted,
+			// and requester doesn't follow
+			// them, so the status is muted.
+			return true, nil
+		}
+	}
+
+	if status.BoostOfAccountID != "" {
+		// If the status is a boost, check for
+		// a domain limit applying to the boostee.
+		//
+		// We need the boostee loaded for this.
+		if status.BoostOfAccount == nil {
+			status.BoostOfAccount, err = f.state.DB.GetAccountByID(
+				gtscontext.SetBarebones(ctx),
+				status.BoostOfAccountID,
+			)
+			if err != nil {
+				return false, gtserror.Newf("db error getting account %s: %w", status.BoostOfAccountID, err)
+			}
+		}
+
+		if status.BoostOfAccount.Domain != status.Account.Domain {
+			// Check if boostee's domain has domain limits.
+			limit, err = f.state.DB.MatchDomainLimit(ctx,
+				status.Account.Domain)
+			if err != nil {
+				return false, gtserror.Newf("error matching domain limit: %w", err)
+			}
+		}
+
+		if limit.AccountsMute() {
+			// If the domain limit does have a mute policy
+			// on accounts, the mute only applies if the
+			// requester does not follow the boostee.
+			following, err := f.state.DB.IsFollowing(ctx,
+				requester.ID,
+				status.AccountID,
+			)
+			if err != nil {
+				return false, gtserror.Newf("db error checking following: %w", err)
+			}
+
+			if !following {
+				// Account's domain is muted,
+				// and requester doesn't follow
+				// them, so the status is muted.
+				return true, nil
+			}
+		}
+	}
+
+	// Neither the booster (nor boostee, if applicable)
+	// are subject to a domain limit accounts policy
+	// mute from the perspective of the requester.
+	return false, nil
 }

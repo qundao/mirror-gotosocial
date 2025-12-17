@@ -25,7 +25,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 )
 
 // NOTE:
@@ -33,53 +32,45 @@ import (
 // of the accounts functions below, as there's only
 // a single cache load required of any UserMute.
 
-// AccountMuted returns whether given target account is muted by requester.
-func (f *Filter) AccountMuted(ctx context.Context, requester *gtsmodel.Account, account *gtsmodel.Account) (bool, error) {
-	mute, expired, err := f.getUserMute(ctx, requester, account)
-	if err != nil {
-		return false, err
-	} else if mute == nil {
-		return false, nil
-	}
-	return !expired, nil
-}
-
-// AccountNotificationsMuted returns whether notifications are muted for requester when incoming from given target account.
-func (f *Filter) AccountNotificationsMuted(ctx context.Context, requester *gtsmodel.Account, account *gtsmodel.Account) (bool, error) {
-	mute, expired, err := f.getUserMute(ctx, requester, account)
-	if err != nil {
-		return false, err
-	} else if mute == nil {
-		return false, nil
-	}
-	return *mute.Notifications && !expired, nil
-}
-
-func (f *Filter) getUserMute(ctx context.Context, requester *gtsmodel.Account, account *gtsmodel.Account) (*gtsmodel.UserMute, bool, error) {
-	if requester == nil {
-		// Un-authed so no account
-		// is possible to be muted.
-		return nil, false, nil
-	}
-
+// AccountNotificationsMuted returns whether notifications
+// from target account are muted for requesting account.
+func (f *Filter) AccountNotificationsMuted(
+	ctx context.Context,
+	requesterID string,
+	targetID string,
+) (bool, error) {
 	// Look for mute against target.
 	mute, err := f.state.DB.GetMute(
 		gtscontext.SetBarebones(ctx),
-		requester.ID,
-		account.ID,
+		requesterID,
+		targetID,
 	)
 	if err != nil && !errors.Is(err, db.ErrNoEntries) {
-		return nil, false, gtserror.Newf("db error getting user mute: %w", err)
+		return false, gtserror.Newf("db error getting user mute: %w", err)
 	}
 
 	if mute == nil {
 		// No user mute exists!
-		return nil, false, nil
+		return false, nil
 	}
 
-	// Get current time.
-	now := time.Now()
+	// To avoid calling time.Now(),
+	// return early if this mute
+	// doesn't apply to notifs.
+	if !*mute.Notifications {
+		return false, nil
+	}
 
-	// Return whether mute is expired.
-	return mute, mute.Expired(now), nil
+	// This mute applies to notifs.
+	// If mute doesn't expire then
+	// notifs are definitely muted.
+	if mute.ExpiresAt.IsZero() {
+		return true, nil
+	}
+
+	// The mute applies to notifs
+	// and may expire. Only return
+	// true if it's not expired.
+	expired := time.Now().After(mute.ExpiresAt)
+	return !expired, nil
 }

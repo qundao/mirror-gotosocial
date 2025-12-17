@@ -24,6 +24,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
+	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -276,6 +277,59 @@ func (suite *StatusMuteTestSuite) TestMutedStatusThread() {
 	suite.NoError(err2)
 	suite.False(muted1)
 	suite.False(muted2)
+}
+
+func (suite *StatusMuteTestSuite) TestMutedByDomainLimit() {
+	ctx := suite.T().Context()
+
+	status := suite.testStatuses["remote_account_1_status_1"]
+	requester := suite.testAccounts["local_account_1"]
+
+	// The status should *not* be muted.
+	muted, err := suite.filter.StatusMuted(ctx, requester, status)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.False(muted)
+
+	// Update domain limit on fossbros-anonymous to set AccountsPolicy = mute.
+	domainLimit := new(gtsmodel.DomainLimit)
+	*domainLimit = *suite.testDomainLimits["fossbros-anonymous.io"]
+	domainLimit.AccountsPolicy = gtsmodel.AccountsPolicyMute
+	if err := suite.state.DB.UpdateDomainLimit(ctx,
+		domainLimit,
+		"accounts_policy",
+	); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// The status should be muted.
+	muted, err = suite.filter.StatusMuted(ctx, requester, status)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.True(muted)
+
+	// Add a follow for zork targeting
+	// the fossbros-anonymous account.
+	follow := &gtsmodel.Follow{
+		ID:              "01K4STEH5NWAXBZ4TFNGQQQ984",
+		CreatedAt:       testrig.TimeMustParse("2022-05-14T13:21:09+02:00"),
+		UpdatedAt:       testrig.TimeMustParse("2022-05-14T13:21:09+02:00"),
+		AccountID:       requester.ID,
+		TargetAccountID: status.AccountID,
+		URI:             "http://localhost:8080/users/the_mighty_zork/follow/01G1TK3PQKFW1BQZ9WVYRTFECK",
+	}
+	if err := suite.state.DB.PutFollow(ctx, follow); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// The status should now *not* be muted.
+	muted, err = suite.filter.StatusMuted(ctx, requester, status)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.False(muted)
 }
 
 func TestStatusMuteTestSuite(t *testing.T) {

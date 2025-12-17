@@ -4012,7 +4012,7 @@ func (suite *InternalToFrontendTestSuite) TestDomainLimitToAPIDomainLimit() {
     "media_policy": "mark_sensitive",
     "follows_policy": "reject_non_mutual",
     "statuses_policy": "filter_warn",
-    "accounts_policy": "mute",
+    "accounts_policy": "no_action",
     "content_warning": "potentially annoying post ahead",
     "public_comment": "they're kind of annoying",
     "private_comment": "they're actually really annoying I just wanna be coy about it",

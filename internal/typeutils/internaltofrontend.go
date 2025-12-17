@@ -3184,3 +3184,40 @@ func (c *Converter) DomainLimitToAPIDomainLimit(
 		CreatedAt:      util.FormatISO8601(createdAt),
 	}, nil
 }
+
+func DomainLimitToAPIFilterV1(domainLimit *gtsmodel.DomainLimit) *apimodel.FilterV1 {
+	return &apimodel.FilterV1{
+		ID:     domainLimit.ID,
+		Phrase: "domain limit: " + domainLimit.Domain,
+		Context: []apimodel.FilterContext{
+			apimodel.FilterContextHome,
+			apimodel.FilterContextPublic,
+			apimodel.FilterContextThread,
+		},
+		Irreversible: domainLimit.StatusesPolicy == gtsmodel.StatusesPolicyFilterHide,
+	}
+}
+
+func DomainLimitToAPIFilterV2(domainLimit *gtsmodel.DomainLimit) *apimodel.FilterV2 {
+	return &apimodel.FilterV2{
+		ID:           domainLimit.ID,
+		Title:        "domain limit: " + domainLimit.Domain,
+		FilterAction: domainLimitStatusesPolicyToFilterAction(domainLimit.StatusesPolicy),
+		Context: []apimodel.FilterContext{
+			apimodel.FilterContextHome,
+			apimodel.FilterContextPublic,
+			apimodel.FilterContextThread,
+		},
+	}
+}
+
+func domainLimitStatusesPolicyToFilterAction(p gtsmodel.StatusesPolicy) apimodel.FilterAction {
+	switch p {
+	case gtsmodel.StatusesPolicyFilterWarn:
+		return apimodel.FilterActionWarn
+	case gtsmodel.StatusesPolicyFilterHide:
+		return apimodel.FilterActionHide
+	default:
+		return apimodel.FilterActionNone
+	}
+}

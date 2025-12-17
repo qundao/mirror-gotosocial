@@ -284,7 +284,7 @@ func (p *Processor) GetVisibleAPIStatuses(
 			continue
 		}
 
-		// Convert to API status, taking mute / filter into account.
+		// Not muted or "hide" filtered. Convert to API status.
 		apiStatus, err := p.converter.StatusToAPIStatus(ctx,
 			status,
 			requester,

@@ -80,8 +80,8 @@ func (p *Processor) NotificationsGet(
 
 		// Check whether notification origin account is muted.
 		muted, err := p.muteFilter.AccountNotificationsMuted(ctx,
-			requester,
-			n.OriginAccount,
+			requester.ID,
+			n.OriginAccountID,
 		)
 		if err != nil {
 			log.Errorf(ctx, "error checking account mute: %v", err)

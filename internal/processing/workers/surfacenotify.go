@@ -665,8 +665,8 @@ func (s *Surface) Notify(
 
 	// Check whether origin account is muted by target account.
 	muted, err := s.MuteFilter.AccountNotificationsMuted(ctx,
-		targetAccount,
-		originAccount,
+		targetAccount.ID,
+		originAccount.ID,
 	)
 	if err != nil {
 		return gtserror.Newf("error checking account mute: %w", err)

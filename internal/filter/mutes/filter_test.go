@@ -42,6 +42,7 @@ type FilterStandardTestSuite struct {
 	testTags         map[string]*gtsmodel.Tag
 	testMentions     map[string]*gtsmodel.Mention
 	testFollows      map[string]*gtsmodel.Follow
+	testDomainLimits map[string]*gtsmodel.DomainLimit
 
 	filter *mutes.Filter
 }
@@ -56,6 +57,7 @@ func (suite *FilterStandardTestSuite) SetupSuite() {
 	suite.testTags = testrig.NewTestTags()
 	suite.testMentions = testrig.NewTestMentions()
 	suite.testFollows = testrig.NewTestFollows()
+	suite.testDomainLimits = testrig.NewTestDomainLimits()
 }
 
 func (suite *FilterStandardTestSuite) SetupTest() {

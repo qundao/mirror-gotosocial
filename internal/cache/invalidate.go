@@ -215,6 +215,16 @@ func (c *Caches) OnInvalidateFollow(follow *gtsmodel.Follow) {
 		// list entries for follow.
 		"f"+follow.ID,
 	)
+
+	// Invalidate the status filter cache, as it
+	// checks follow relationships when applying
+	// limit Statuses policy filter results.
+	c.StatusFilter.Invalidate("RequesterID", follow.AccountID)
+
+	// Invalidate the mutes cache, as it checks
+	// follow relationships when applying limit
+	// Accounts policy mute results.
+	c.Mutes.Invalidate("RequesterID", follow.AccountID)
 }
 
 func (c *Caches) OnInvalidateFollowRequest(followReq *gtsmodel.FollowRequest) {
@@ -401,4 +411,16 @@ func (c *Caches) OnInvalidateUserMute(mute *gtsmodel.UserMute) {
 func (c *Caches) OnInvalidateWebPushSubscription(subscription *gtsmodel.WebPushSubscription) {
 	// Invalidate source account's Web Push subscription list.
 	c.DB.WebPushSubscriptionIDs.Invalidate(subscription.AccountID)
+}
+
+func (c *Caches) OnInvalidateDomainLimit(domainLimit *gtsmodel.DomainLimit) {
+	// Clear the StatusFilter cache, as
+	// the invalidated limit may affect
+	// filtering via a StatusesPolicy.
+	c.StatusFilter.Clear()
+
+	// Clear the Mutes cache, as the
+	// invalidated limit may affect
+	// mutes via an AccountsPolicy.
+	c.Mutes.Clear()
 }
