@@ -678,8 +678,8 @@ github.com/json-iterator/go
 # github.com/k3a/html2text v1.3.0
 ## explicit; go 1.16
 github.com/k3a/html2text
-# github.com/klauspost/compress v1.18.0
-## explicit; go 1.22
+# github.com/klauspost/compress v1.18.2
+## explicit; go 1.23
 github.com/klauspost/compress/internal/le
 github.com/klauspost/compress/internal/race
 github.com/klauspost/compress/s2
@@ -714,14 +714,14 @@ github.com/microcosm-cc/bluemonday/css
 # github.com/miekg/dns v1.1.70
 ## explicit; go 1.24.0
 github.com/miekg/dns
-# github.com/minio/crc64nvme v1.1.0
+# github.com/minio/crc64nvme v1.1.1
 ## explicit; go 1.22
 github.com/minio/crc64nvme
 # github.com/minio/md5-simd v1.1.2
 ## explicit; go 1.14
 github.com/minio/md5-simd
-# github.com/minio/minio-go/v7 v7.0.97
-## explicit; go 1.23.0
+# github.com/minio/minio-go/v7 v7.0.98
+## explicit; go 1.24.0
 github.com/minio/minio-go/v7
 github.com/minio/minio-go/v7/pkg/cors
 github.com/minio/minio-go/v7/pkg/credentials
@@ -766,7 +766,7 @@ github.com/ncruces/go-sqlite3/util/sql3util
 github.com/ncruces/go-sqlite3/util/vfsutil
 github.com/ncruces/go-sqlite3/vfs
 github.com/ncruces/go-sqlite3/vfs/memdb
-# github.com/ncruces/go-strftime v0.1.9
+# github.com/ncruces/go-strftime v1.0.0
 ## explicit; go 1.17
 github.com/ncruces/go-strftime
 # github.com/ncruces/julianday v1.0.0
@@ -954,9 +954,10 @@ github.com/tetratelabs/wazero/internal/wasm/binary
 github.com/tetratelabs/wazero/internal/wasmdebug
 github.com/tetratelabs/wazero/internal/wasmruntime
 github.com/tetratelabs/wazero/sys
-# github.com/tinylib/msgp v1.3.0
-## explicit; go 1.20
+# github.com/tinylib/msgp v1.6.1
+## explicit; go 1.24
 github.com/tinylib/msgp/msgp
+github.com/tinylib/msgp/msgp/setof
 # github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc
 ## explicit
 github.com/tmthrgd/go-hex
@@ -1227,7 +1228,7 @@ go.yaml.in/yaml/v3
 # golang.org/x/arch v0.22.0
 ## explicit; go 1.24.0
 golang.org/x/arch/x86/x86asm
-# golang.org/x/crypto v0.46.0
+# golang.org/x/crypto v0.47.0
 ## explicit; go 1.24.0
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
@@ -1248,10 +1249,10 @@ golang.org/x/crypto/scrypt
 golang.org/x/crypto/sha3
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
-## explicit; go 1.23.0
+# golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
+## explicit; go 1.24.0
 golang.org/x/exp/constraints
-# golang.org/x/image v0.34.0
+# golang.org/x/image v0.35.0
 ## explicit; go 1.24.0
 golang.org/x/image/riff
 golang.org/x/image/vp8
@@ -1262,7 +1263,7 @@ golang.org/x/image/webp
 golang.org/x/mod/internal/lazyregexp
 golang.org/x/mod/module
 golang.org/x/mod/semver
-# golang.org/x/net v0.48.0
+# golang.org/x/net v0.49.0
 ## explicit; go 1.24.0
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -1466,8 +1467,8 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# modernc.org/libc v1.66.10
-## explicit; go 1.23.0
+# modernc.org/libc v1.67.4
+## explicit; go 1.24.0
 modernc.org/libc
 modernc.org/libc/errno
 modernc.org/libc/fcntl
@@ -1500,7 +1501,7 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.43.0 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.43.0-concurrency-workaround
+# modernc.org/sqlite v1.44.0 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.44.0-concurrency-workaround
 ## explicit; go 1.24.0
 modernc.org/sqlite
 modernc.org/sqlite/lib
@@ -1508,5 +1509,5 @@ modernc.org/sqlite/vtab
 # mvdan.cc/xurls/v2 v2.6.0
 ## explicit; go 1.22.0
 mvdan.cc/xurls/v2
-# modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.43.0-concurrency-workaround
+# modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.44.0-concurrency-workaround
 # github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.0-array-binding-fix-2
