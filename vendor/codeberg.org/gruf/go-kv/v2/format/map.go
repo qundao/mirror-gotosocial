@@ -11,15 +11,10 @@ import (
 // note this will fetch sub-FormatFuncs for key / value types.
 func (fmt *Formatter) iterMapType(t xunsafe.TypeIter) FormatFunc {
 
-	// Key / value types.
-	key := t.Type.Key()
-	elem := t.Type.Elem()
-
-	// Get nested k / v TypeIters with appropriate flags.
-	flagsKey := xunsafe.ReflectMapKeyFlags(key) | flagKeyType
-	flagsVal := xunsafe.ReflectMapElemFlags(elem)
-	kt := t.Child(key, flagsKey)
-	vt := t.Child(elem, flagsVal)
+	// Get nested k / v.
+	kt := t.MapKey()
+	vt := t.MapElem()
+	kt.Flag |= flagKeyType
 
 	// Get key format func.
 	kfn := fmt.loadOrGet(kt)
@@ -36,10 +31,6 @@ func (fmt *Formatter) iterMapType(t xunsafe.TypeIter) FormatFunc {
 	// Final map type.
 	rtype := t.Type
 	flags := t.Flag
-
-	// Map type string with ptrs / refs.
-	typestrPtrs := typestr_with_ptrs(t)
-	typestrRefs := typestr_with_refs(t)
 
 	if !needs_typestr(t) {
 		return func(s *State) {
@@ -84,6 +75,10 @@ func (fmt *Formatter) iterMapType(t xunsafe.TypeIter) FormatFunc {
 			s.B = append(s.B, '}')
 		}
 	}
+
+	// Map type string with ptrs / refs.
+	typestrPtrs := typestr_with_ptrs(t)
+	typestrRefs := typestr_with_refs(t)
 
 	return func(s *State) {
 		if s.P == nil || *(*unsafe.Pointer)(s.P) == nil {

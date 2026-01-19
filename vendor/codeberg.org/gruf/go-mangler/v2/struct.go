@@ -27,12 +27,7 @@ func iterStructType(t xunsafe.TypeIter) Mangler {
 	for i := 0; i < n; i++ {
 
 		// Get struct field at index.
-		sfield := t.Type.Field(i)
-		rtype := sfield.Type
-
-		// Get nested field TypeIter with appropriate flags.
-		flags := xunsafe.ReflectStructFieldFlags(t.Flag, rtype)
-		ft := t.Child(sfield.Type, flags)
+		ft, sfield := t.StructField(i)
 
 		// Get field mangler.
 		fn := loadOrGet(ft)

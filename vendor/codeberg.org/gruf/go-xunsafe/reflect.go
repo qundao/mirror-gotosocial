@@ -10,6 +10,22 @@ import (
 // see: go/src/reflect/value.go
 type Reflect_flag uintptr
 
+// see: go/src/reflect/value.go ro.kind()
+func (f Reflect_flag) Kind() reflect.Kind {
+	return reflect.Kind(f & Reflect_flagKindMask)
+}
+
+// see: go/src/reflect/value.go flag.ro()
+func (f Reflect_flag) RO() Reflect_flag {
+	if f&Reflect_flagRO != 0 {
+		return Reflect_flagStickyRO
+	}
+	return 0
+}
+
+// Indirect returns whether Reflect_flagIndir is set on receiving Reflect_flag.
+func (f Reflect_flag) Indirect() bool { return f&Reflect_flagIndir != 0 }
+
 const (
 	// see: go/src/reflect/value.go
 	Reflect_flagKindWidth                = 5 // there are 27 kinds
@@ -26,57 +42,81 @@ const (
 // ReflectIfaceElemFlags returns the reflect_flag expected of an unboxed interface element of type.
 //
 // see: go/src/reflect/value.go unpackElem()
-func ReflectIfaceElemFlags(elemType reflect.Type) Reflect_flag {
+func ReflectIfaceElemFlags(ifaceFlags Reflect_flag, elemType reflect.Type) Reflect_flag {
 	if elemType == nil {
 		return 0
 	}
-	flags := Reflect_flag(Abi_Type_Kind(elemType))
+	f := Reflect_flag(Abi_Type_Kind(elemType))
 	if Abi_Type_IfaceIndir(elemType) {
-		flags |= Reflect_flagIndir
+		f |= Reflect_flagIndir
 	}
-	return flags
+	if f != 0 {
+		f |= ifaceFlags.RO()
+	}
+	return f
 }
 
 // ReflectPointerElemFlags returns the reflect_flag expected of a dereferenced pointer element of type.
 //
 // see: go/src/reflect/value.go Value.Elem()
 func ReflectPointerElemFlags(ptrFlags Reflect_flag, elemType reflect.Type) Reflect_flag {
-	return ptrFlags | Reflect_flagIndir | Reflect_flagAddr | Reflect_flag(Abi_Type_Kind(elemType))
+	return ptrFlags&Reflect_flagRO | Reflect_flagIndir | Reflect_flagAddr | Reflect_flag(Abi_Type_Kind(elemType))
 }
 
 // ReflectArrayElemFlags returns the reflect_flag expected of an element of type in an array.
 //
 // see: go/src/reflect/value.go Value.Index()
-func ReflectArrayElemFlags(arrayFlags Reflect_flag, elemType reflect.Type) Reflect_flag {
-	return arrayFlags&(Reflect_flagIndir|Reflect_flagAddr) | Reflect_flag(Abi_Type_Kind(elemType))
+func ReflectArrayElemFlags(arrayFlags Reflect_flag, arrayType, elemType reflect.Type) Reflect_flag {
+	f := arrayFlags&(Reflect_flagIndir|Reflect_flagAddr) | arrayFlags.RO() | Reflect_flag(Abi_Type_Kind(elemType))
+	if arrayType.Len() == 1 && !arrayFlags.Indirect() {
+		f &= ^Reflect_flagIndir
+	}
+	return f
 }
 
 // reflect_slice_elem_flags returns the reflect_flag expected of a slice element of type.
 //
 // see: go/src/reflect/value.go Value.Index()
-func ReflectSliceElemFlags(elemType reflect.Type) Reflect_flag {
-	return Reflect_flagAddr | Reflect_flagIndir | Reflect_flag(Abi_Type_Kind(elemType))
+func ReflectSliceElemFlags(sliceFlags Reflect_flag, elemType reflect.Type) Reflect_flag {
+	return Reflect_flagAddr | Reflect_flagIndir | sliceFlags.RO() | Reflect_flag(Abi_Type_Kind(elemType))
 }
 
 // ReflectStructFieldFlags returns the reflect_flag expected of a struct field of type.
 //
 // see: go/src/reflect/value.go Value.Field()
-func ReflectStructFieldFlags(structFlags Reflect_flag, fieldType reflect.Type) Reflect_flag {
-	return structFlags&(Reflect_flagIndir|Reflect_flagAddr) | Reflect_flag(Abi_Type_Kind(fieldType))
+func ReflectStructFieldFlags(structFlags Reflect_flag, structType reflect.Type, field reflect.StructField) Reflect_flag {
+	f := structFlags&(Reflect_flagStickyRO|Reflect_flagIndir|Reflect_flagAddr) | Reflect_flag(Abi_Type_Kind(field.Type))
+	if !field.IsExported() {
+		if field.Anonymous {
+			f |= Reflect_flagEmbedRO
+		} else {
+			f |= Reflect_flagStickyRO
+		}
+	}
+	if structType.NumField() == 1 && !structFlags.Indirect() {
+		f &= ^Reflect_flagIndir
+	}
+	return f
 }
 
 // ReflectMapKeyFlags returns the reflect_flag expected of a map key of type.
 //
 // see: go/src/reflect/map_swiss.go MapIter.Key()
-func ReflectMapKeyFlags(keyType reflect.Type) Reflect_flag {
-	return Reflect_flag(Abi_Type_Kind(keyType))
+func ReflectMapKeyFlags(mapFlags Reflect_flag, keyType reflect.Type) Reflect_flag {
+	flags := mapFlags.RO() | Reflect_flag(Abi_Type_Kind(keyType))
+	if Abi_Type_IfaceIndir(keyType) {
+		flags |= Reflect_flagIndir
+	}
+	return flags
 }
 
 // ReflectMapElemFlags returns the reflect_flag expected of a map element of type.
 //
 // see: go/src/reflect/map_swiss.go MapIter.Value()
-func ReflectMapElemFlags(elemType reflect.Type) Reflect_flag {
-	return Reflect_flag(Abi_Type_Kind(elemType))
+func ReflectMapElemFlags(mapFlags Reflect_flag, elemType reflect.Type) Reflect_flag {
+	flags := mapFlags.RO() | Reflect_flag(Abi_Type_Kind(elemType))
+	flags |= Reflect_flagIndir
+	return flags
 }
 
 // reflect_Value is a copy of the memory layout of reflect.Value{}.

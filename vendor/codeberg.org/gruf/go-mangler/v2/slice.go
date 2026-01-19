@@ -12,13 +12,9 @@ import (
 // note this will fetch sub-Mangler for slice element type.
 func iterSliceType(t xunsafe.TypeIter) Mangler {
 
-	// Get nested element type.
-	elem := t.Type.Elem()
-	esz := elem.Size()
-
-	// Get nested elem TypeIter{} with flags.
-	flags := xunsafe.ReflectSliceElemFlags(elem)
-	et := t.Child(elem, flags)
+	// Get nested elem.
+	et := t.SliceElem()
+	esz := et.Type.Size()
 
 	// Prefer to use a known slice mangler func.
 	if fn := mangleKnownSlice(et); fn != nil {

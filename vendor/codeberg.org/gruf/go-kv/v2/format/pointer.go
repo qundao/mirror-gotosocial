@@ -12,27 +12,20 @@ import (
 // note this will fetch a sub-FormatFunc for resulting value type.
 func (fmt *Formatter) derefPointerType(t xunsafe.TypeIter) FormatFunc {
 	var n int
-	rtype := t.Type
-	flags := t.Flag
+	vt := t
 
 	// Iteratively dereference pointer types.
-	for rtype.Kind() == reflect.Pointer {
+	for vt.Type.Kind() == reflect.Pointer {
 
 		// If this actual indirect memory,
 		// increase dereferences counter.
-		if flags&xunsafe.Reflect_flagIndir != 0 {
+		if vt.Indirect() {
 			n++
 		}
 
 		// Get next elem type.
-		rtype = rtype.Elem()
-
-		// Get next set of dereferenced element type flags.
-		flags = xunsafe.ReflectPointerElemFlags(flags, rtype)
+		vt = vt.PointerElem()
 	}
-
-	// Wrap value as TypeIter.
-	vt := t.Child(rtype, flags)
 
 	// Get value format func.
 	fn := fmt.loadOrGet(vt)

@@ -25,17 +25,17 @@ const (
 //
 // see: go/src/internal/abi/type.go
 type Abi_Type struct {
-	_        uintptr
-	PtrBytes uintptr
-	_        uint32
-	_        uint8
-	_        uint8
-	_        uint8
-	Kind_    uint8
-	_        func(unsafe.Pointer, unsafe.Pointer) bool
-	_        *byte
-	_        int32
-	_        int32
+	Size_       uintptr
+	PtrBytes    uintptr
+	Hash        uint32
+	TFlag       uint8
+	Align_      uint8
+	FieldAlign_ uint8
+	Kind_       uint8
+	Equal       func(unsafe.Pointer, unsafe.Pointer) bool
+	GCData      *byte
+	Str         int32
+	PtrToThis   int32
 }
 
 // Abi_EmptyInterface is a copy of the memory layout of abi.EmptyInterface{},

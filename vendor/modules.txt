@@ -210,7 +210,7 @@ code.superseriousbusiness.org/go-jpeg-image-structure/v2
 # code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0
 ## explicit; go 1.12
 code.superseriousbusiness.org/go-png-image-structure/v2
-# code.superseriousbusiness.org/gopkg v0.0.0-20251207012115-5bde591107ab
+# code.superseriousbusiness.org/gopkg v0.0.0-20260117214252-d095ed821f5a
 ## explicit; go 1.24.6
 code.superseriousbusiness.org/gopkg/log
 code.superseriousbusiness.org/gopkg/log/format
@@ -264,14 +264,14 @@ codeberg.org/gruf/go-iotools
 ## explicit; go 1.20
 codeberg.org/gruf/go-kv
 codeberg.org/gruf/go-kv/format
-# codeberg.org/gruf/go-kv/v2 v2.0.7
+# codeberg.org/gruf/go-kv/v2 v2.0.9
 ## explicit; go 1.24.5
 codeberg.org/gruf/go-kv/v2
 codeberg.org/gruf/go-kv/v2/format
 # codeberg.org/gruf/go-list v0.0.0-20240425093752-494db03d641f
 ## explicit; go 1.21.3
 codeberg.org/gruf/go-list
-# codeberg.org/gruf/go-mangler/v2 v2.0.6
+# codeberg.org/gruf/go-mangler/v2 v2.0.8
 ## explicit; go 1.24.5
 codeberg.org/gruf/go-mangler/v2
 # codeberg.org/gruf/go-maps v1.0.4
@@ -303,10 +303,10 @@ codeberg.org/gruf/go-storage/internal
 codeberg.org/gruf/go-storage/memory
 codeberg.org/gruf/go-storage/s3
 codeberg.org/gruf/go-storage/s3/cache
-# codeberg.org/gruf/go-structr v0.9.14
+# codeberg.org/gruf/go-structr v0.9.15
 ## explicit; go 1.24.5
 codeberg.org/gruf/go-structr
-# codeberg.org/gruf/go-xunsafe v0.0.0-20250809104800-512a9df57d73
+# codeberg.org/gruf/go-xunsafe v0.0.0-20260117210223-fcb7e60d2b22
 ## explicit; go 1.24.5
 codeberg.org/gruf/go-xunsafe
 # dario.cat/mergo v1.0.2
@@ -1501,7 +1501,7 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.44.0 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.44.0-concurrency-workaround
+# modernc.org/sqlite v1.44.1 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.44.0-concurrency-workaround
 ## explicit; go 1.24.0
 modernc.org/sqlite
 modernc.org/sqlite/lib

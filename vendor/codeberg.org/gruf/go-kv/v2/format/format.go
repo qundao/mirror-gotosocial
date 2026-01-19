@@ -289,6 +289,86 @@ func (fmt *Formatter) get(t xunsafe.TypeIter) (fn FormatFunc) {
 }
 
 func (fmt *Formatter) getInterfaceType(t xunsafe.TypeIter) FormatFunc {
+	// Get interface
+	// type flags.
+	flags := t.Flag
+
+	// Prepare pointer function that performs
+	// no dereference (as we already handle that).
+	pfn := with_typestr_ptrs(t, func(s *State) {
+		appendPointer(s, s.P)
+	})
+
+	if t.Indirect() && !t.IfaceIndir() {
+		if t.Type.NumMethod() == 0 {
+			return func(s *State) {
+				// Unpack empty interface.
+				s.P = *(*unsafe.Pointer)(s.P)
+				eface := *(*any)(s.P)
+				s.P = xunsafe.UnpackEface(eface)
+
+				// Get reflected type information.
+				rtype := reflect.TypeOf(eface)
+				if rtype == nil {
+					appendNil(s)
+					return
+				}
+
+				if s.P != nil {
+					// Check for ptr recursion.
+					if s.ifaces.contains(s.P) {
+						pfn(s)
+						return
+					}
+
+					// Store value ptr.
+					s.ifaces.set(s.P)
+				}
+
+				// Wrap before load.
+				var t xunsafe.TypeIter
+				t.Flag = xunsafe.ReflectIfaceElemFlags(flags, rtype)
+				t.Type = rtype
+
+				// Load + pass to func.
+				fmt.loadOrStore(t)(s)
+			}
+		}
+
+		return func(s *State) {
+			// Unpack interface-with-method ptr.
+			s.P = *(*unsafe.Pointer)(s.P)
+			iface := *(*interface{ M() })(s.P)
+			s.P = xunsafe.UnpackEface(iface)
+
+			// Get reflected type information.
+			rtype := reflect.TypeOf(iface)
+			if rtype == nil {
+				appendNil(s)
+				return
+			}
+
+			if s.P != nil {
+				// Check for ptr recursion.
+				if s.ifaces.contains(s.P) {
+					pfn(s)
+					return
+				}
+
+				// Store value ptr.
+				s.ifaces.set(s.P)
+			}
+
+			// Wrap before load.
+			var t xunsafe.TypeIter
+			t.Flag = xunsafe.ReflectIfaceElemFlags(flags, rtype)
+			t.Type = rtype
+
+			// Load + pass to func.
+			fmt.loadOrStore(t)(s)
+		}
+	}
+
 	if t.Type.NumMethod() == 0 {
 		return func(s *State) {
 			// Unpack empty interface.
@@ -302,53 +382,57 @@ func (fmt *Formatter) getInterfaceType(t xunsafe.TypeIter) FormatFunc {
 				return
 			}
 
-			// Check for ptr recursion.
-			if s.ifaces.contains(s.P) {
-				getPointerType(t)(s)
-				return
-			}
+			if s.P != nil {
+				// Check for ptr recursion.
+				if s.ifaces.contains(s.P) {
+					pfn(s)
+					return
+				}
 
-			// Store value ptr.
-			s.ifaces.set(s.P)
+				// Store value ptr.
+				s.ifaces.set(s.P)
+			}
 
 			// Wrap before load.
 			var t xunsafe.TypeIter
-			t.Flag = xunsafe.ReflectIfaceElemFlags(rtype)
+			t.Flag = xunsafe.ReflectIfaceElemFlags(flags, rtype)
 			t.Type = rtype
 
 			// Load + pass to func.
 			fmt.loadOrStore(t)(s)
 		}
-	} else {
-		return func(s *State) {
-			// Unpack interface-with-method ptr.
-			iface := *(*interface{ M() })(s.P)
-			s.P = xunsafe.UnpackEface(iface)
+	}
 
-			// Get reflected type information.
-			rtype := reflect.TypeOf(iface)
-			if rtype == nil {
-				appendNil(s)
-				return
-			}
+	return func(s *State) {
+		// Unpack interface-with-method ptr.
+		iface := *(*interface{ M() })(s.P)
+		s.P = xunsafe.UnpackEface(iface)
 
+		// Get reflected type information.
+		rtype := reflect.TypeOf(iface)
+		if rtype == nil {
+			appendNil(s)
+			return
+		}
+
+		if s.P != nil {
 			// Check for ptr recursion.
 			if s.ifaces.contains(s.P) {
-				getPointerType(t)(s)
+				pfn(s)
 				return
 			}
 
 			// Store value ptr.
 			s.ifaces.set(s.P)
-
-			// Wrap before load.
-			var t xunsafe.TypeIter
-			t.Flag = xunsafe.ReflectIfaceElemFlags(rtype)
-			t.Type = rtype
-
-			// Load + pass to func.
-			fmt.loadOrStore(t)(s)
 		}
+
+		// Wrap before load.
+		var t xunsafe.TypeIter
+		t.Flag = xunsafe.ReflectIfaceElemFlags(flags, rtype)
+		t.Type = rtype
+
+		// Load + pass to func.
+		fmt.loadOrStore(t)(s)
 	}
 }
 

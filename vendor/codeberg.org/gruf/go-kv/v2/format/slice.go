@@ -8,13 +8,9 @@ import "codeberg.org/gruf/go-xunsafe"
 // type, and also handle special cases of []byte, []rune slices.
 func (fmt *Formatter) iterSliceType(t xunsafe.TypeIter) FormatFunc {
 
-	// Get nested element type.
-	elem := t.Type.Elem()
-	esz := elem.Size()
-
-	// Get nested elem TypeIter{} with flags.
-	flags := xunsafe.ReflectSliceElemFlags(elem)
-	et := t.Child(elem, flags)
+	// Get nested elem.
+	et := t.SliceElem()
+	esz := et.Type.Size()
 
 	// Get elem format func.
 	fn := fmt.loadOrGet(et)

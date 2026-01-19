@@ -11,15 +11,9 @@ import (
 // note this will fetch sub-Manglers for key / value types.
 func iterMapType(t xunsafe.TypeIter) Mangler {
 
-	// Key / value types.
-	key := t.Type.Key()
-	elem := t.Type.Elem()
-
-	// Get nested k / v TypeIters with appropriate flags.
-	flagsKey := xunsafe.ReflectMapKeyFlags(key)
-	flagsVal := xunsafe.ReflectMapElemFlags(elem)
-	kt := t.Child(key, flagsKey)
-	vt := t.Child(elem, flagsVal)
+	// Get nested k / v.
+	kt := t.MapKey()
+	vt := t.MapElem()
 
 	// Get key mangler.
 	kfn := loadOrGet(kt)

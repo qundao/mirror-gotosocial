@@ -11,12 +11,8 @@ import (
 // note this will fetch sub-Mangler for array element type.
 func iterArrayType(t xunsafe.TypeIter) Mangler {
 
-	// Array element type.
-	elem := t.Type.Elem()
-
-	// Get nested elem TypeIter with appropriate flags.
-	flags := xunsafe.ReflectArrayElemFlags(t.Flag, elem)
-	et := t.Child(elem, flags)
+	// Get nested elem.
+	et := t.ArrayElem()
 
 	// Get elem mangler.
 	fn := loadOrGet(et)

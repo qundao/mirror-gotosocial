@@ -12,12 +12,8 @@ import (
 // type, and also handle special cases of [n]byte, [n]rune arrays.
 func (fmt *Formatter) iterArrayType(t xunsafe.TypeIter) FormatFunc {
 
-	// Array element type.
-	elem := t.Type.Elem()
-
-	// Get nested elem TypeIter with appropriate flags.
-	flags := xunsafe.ReflectArrayElemFlags(t.Flag, elem)
-	et := t.Child(elem, flags)
+	// Get nested elem.
+	et := t.ArrayElem()
 
 	// Get elem format func.
 	fn := fmt.loadOrGet(et)

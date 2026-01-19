@@ -11,7 +11,7 @@ replace github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.
 require (
 	code.superseriousbusiness.org/activity v1.17.0
 	code.superseriousbusiness.org/exif-terminator v0.11.0
-	code.superseriousbusiness.org/gopkg v0.0.0-20251207012115-5bde591107ab
+	code.superseriousbusiness.org/gopkg v0.0.0-20260117214252-d095ed821f5a
 	code.superseriousbusiness.org/httpsig v1.5.0
 	code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384
 	codeberg.org/gruf/go-bytesize v1.0.4
@@ -24,7 +24,7 @@ require (
 	codeberg.org/gruf/go-fastpath/v2 v2.0.1
 	codeberg.org/gruf/go-ffmpreg v0.6.16
 	codeberg.org/gruf/go-iotools v0.0.0-20240710125620-934ae9c654cf
-	codeberg.org/gruf/go-kv/v2 v2.0.7
+	codeberg.org/gruf/go-kv/v2 v2.0.9
 	codeberg.org/gruf/go-list v0.0.0-20240425093752-494db03d641f
 	codeberg.org/gruf/go-mempool v0.0.0-20251205182607-a05549c9a993
 	codeberg.org/gruf/go-mmap v0.0.0-20251111184116-345a42dab154
@@ -33,7 +33,7 @@ require (
 	codeberg.org/gruf/go-sched v1.3.0
 	codeberg.org/gruf/go-split v1.2.0
 	codeberg.org/gruf/go-storage v0.6.0
-	codeberg.org/gruf/go-structr v0.9.14
+	codeberg.org/gruf/go-structr v0.9.15
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/KimMachineGun/automemlimit v0.7.5
 	github.com/SherClockHolmes/webpush-go v1.4.0
@@ -91,7 +91,7 @@ require (
 	golang.org/x/text v0.33.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.44.0
+	modernc.org/sqlite v1.44.1
 	mvdan.cc/xurls/v2 v2.6.0
 )
 
@@ -99,9 +99,9 @@ require (
 	code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0 // indirect
 	code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0 // indirect
 	codeberg.org/gruf/go-kv v1.6.5 // indirect
-	codeberg.org/gruf/go-mangler/v2 v2.0.6 // indirect
+	codeberg.org/gruf/go-mangler/v2 v2.0.8 // indirect
 	codeberg.org/gruf/go-maps v1.0.4 // indirect
-	codeberg.org/gruf/go-xunsafe v0.0.0-20250809104800-512a9df57d73 // indirect
+	codeberg.org/gruf/go-xunsafe v0.0.0-20260117210223-fcb7e60d2b22 // indirect
 	dario.cat/mergo v1.0.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.4.0 // indirect

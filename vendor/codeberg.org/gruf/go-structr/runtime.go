@@ -76,67 +76,47 @@ func find_field(t xunsafe.TypeIter, names []string) (sfield struct_field, ftype 
 			}
 			return name
 		}
-
-		// field is the iteratively searched
-		// struct field value in below loop.
-		field reflect.StructField
 	)
-
-	// Take reference
-	// of parent iter.
-	o := t
 
 	for len(names) > 0 {
 		// Pop next name.
 		name := pop_name()
 
 		var n int
-		rtype := t.Type
-		flags := t.Flag
+		vt := t
 
 		// Iteratively dereference pointer types.
-		for rtype.Kind() == reflect.Pointer {
+		for vt.Type.Kind() == reflect.Pointer {
 
 			// If this actual indirect memory,
 			// increase dereferences counter.
-			if flags&xunsafe.Reflect_flagIndir != 0 {
+			if vt.Indirect() {
 				n++
 			}
 
 			// Get next elem type.
-			rtype = rtype.Elem()
-
-			// Get next set of dereferenced element type flags.
-			flags = xunsafe.ReflectPointerElemFlags(flags, rtype)
-
-			// Update type iter info.
-			t = t.Child(rtype, flags)
+			vt = vt.PointerElem()
 		}
 
-		// Check for valid struct type.
-		if rtype.Kind() != reflect.Struct {
-			panic(fmt.Sprintf("field %s is not struct (or ptr-to): %s", rtype, name))
+		// Check for expected struct type.
+		if vt.Type.Kind() != reflect.Struct {
+			panic(fmt.Sprintf("field %s is not struct (or ptr-to): %s", vt.Type, name))
 		}
-
-		// Set offset info.
-		var off next_offset
-		off.derefs = n
 
 		var ok bool
+		var field reflect.StructField
 
-		// Look for the next field by name.
-		field, ok = rtype.FieldByName(name)
+		// Look for next field by provided name.
+		t, field, ok = vt.StructFieldByName(name)
 		if !ok {
 			panic(fmt.Sprintf("unknown field: %s", name))
 		}
 
-		// Set next offset value.
-		off.offset = field.Offset
-		sfield.offsets = append(sfield.offsets, off)
-
-		// Calculate value flags, and set next nested field type.
-		flags = xunsafe.ReflectStructFieldFlags(t.Flag, field.Type)
-		t = t.Child(field.Type, flags)
+		// Append next determined offset and dereferences.
+		sfield.offsets = append(sfield.offsets, next_offset{
+			offset: field.Offset,
+			derefs: n,
+		})
 	}
 
 	// Set final field type.
@@ -145,41 +125,13 @@ func find_field(t xunsafe.TypeIter, names []string) (sfield struct_field, ftype 
 	// Get mangler from type info.
 	sfield.mangle = mangler.Get(t)
 
-	// Calculate zero value string.
-	zptr := zero_value_ptr(o, sfield.offsets)
+	// Calculate zero value mangled string.
+	zptr := reflect.New(ftype).UnsafePointer()
 	zstr := string(sfield.mangle(nil, zptr))
 	sfield.zerostr = zstr
 	sfield.zero = zptr
 
 	return
-}
-
-// zero_value iterates the type contained in TypeIter{} along the given
-// next_offset{} values, creating new ptrs where necessary, returning the
-// zero reflect.Value{} after fully iterating the next_offset{} slice.
-func zero_value(t xunsafe.TypeIter, offsets []next_offset) reflect.Value {
-	v := reflect.New(t.Type).Elem()
-	for _, offset := range offsets {
-		for range offset.derefs {
-			if v.IsNil() {
-				new := reflect.New(v.Type().Elem())
-				v.Set(new)
-			}
-			v = v.Elem()
-		}
-		for i := 0; i < v.NumField(); i++ {
-			if v.Type().Field(i).Offset == offset.offset {
-				v = v.Field(i)
-				break
-			}
-		}
-	}
-	return v
-}
-
-// zero_value_ptr returns the unsafe pointer address of the result of zero_value().
-func zero_value_ptr(t xunsafe.TypeIter, offsets []next_offset) unsafe.Pointer {
-	return zero_value(t, offsets).Addr().UnsafePointer()
 }
 
 // extract_fields extracts given structfields from the provided value type,

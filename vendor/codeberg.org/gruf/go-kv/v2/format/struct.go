@@ -15,6 +15,7 @@ type field struct {
 // and formatting the given struct type currently in TypeIter{}.
 // note this will fetch sub-FormatFuncs for each struct field.
 func (fmt *Formatter) iterStructType(t xunsafe.TypeIter) FormatFunc {
+
 	// Number of struct fields.
 	n := t.Type.NumField()
 
@@ -23,12 +24,7 @@ func (fmt *Formatter) iterStructType(t xunsafe.TypeIter) FormatFunc {
 	for i := 0; i < n; i++ {
 
 		// Get struct field at index.
-		sfield := t.Type.Field(i)
-		rtype := sfield.Type
-
-		// Get nested field TypeIter with appropriate flags.
-		flags := xunsafe.ReflectStructFieldFlags(t.Flag, rtype)
-		ft := t.Child(sfield.Type, flags)
+		ft, sfield := t.StructField(i)
 
 		// Get field format func.
 		fn := fmt.loadOrGet(ft)
