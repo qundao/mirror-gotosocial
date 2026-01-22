@@ -473,6 +473,20 @@ func (p *fediAPI) CreateReplyRequest(ctx context.Context, fMsg *messages.FromFed
 		return gtserror.Newf("db error updating interaction request: %w", err)
 	}
 
+	// Mark the reply as now approved, referring to
+	// the accepted interaction request we just stored.
+	reply.PreApproved = false
+	reply.PendingApproval = util.Ptr(false)
+	reply.ApprovedByURI = req.AuthorizationURI
+	if err := p.state.DB.UpdateStatus(
+		ctx,
+		reply,
+		"pending_approval",
+		"approved_by_uri",
+	); err != nil {
+		return gtserror.Newf("db error updating status: %w", err)
+	}
+
 	// Send out the accept.
 	if err := p.federate.AcceptInteraction(ctx, req); err != nil {
 		log.Errorf(ctx, "error federating accept: %v", err)
@@ -756,17 +770,11 @@ func (p *fediAPI) CreateLikeRequest(ctx context.Context, fMsg *messages.FromFedi
 		return gtserror.Newf("db error updating interaction request: %w", err)
 	}
 
-	// Send out the accept.
-	if err := p.federate.AcceptInteraction(ctx, req); err != nil {
-		log.Errorf(ctx, "error federating accept: %v", err)
-	}
-
-	// Mark the fave as approved.
+	// Mark the status fave as now approved, referring to
+	// the accepted interaction request we just stored.
+	req.Like.PreApproved = false
 	req.Like.PendingApproval = util.Ptr(false)
 	req.Like.ApprovedByURI = req.AuthorizationURI
-	req.Like.PreApproved = false
-
-	// Update in the db.
 	if err := p.state.DB.UpdateStatusFave(
 		ctx,
 		req.Like,
@@ -774,6 +782,11 @@ func (p *fediAPI) CreateLikeRequest(ctx context.Context, fMsg *messages.FromFedi
 		"approved_by_uri",
 	); err != nil {
 		return gtserror.Newf("db error updating status fave: %w", err)
+	}
+
+	// Send out the accept.
+	if err := p.federate.AcceptInteraction(ctx, req); err != nil {
+		log.Errorf(ctx, "error federating accept: %v", err)
 	}
 
 	// Notify the faved account.
@@ -977,6 +990,20 @@ func (p *fediAPI) CreateAnnounceRequest(ctx context.Context, fMsg *messages.From
 		"authorization_uri",
 	); err != nil {
 		return gtserror.Newf("db error updating interaction request: %w", err)
+	}
+
+	// Mark the boost as now approved, referring to
+	// the accepted interaction request we just stored.
+	boost.PreApproved = false
+	boost.PendingApproval = util.Ptr(false)
+	boost.ApprovedByURI = req.AuthorizationURI
+	if err := p.state.DB.UpdateStatus(
+		ctx,
+		boost,
+		"pending_approval",
+		"approved_by_uri",
+	); err != nil {
+		return gtserror.Newf("db error updating status: %w", err)
 	}
 
 	// Send out the accept.
