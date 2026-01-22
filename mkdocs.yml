@@ -158,7 +158,7 @@ nav:
       - "federation/ratelimiting.md"
       - "federation/actors.md"
       - "federation/posts.md"
-      - "federation/interaction_policy.md"
+      - "federation/interaction_controls.md"
       - "federation/moderation.md"
       - "federation/glossary.md"
   - "Client API Docs":
