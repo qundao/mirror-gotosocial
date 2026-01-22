@@ -27,7 +27,7 @@ import { Error } from "../error";
 import { NoArg } from "../../lib/types/query";
 
 export function Authorization({ App }) {
-	const { current: loginState, expectingRedirect } = store.getState().login;
+	const { current: loginState, token: token, expectingRedirect } = store.getState().login;
 	const skip = (loginState == "none" || loginState == "loggedout" || expectingRedirect);
 	const [ logoutQuery ] = useLogoutMutation();
 
@@ -60,7 +60,14 @@ export function Authorization({ App }) {
 	} else if (error !== undefined) {
 		// Something went wrong,
 		// log the user out.
-		logoutQuery(NoArg);
+
+		// token can be undefined in some cases
+		// (ex: user going back to /settings after abandoning login)
+		// logoutQuery should only be called when token is defined,
+		// since that function revokes the token
+		if (token !== undefined) {
+			logoutQuery(NoArg);
+		}
 
 		content = (
 			<div>

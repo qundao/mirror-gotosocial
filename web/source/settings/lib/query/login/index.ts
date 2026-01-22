@@ -141,7 +141,7 @@ const extended = gtsApi.injectEndpoints({
 				}
 
 				instanceUrl = new URL(formData.instance).origin;
-				if (loginState?.instanceUrl == instanceUrl && loginState.app) {
+				if (loginState?.instanceUrl == instanceUrl && loginState.app && loginState.token !== undefined) {
 					return { data: loginState.app };
 				}
 				
