@@ -96,7 +96,6 @@ func (suite *InternalToASTestSuite) TestAccountToAS() {
   },
   "published": "2022-05-20T11:09:18Z",
   "summary": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
-  "tag": [],
   "type": "Person",
   "url": "http://localhost:8080/@the_mighty_zork"
 }`, string(bytes))
@@ -169,7 +168,6 @@ func (suite *InternalToASTestSuite) TestAccountToASBot() {
   },
   "published": "2022-05-20T11:09:18Z",
   "summary": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
-  "tag": [],
   "type": "Service",
   "url": "http://localhost:8080/@the_mighty_zork"
 }`, string(bytes))
@@ -239,7 +237,6 @@ func (suite *InternalToASTestSuite) TestAccountToASWithFields() {
   },
   "published": "2022-06-04T13:12:00Z",
   "summary": "\u003cp\u003ei post about things that concern me\u003c/p\u003e",
-  "tag": [],
   "type": "Person",
   "url": "http://localhost:8080/@1happyturtle"
 }`, string(bytes))
@@ -327,7 +324,6 @@ func (suite *InternalToASTestSuite) TestAccountToASAliasedAndMoved() {
   },
   "published": "2022-05-20T11:09:18Z",
   "summary": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
-  "tag": [],
   "type": "Person",
   "url": "http://localhost:8080/@the_mighty_zork"
 }`, string(bytes))
@@ -394,7 +390,6 @@ func (suite *InternalToASTestSuite) TestAccountToASWithOneField() {
   },
   "published": "2022-06-04T13:12:00Z",
   "summary": "\u003cp\u003ei post about things that concern me\u003c/p\u003e",
-  "tag": [],
   "type": "Person",
   "url": "http://localhost:8080/@1happyturtle"
 }`, string(bytes))
@@ -545,7 +540,6 @@ func (suite *InternalToASTestSuite) TestAccountToASWithSharedInbox() {
   },
   "published": "2022-05-20T11:09:18Z",
   "summary": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
-  "tag": [],
   "type": "Person",
   "url": "http://localhost:8080/@the_mighty_zork"
 }`, string(bytes))
@@ -572,7 +566,6 @@ func (suite *InternalToASTestSuite) TestStatusToAS() {
       "sensitive": "as:sensitive"
     }
   ],
-  "attachment": [],
   "attributedTo": "http://localhost:8080/users/the_mighty_zork",
   "cc": "http://localhost:8080/users/the_mighty_zork/followers",
   "content": "\u003cp\u003ehello everyone!\u003c/p\u003e",
@@ -610,7 +603,6 @@ func (suite *InternalToASTestSuite) TestStatusToAS() {
   },
   "sensitive": true,
   "summary": "introduction post",
-  "tag": [],
   "to": "https://www.w3.org/ns/activitystreams#Public",
   "type": "Note",
   "url": "http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY"
@@ -643,7 +635,6 @@ func (suite *InternalToASTestSuite) TestStatusWithTagsToASWithIDs() {
         "@container": "@list",
         "@id": "toot:focalPoint"
       },
-      "sensitive": "as:sensitive",
       "toot": "http://joinmastodon.org/ns#"
     }
   ],
@@ -695,8 +686,6 @@ func (suite *InternalToASTestSuite) TestStatusWithTagsToASWithIDs() {
     "id": "http://localhost:8080/users/admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R/replies",
     "type": "Collection"
   },
-  "sensitive": false,
-  "summary": "",
   "tag": [
     {
       "icon": {
@@ -748,7 +737,6 @@ func (suite *InternalToASTestSuite) TestStatusWithTagsToASFromDB() {
         "@container": "@list",
         "@id": "toot:focalPoint"
       },
-      "sensitive": "as:sensitive",
       "toot": "http://joinmastodon.org/ns#"
     }
   ],
@@ -800,8 +788,6 @@ func (suite *InternalToASTestSuite) TestStatusWithTagsToASFromDB() {
     "id": "http://localhost:8080/users/admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R/replies",
     "type": "Collection"
   },
-  "sensitive": false,
-  "summary": "",
   "tag": [
     {
       "icon": {
@@ -845,12 +831,8 @@ func (suite *InternalToASTestSuite) TestStatusToASWithMentions() {
 	suite.Equal(`{
   "@context": [
     "https://gotosocial.org/ns",
-    "https://www.w3.org/ns/activitystreams",
-    {
-      "sensitive": "as:sensitive"
-    }
+    "https://www.w3.org/ns/activitystreams"
   ],
-  "attachment": [],
   "attributedTo": "http://localhost:8080/users/admin",
   "cc": [
     "http://localhost:8080/users/admin/followers",
@@ -890,8 +872,6 @@ func (suite *InternalToASTestSuite) TestStatusToASWithMentions() {
     "id": "http://localhost:8080/users/admin/statuses/01FF25D5Q0DH7CHD57CTRS6WK0/replies",
     "type": "Collection"
   },
-  "sensitive": false,
-  "summary": "",
   "tag": {
     "href": "http://localhost:8080/users/the_mighty_zork",
     "name": "@the_mighty_zork@localhost:8080",
@@ -962,13 +942,9 @@ func (suite *InternalToASTestSuite) TestStatusToASPoliteApproved() {
 	suite.Equal(`{
   "@context": [
     "https://gotosocial.org/ns",
-    "https://www.w3.org/ns/activitystreams",
-    {
-      "sensitive": "as:sensitive"
-    }
+    "https://www.w3.org/ns/activitystreams"
   ],
   "approvedBy": "http://localhost:8080/users/1happyturtle/accepts/01J5QVXCCEATJYSXM9H6MZT4JR",
-  "attachment": [],
   "attributedTo": "http://localhost:8080/users/admin",
   "cc": [
     "http://localhost:8080/users/admin/followers",
@@ -1006,8 +982,6 @@ func (suite *InternalToASTestSuite) TestStatusToASPoliteApproved() {
     "type": "Collection"
   },
   "replyAuthorization": "http://localhost:8080/users/1happyturtle/authorizations/01J5QVXCCEATJYSXM9H6MZT4JR",
-  "sensitive": false,
-  "summary": "",
   "tag": {
     "href": "http://localhost:8080/users/1happyturtle",
     "name": "@1happyturtle@localhost:8080",
@@ -1074,13 +1048,9 @@ func (suite *InternalToASTestSuite) TestStatusToASPImpoliteApproved() {
 	suite.Equal(`{
   "@context": [
     "https://gotosocial.org/ns",
-    "https://www.w3.org/ns/activitystreams",
-    {
-      "sensitive": "as:sensitive"
-    }
+    "https://www.w3.org/ns/activitystreams"
   ],
   "approvedBy": "http://localhost:8080/users/1happyturtle/accepts/01J5QVXCCEATJYSXM9H6MZT4JR",
-  "attachment": [],
   "attributedTo": "http://localhost:8080/users/admin",
   "cc": [
     "http://localhost:8080/users/admin/followers",
@@ -1118,8 +1088,6 @@ func (suite *InternalToASTestSuite) TestStatusToASPImpoliteApproved() {
     "type": "Collection"
   },
   "replyAuthorization": "http://localhost:8080/users/1happyturtle/authorizations/01J5QVXCCEATJYSXM9H6MZT4JR",
-  "sensitive": false,
-  "summary": "",
   "tag": {
     "href": "http://localhost:8080/users/1happyturtle",
     "name": "@1happyturtle@localhost:8080",
@@ -1761,7 +1729,6 @@ func (suite *InternalToASTestSuite) TestInteractionReqToASInteractionRequestable
     "https://www.w3.org/ns/activitystreams",
     {
       "blurhash": "toot:blurhash",
-      "sensitive": "as:sensitive",
       "toot": "http://joinmastodon.org/ns#"
     }
   ],
@@ -1812,9 +1779,6 @@ func (suite *InternalToASTestSuite) TestInteractionReqToASInteractionRequestable
       "id": "http://fossbros-anonymous.io/users/foss_satan/statuses/01FVW7JHQFSFK166WWKR8CBA6M/replies",
       "type": "Collection"
     },
-    "sensitive": false,
-    "summary": "",
-    "tag": [],
     "to": "http://fossbros-anonymous.io/users/foss_satan/followers",
     "type": "Note",
     "url": "http://fossbros-anonymous.io/@foss_satan/statuses/01FVW7JHQFSFK166WWKR8CBA6M"

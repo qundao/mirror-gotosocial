@@ -231,10 +231,7 @@ GoToSocial 更偏好 `href` 属性，它可以是目标的 ActivityPub ID/URI �
   "contentMap": {
     "en": "<p>This is an example note.</p>"
   },
-  "attachment": [],
   "replies": {...},
-  "sensitive": false,
-  "summary": "",
   "tag": {...}
 }
 ```

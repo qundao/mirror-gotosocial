@@ -300,7 +300,9 @@ func (c *Converter) AccountToAS(
 	// tag -- hashtags
 	// TODO
 
-	accountable.SetActivityStreamsTag(tagProp)
+	if tagProp.Len() != 0 {
+		accountable.SetActivityStreamsTag(tagProp)
+	}
 
 	// attachment
 	// Used for profile fields.
@@ -522,7 +524,9 @@ func (c *Converter) StatusToAS(ctx context.Context, s *gtsmodel.Status) (ap.Stat
 	}
 
 	// `summary` property.
-	ap.AppendSummary(statusable, s.ContentWarning)
+	if s.ContentWarning != "" {
+		ap.AppendSummary(statusable, s.ContentWarning)
+	}
 
 	// `inReplyTo` property.
 	if s.InReplyToURI != "" {
@@ -586,7 +590,9 @@ func (c *Converter) StatusToAS(ctx context.Context, s *gtsmodel.Status) (ap.Stat
 	}
 
 	// Append built `tag` property.
-	statusable.SetActivityStreamsTag(tagProp)
+	if tagProp.Len() != 0 {
+		statusable.SetActivityStreamsTag(tagProp)
+	}
 
 	// `to` and `cc` properties
 	// depend on visibility of post.
@@ -642,14 +648,16 @@ func (c *Converter) StatusToAS(ctx context.Context, s *gtsmodel.Status) (ap.Stat
 	}
 
 	// `content` and `contentMap` properties.
-	ap.AppendContent(statusable, s.Content)
-	if s.Language != "" {
-		ap.AppendContentMap(
-			statusable,
-			map[string]string{
-				s.Language: s.Content,
-			},
-		)
+	if s.Content != "" {
+		ap.AppendContent(statusable, s.Content)
+		if s.Language != "" {
+			ap.AppendContentMap(
+				statusable,
+				map[string]string{
+					s.Language: s.Content,
+				},
+			)
+		}
 	}
 
 	// `attachment` property.
@@ -666,7 +674,9 @@ func (c *Converter) StatusToAS(ctx context.Context, s *gtsmodel.Status) (ap.Stat
 	ap.SetReplies(statusable, replies)
 
 	// `sensitive` property.
-	ap.AppendSensitive(statusable, *s.Sensitive)
+	if sensitive := *s.Sensitive; sensitive {
+		ap.AppendSensitive(statusable, sensitive)
+	}
 
 	// `interactionPolicy` property.
 	if wip, ok := statusable.(ap.WithInteractionPolicy); ok {
@@ -1093,8 +1103,16 @@ func (c *Converter) attachAttachments(
 	s *gtsmodel.Status,
 	statusable ap.Statusable,
 ) error {
+
+	// Return early if no attachments.
+	aIDsLen := len(s.AttachmentIDs)
+	asLen := len(s.Attachments)
+	if aIDsLen == 0 || asLen == 0 {
+		return nil
+	}
+
 	// Ensure status attachments populated.
-	if len(s.AttachmentIDs) != len(s.Attachments) {
+	if aIDsLen != asLen {
 		var err error
 		s.Attachments, err = c.state.DB.GetAttachmentsByIDs(ctx, s.AttachmentIDs)
 		if err != nil && !errors.Is(err, db.ErrNoEntries) {

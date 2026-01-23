@@ -184,7 +184,6 @@ func (suite *APTestSuite) noteWithHashtags1() ap.Statusable {
 	],
 	"id": "https://mastodon.social/users/pixelfed/statuses/110609702372389319",
 	"type": "Note",
-	"summary": null,
 	"inReplyTo": null,
 	"published": "2023-06-26T09:01:56Z",
 	"url": "https://mastodon.social/@pixelfed/110609702372389319",
@@ -196,7 +195,6 @@ func (suite *APTestSuite) noteWithHashtags1() ap.Statusable {
 	  "https://mastodon.social/users/pixelfed/followers",
 	  "https://gts.superseriousbusiness.org/users/gotosocial"
 	],
-	"sensitive": false,
 	"atomUri": "https://mastodon.social/users/pixelfed/statuses/110609702372389319",
 	"inReplyToAtomUri": null,
 	"conversation": "tag:mastodon.social,2023-06-26:objectId=474977189:objectType=Conversation",
@@ -204,7 +202,6 @@ func (suite *APTestSuite) noteWithHashtags1() ap.Statusable {
 	"contentMap": {
 	  "en": "<p>⚡ Heard of <span class=\"h-card\" translate=\"no\"><a href=\"https://gts.superseriousbusiness.org/@gotosocial\" class=\"u-url mention\">@<span>gotosocial</span></a></span> ?</p><p>GoToSocial provides a lightweight, customizable, and safety-focused entryway into the <a href=\"https://mastodon.social/tags/fediverse\" class=\"mention hashtag\" rel=\"tag\">#<span>fediverse</span></a>, you can keep in touch with your friends, post, read, and share images and articles.</p><p>Consider <a href=\"https://mastodon.social/tags/GoToSocial\" class=\"mention hashtag\" rel=\"tag\">#<span>GoToSocial</span></a> instead of Pixelfed if you&#39;d like a safety-focused alternative with text-only post support that is maintained by a stellar developer community!</p><p>We ❤️ GtS, check them out!</p><p>🌍 <a href=\"https://gotosocial.org/\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">gotosocial.org/</span><span class=\"invisible\"></span></a></p><p>🔍 <a href=\"https://fedidb.org/software/gotosocial\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">fedidb.org/software/gotosocial</span><span class=\"invisible\"></span></a></p>"
 	},
-	"attachment": [],
 	"tag": [
 	  {
 		"type": "Mention",

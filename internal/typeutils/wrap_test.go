@@ -86,7 +86,6 @@ func (suite *WrapTestSuite) TestWrapNoteInCreate() {
   "cc": "http://localhost:8080/users/the_mighty_zork/followers",
   "id": "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY/activity#Create",
   "object": {
-    "attachment": [],
     "attributedTo": "http://localhost:8080/users/the_mighty_zork",
     "cc": "http://localhost:8080/users/the_mighty_zork/followers",
     "content": "\u003cp\u003ehello everyone!\u003c/p\u003e",
@@ -124,7 +123,6 @@ func (suite *WrapTestSuite) TestWrapNoteInCreate() {
     },
     "sensitive": true,
     "summary": "introduction post",
-    "tag": [],
     "to": "https://www.w3.org/ns/activitystreams#Public",
     "type": "Note",
     "url": "http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY"
@@ -213,7 +211,6 @@ func (suite *WrapTestSuite) TestWrapAccountableInUpdate() {
     },
     "published": "2022-05-20T11:09:18Z",
     "summary": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
-    "tag": [],
     "type": "Person",
     "url": "http://localhost:8080/@the_mighty_zork"
   },

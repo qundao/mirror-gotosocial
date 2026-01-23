@@ -41,7 +41,6 @@ func (suite *NormalizeTestSuite) getStatusable() (vocab.ActivityStreamsNote, map
 		  }
 		],
 		"actor": "https://example.org/users/someone",
-		"attachment": [],
 		"attributedTo": "https://example.org/users/someone",
 		"cc": [
 		  "https://example.org/users/someone/followers"

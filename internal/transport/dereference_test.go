@@ -43,8 +43,8 @@ func (suite *DereferenceTestSuite) TestDerefLocalUser() {
 	defer resp.Body.Close()
 
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	suite.EqualValues(2155, resp.ContentLength)
-	suite.Equal("2155", resp.Header.Get("Content-Length"))
+	suite.EqualValues(2146, resp.ContentLength)
+	suite.Equal("2146", resp.Header.Get("Content-Length"))
 	suite.Equal(apiutil.AppActivityLDJSON, resp.Header.Get("Content-Type"))
 
 	b, err := io.ReadAll(resp.Body)
@@ -105,7 +105,6 @@ func (suite *DereferenceTestSuite) TestDerefLocalUser() {
   },
   "published": "2022-05-20T11:09:18Z",
   "summary": "\u003cp\u003ehey yo this is my profile!\u003c/p\u003e",
-  "tag": [],
   "type": "Person",
   "url": "http://localhost:8080/@the_mighty_zork"
 }`, dst.String())
@@ -121,8 +120,8 @@ func (suite *DereferenceTestSuite) TestDerefLocalStatus() {
 	defer resp.Body.Close()
 
 	suite.Equal(http.StatusOK, resp.StatusCode)
-	suite.EqualValues(1469, resp.ContentLength)
-	suite.Equal("1469", resp.Header.Get("Content-Length"))
+	suite.EqualValues(1444, resp.ContentLength)
+	suite.Equal("1444", resp.Header.Get("Content-Length"))
 	suite.Equal(apiutil.AppActivityLDJSON, resp.Header.Get("Content-Type"))
 
 	b, err := io.ReadAll(resp.Body)
@@ -143,7 +142,6 @@ func (suite *DereferenceTestSuite) TestDerefLocalStatus() {
       "sensitive": "as:sensitive"
     }
   ],
-  "attachment": [],
   "attributedTo": "http://localhost:8080/users/the_mighty_zork",
   "cc": "http://localhost:8080/users/the_mighty_zork/followers",
   "content": "\u003cp\u003ehello everyone!\u003c/p\u003e",
@@ -181,7 +179,6 @@ func (suite *DereferenceTestSuite) TestDerefLocalStatus() {
   },
   "sensitive": true,
   "summary": "introduction post",
-  "tag": [],
   "to": "https://www.w3.org/ns/activitystreams#Public",
   "type": "Note",
   "url": "http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY"

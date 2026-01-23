@@ -252,7 +252,6 @@ func (suite *ASToInternalTestSuite) TestParseBookwyrmStatus() {
     "last": "` + authorAccount.URI + `/review/445260/replies?page=1",
     "@context": "https://www.w3.org/ns/activitystreams"
   },
-  "tag": [],
   "attachment": [
     {
   	"type": "Document",

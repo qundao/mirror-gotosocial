@@ -42,9 +42,7 @@ const (
     {
       "ostatus": "http://ostatus.org#",
       "atomUri": "ostatus:atomUri",
-      "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
       "conversation": "ostatus:conversation",
-      "sensitive": "as:sensitive",
       "toot": "http://joinmastodon.org/ns#",
       "votersCount": "toot:votersCount"
     }
@@ -67,11 +65,8 @@ const (
     "https://another.misskey.instance.com/users/9eklgce5yk",
     "http://localhost:8080/users/the_mighty_zork"
   ],
-  "sensitive": false,
   "atomUri": "http://fossbros-anonymous.io/users/foss_satan/statuses/111985188827079562",
-  "inReplyToAtomUri": null,
   "content": "<p><a href=\"https://spammylink.org/\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">spammylink.org/</span><span class=\"invisible\"></span></a></p><p><span class=\"h-card\" translate=\"no\"><a href=\"https://example.org/@Nao_ya_ia22\" class=\"u-url mention\">@<span>Nao_ya_ia22</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://example.net/@nityosan\" class=\"u-url mention\">@<span>nityosan</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://a.misskey.instance.com/@FIzxive\" class=\"u-url mention\">@<span>FIzxive</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://another.misskey.instance.com/@mendako\" class=\"u-url mention\">@<span>mendako</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@the_mighty_zork\" class=\"u-url mention\">@<span>the_mighty_zork</span></a></span></p>",
-  "attachment": [],
   "tag": [
     {
       "type": "Mention",
@@ -143,11 +138,8 @@ const (
     "https://another.misskey.instance.com/users/9eklgce5yk",
     "http://localhost:8080/users/the_mighty_zork"
   ],
-  "sensitive": false,
   "atomUri": "http://fossbros-anonymous.io/users/foss_satan/statuses/111985188827079562",
-  "inReplyToAtomUri": null,
   "content": "<p><a href=\"https://spammylink.org/\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">spammylink.org/</span><span class=\"invisible\"></span></a></p><p><span class=\"h-card\" translate=\"no\"><a href=\"https://example.net/@nityosan\" class=\"u-url mention\">@<span>nityosan</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://a.misskey.instance.com/@FIzxive\" class=\"u-url mention\">@<span>FIzxive</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://another.misskey.instance.com/@mendako\" class=\"u-url mention\">@<span>mendako</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@the_mighty_zork\" class=\"u-url mention\">@<span>the_mighty_zork</span></a></span></p>",
-  "attachment": [],
   "tag": [
     {
       "type": "Mention",
@@ -214,11 +206,8 @@ const (
     "https://another.misskey.instance.com/users/9eklgce5yk",
     "http://localhost:8080/users/the_mighty_zork"
   ],
-  "sensitive": false,
   "atomUri": "http://fossbros-anonymous.io/users/foss_satan/statuses/111985188827079562",
-  "inReplyToAtomUri": null,
   "content": "<p><span class=\"h-card\" translate=\"no\"><a href=\"https://example.net/@nityosan\" class=\"u-url mention\">@<span>nityosan</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://a.misskey.instance.com/@FIzxive\" class=\"u-url mention\">@<span>FIzxive</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://another.misskey.instance.com/@mendako\" class=\"u-url mention\">@<span>mendako</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@the_mighty_zork\" class=\"u-url mention\">@<span>the_mighty_zork</span></a></span></p>",
-  "attachment": [],
   "tag": [
     {
       "type": "Mention",
@@ -285,9 +274,7 @@ const (
     "https://another.misskey.instance.com/users/9eklgce5yk",
     "http://localhost:8080/users/the_mighty_zork"
   ],
-  "sensitive": false,
   "atomUri": "http://fossbros-anonymous.io/users/foss_satan/statuses/111985188827079562",
-  "inReplyToAtomUri": null,
   "content": "<p><span class=\"h-card\" translate=\"no\"><a href=\"https://example.net/@nityosan\" class=\"u-url mention\">@<span>nityosan</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://a.misskey.instance.com/@FIzxive\" class=\"u-url mention\">@<span>FIzxive</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://another.misskey.instance.com/@mendako\" class=\"u-url mention\">@<span>mendako</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@the_mighty_zork\" class=\"u-url mention\">@<span>the_mighty_zork</span></a></span></p>",
   "attachment": [
     {
@@ -365,11 +352,8 @@ const (
     "http://localhost:8080/users/admin",
     "http://localhost:8080/users/the_mighty_zork"
   ],
-  "sensitive": false,
   "atomUri": "http://fossbros-anonymous.io/users/foss_satan/statuses/111985188827079562",
-  "inReplyToAtomUri": null,
   "content": "<p><a href=\"https://spammylink.org/\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">spammylink.org/</span><span class=\"invisible\"></span></a></p><p><span class=\"h-card\" translate=\"no\"><a href=\"https://example.net/@nityosan\" class=\"u-url mention\">@<span>nityosan</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://a.misskey.instance.com/@FIzxive\" class=\"u-url mention\">@<span>FIzxive</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@admin\" class=\"u-url mention\">@<span>admin</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@the_mighty_zork\" class=\"u-url mention\">@<span>the_mighty_zork</span></a></span></p>",
-  "attachment": [],
   "tag": [
     {
       "type": "Mention",
@@ -436,11 +420,8 @@ const (
     "https://a.misskey.instance.com/users/9c06ylkgsx",
     "http://localhost:8080/users/admin"
   ],
-  "sensitive": false,
   "atomUri": "http://fossbros-anonymous.io/users/foss_satan/statuses/111985188827079562",
-  "inReplyToAtomUri": null,
   "content": "<p><a href=\"https://spammylink.org/\" target=\"_blank\" rel=\"nofollow noopener noreferrer\" translate=\"no\"><span class=\"invisible\">https://</span><span class=\"\">spammylink.org/</span><span class=\"invisible\"></span></a></p><p><span class=\"h-card\" translate=\"no\"><a href=\"https://example.net/@nityosan\" class=\"u-url mention\">@<span>nityosan</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://a.misskey.instance.com/@FIzxive\" class=\"u-url mention\">@<span>FIzxive</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@admin\" class=\"u-url mention\">@<span>admin</span></a></span></p>",
-  "attachment": [],
   "tag": [
     {
       "type": "Mention",
@@ -506,7 +487,6 @@ const (
     "atomUri": "http://fossbros-anonymous.io/users/foss_satan/statuses/111985188827079562",
     "inReplyToAtomUri": null,
     "content": "<p><a href=\"https://fossbros-anonymous.io/tags/gotosocial\" class=\"mention hashtag\" rel=\"tag\">#<span>gotosocial</span></a> smells<br/><br/><span class=\"h-card\" translate=\"no\"><a href=\"https://example.net/@nityosan\" class=\"u-url mention\">@<span>nityosan</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://a.misskey.instance.com/@FIzxive\" class=\"u-url mention\">@<span>FIzxive</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://another.misskey.instance.com/@mendako\" class=\"u-url mention\">@<span>mendako</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@the_mighty_zork\" class=\"u-url mention\">@<span>the_mighty_zork</span></a></span></p>",
-    "attachment": [],
     "tag": [
       {
         "type": "Mention",
@@ -582,7 +562,6 @@ const (
     "atomUri": "http://fossbros-anonymous.io/users/foss_satan/statuses/111985188827079562",
     "inReplyToAtomUri": null,
     "content": "<p><a href=\"https://fossbros-anonymous.io/tags/gotosocial\" class=\"mention hashtag\" rel=\"tag\">#<span>gotosocial</span></a> smells<br/><br/><span class=\"h-card\" translate=\"no\"><a href=\"https://example.net/@nityosan\" class=\"u-url mention\">@<span>nityosan</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://a.misskey.instance.com/@FIzxive\" class=\"u-url mention\">@<span>FIzxive</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"https://another.misskey.instance.com/@mendako\" class=\"u-url mention\">@<span>mendako</span></a></span><br /><span class=\"h-card\" translate=\"no\"><a href=\"http://localhost:8080/@the_mighty_zork\" class=\"u-url mention\">@<span>the_mighty_zork</span></a></span></p>",
-    "attachment": [],
     "tag": [
       {
         "type": "Mention",

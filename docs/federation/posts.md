@@ -240,10 +240,7 @@ For example, a post written in English (`en`) will look something like this:
   "contentMap": {
     "en": "<p>This is an example note.</p>"
   },
-  "attachment": [],
   "replies": {...},
-  "sensitive": false,
-  "summary": "",
   "tag": {...}
 }
 ```
