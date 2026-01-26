@@ -52,9 +52,9 @@ Instance Logo
 {{- define "strapUsers" -}}
 {{- with deref .instance.Stats.user_count -}}
     {{- if eq . 1 -}}
-        <span class="count">{{- . -}}</span> user
+        <span class="count">{{- . -}}</span> user who has written
     {{- else -}}
-        <span class="count">{{- . -}}</span> users
+        <span class="count">{{- . -}}</span> users who have written
     {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -101,6 +101,6 @@ Instance Logo
     <h1>{{- .instance.Title -}}</h1>
 </a>
 {{- if .showStrap }}
-<aside>home to {{ template "strapUsers" . }} who have written {{ template "strapPosts" . }}; knows of {{ template "strapInstances" . }}</aside>
+<aside>home to {{ template "strapUsers" . }} {{ template "strapPosts" . }}; knows of {{ template "strapInstances" . }}</aside>
 {{- end }}
 {{- end }}
