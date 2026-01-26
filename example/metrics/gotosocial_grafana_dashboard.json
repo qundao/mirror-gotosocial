@@ -129,7 +129,7 @@
         {
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_client_api_count{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.client_api.count\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "legendFormat": "{{__name__}}",
@@ -148,7 +148,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_delivery_count{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.delivery.count\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -164,7 +164,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_dereference_count{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.dereference.count\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -180,7 +180,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_fedi_api_count{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.fedi_api.count\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -196,7 +196,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_processing_count{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.processing.count\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -212,7 +212,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_webpush_count{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.webpush.count\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -227,7 +227,7 @@
         {
           "id": "renameByRegex",
           "options": {
-            "regex": "gotosocial_workers_(.+)_count",
+            "regex": "gotosocial\\.workers\\.(.+)\\.count",
             "renamePattern": "$1"
           }
         }
@@ -322,7 +322,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_client_api_queue{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.client_api.queue\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -339,7 +339,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_delivery_queue{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.delivery.queue\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -357,7 +357,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_dereference_queue{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.dereference.queue\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -374,7 +374,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_fedi_api_queue{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.fedi_api.queue\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -391,7 +391,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_processing_queue{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.processing.queue\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -408,7 +408,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "gotosocial_workers_webpush_queue{job=\"$job\", instance=~\"$instance\"}",
+          "expr": "{\"gotosocial.workers.webpush.queue\", job=\"$job\", instance=~\"$instance\"}",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -424,7 +424,7 @@
         {
           "id": "renameByRegex",
           "options": {
-            "regex": "gotosocial_workers_(.+)_queue",
+            "regex": "gotosocial.workers.(.+).queue",
             "renamePattern": "$1"
           }
         }
@@ -531,7 +531,7 @@
           },
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "sum by(instance) (rate(http_server_requests_total{job=\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
+          "expr": "sum by(instance) (rate({\"http.server.requests_total\", job=\"$job\", instance=~\"$instance\"}[$__rate_interval]))",
           "fullMetaSearch": false,
           "hide": false,
           "includeNullMetadata": true,
@@ -633,9 +633,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (http_route, http_status_code) (rate(http_server_requests_total{instance=~\"$instance\", job=\"$job\", http_route=~\"/api.+\"}[$__rate_interval]))",
+          "expr": "sum by (\"http.route\", \"http.status_code\") (rate({\"http.server.requests_total\", instance=~\"$instance\", job=\"$job\", 'http.route'=~\"/api.+\"}[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{http_route}} {{http_status_code}}",
+          "legendFormat": "{{http.route}} {{http.status_code}}",
           "range": true,
           "refId": "A"
         }
@@ -731,9 +731,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (http_route, http_status_code) (rate(http_server_requests_total{instance=~\"$instance\", job=\"$job\", http_route=~\"/(.well-known|users).+\"}[$__rate_interval]))",
+          "expr": "sum by (\"http.route\", \"http.status_code\") (rate({\"http.server.requests_total\", instance=~\"$instance\", job=\"$job\", 'http.route'=~\"/(.well-known|users).+\"}[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{http_route}} {{http_status_code}}",
+          "legendFormat": "{{http.route}} {{http.status_code}}",
           "range": true,
           "refId": "A"
         }
@@ -829,9 +829,9 @@
             "uid": "${DS_PROMETHEUS}"
           },
           "editorMode": "code",
-          "expr": "sum by (http_route, http_status_code) (rate(http_server_requests_total{instance=~\"$instance\", job=\"$job\", http_route=~\"/fileserver.+\"}[$__rate_interval]))",
+          "expr": "sum by (\"http.route\", \"http.status_code\") (rate({\"http.server.requests_total\", instance=~\"$instance\", job=\"$job\", 'http.route'=~\"/fileserver.+\"}[$__rate_interval]))",
           "instant": false,
-          "legendFormat": "{{http_route}} {{http_status_code}}",
+          "legendFormat": "{{http.route}} {{http.status_code}}",
           "range": true,
           "refId": "A"
         }
@@ -905,7 +905,7 @@
         {
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "histogram_quantile(0.95, sum by(le) (rate(http_server_duration_milliseconds_bucket{job=\"$job\", instance=~\"$instance\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.95, sum by(le) (rate({\"http.server.duration_milliseconds_bucket\", job=\"$job\", instance=~\"$instance\"}[$__rate_interval])))",
           "fullMetaSearch": false,
           "includeNullMetadata": false,
           "legendFormat": "__auto",
@@ -987,7 +987,7 @@
         {
           "disableTextWrap": false,
           "editorMode": "builder",
-          "expr": "histogram_quantile(0.99, sum by(le) (rate(http_server_duration_milliseconds_bucket{job=\"$job\", instance=~\"$instance\"}[$__rate_interval])))",
+          "expr": "histogram_quantile(0.99, sum by(le) (rate({\"http.server.duration_milliseconds_bucket\", job=\"$job\", instance=~\"$instance\"}[$__rate_interval])))",
           "fullMetaSearch": false,
           "includeNullMetadata": false,
           "legendFormat": "__auto",
