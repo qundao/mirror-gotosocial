@@ -14,6 +14,8 @@ import (
 	typelikeapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeapproval"
 	typelikeauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeauthorization"
 	typelikerequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likerequest"
+	typequoteauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoteauthorization"
+	typequoterequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoterequest"
 	typereplyapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyapproval"
 	typereplyauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyauthorization"
 	typereplyrequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyrequest"
@@ -95,6 +97,20 @@ func GoToSocialLikeAuthorizationIsExtendedBy(other vocab.Type) bool {
 // "IsOrExtends" variant instead.
 func GoToSocialLikeRequestIsExtendedBy(other vocab.Type) bool {
 	return typelikerequest.LikeRequestIsExtendedBy(other)
+}
+
+// GoToSocialQuoteAuthorizationIsExtendedBy returns true if the other's type
+// extends from QuoteAuthorization. Note that it returns false if the types
+// are the same; see the "IsOrExtends" variant instead.
+func GoToSocialQuoteAuthorizationIsExtendedBy(other vocab.Type) bool {
+	return typequoteauthorization.QuoteAuthorizationIsExtendedBy(other)
+}
+
+// GoToSocialQuoteRequestIsExtendedBy returns true if the other's type extends
+// from QuoteRequest. Note that it returns false if the types are the same;
+// see the "IsOrExtends" variant instead.
+func GoToSocialQuoteRequestIsExtendedBy(other vocab.Type) bool {
+	return typequoterequest.QuoteRequestIsExtendedBy(other)
 }
 
 // GoToSocialReplyApprovalIsExtendedBy returns true if the other's type extends

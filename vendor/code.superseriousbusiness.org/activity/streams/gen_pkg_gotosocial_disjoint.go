@@ -14,6 +14,8 @@ import (
 	typelikeapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeapproval"
 	typelikeauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeauthorization"
 	typelikerequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likerequest"
+	typequoteauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoteauthorization"
+	typequoterequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoterequest"
 	typereplyapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyapproval"
 	typereplyauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyauthorization"
 	typereplyrequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyrequest"
@@ -84,6 +86,18 @@ func GoToSocialLikeAuthorizationIsDisjointWith(other vocab.Type) bool {
 // with the other's type.
 func GoToSocialLikeRequestIsDisjointWith(other vocab.Type) bool {
 	return typelikerequest.LikeRequestIsDisjointWith(other)
+}
+
+// GoToSocialQuoteAuthorizationIsDisjointWith returns true if QuoteAuthorization
+// is disjoint with the other's type.
+func GoToSocialQuoteAuthorizationIsDisjointWith(other vocab.Type) bool {
+	return typequoteauthorization.QuoteAuthorizationIsDisjointWith(other)
+}
+
+// GoToSocialQuoteRequestIsDisjointWith returns true if QuoteRequest is disjoint
+// with the other's type.
+func GoToSocialQuoteRequestIsDisjointWith(other vocab.Type) bool {
+	return typequoterequest.QuoteRequestIsDisjointWith(other)
 }
 
 // GoToSocialReplyApprovalIsDisjointWith returns true if ReplyApproval is disjoint

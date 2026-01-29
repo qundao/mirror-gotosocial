@@ -14,6 +14,8 @@ import (
 	typelikeapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeapproval"
 	typelikeauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeauthorization"
 	typelikerequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likerequest"
+	typequoteauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoteauthorization"
+	typequoterequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoterequest"
 	typereplyapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyapproval"
 	typereplyauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyauthorization"
 	typereplyrequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyrequest"
@@ -85,6 +87,18 @@ func IsOrExtendsGoToSocialLikeAuthorization(other vocab.Type) bool {
 // LikeRequest type or extends from the LikeRequest type.
 func IsOrExtendsGoToSocialLikeRequest(other vocab.Type) bool {
 	return typelikerequest.IsOrExtendsLikeRequest(other)
+}
+
+// IsOrExtendsGoToSocialQuoteAuthorization returns true if the other provided type
+// is the QuoteAuthorization type or extends from the QuoteAuthorization type.
+func IsOrExtendsGoToSocialQuoteAuthorization(other vocab.Type) bool {
+	return typequoteauthorization.IsOrExtendsQuoteAuthorization(other)
+}
+
+// IsOrExtendsGoToSocialQuoteRequest returns true if the other provided type is
+// the QuoteRequest type or extends from the QuoteRequest type.
+func IsOrExtendsGoToSocialQuoteRequest(other vocab.Type) bool {
+	return typequoterequest.IsOrExtendsQuoteRequest(other)
 }
 
 // IsOrExtendsGoToSocialReplyApproval returns true if the other provided type is

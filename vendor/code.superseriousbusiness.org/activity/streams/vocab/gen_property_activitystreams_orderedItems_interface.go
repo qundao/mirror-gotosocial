@@ -265,6 +265,14 @@ type ActivityStreamsOrderedItemsPropertyIterator interface {
 	// IsGoToSocialLikeRequest returns false, GetGoToSocialLikeRequest
 	// will return an arbitrary value.
 	GetGoToSocialLikeRequest() GoToSocialLikeRequest
+	// GetGoToSocialQuoteAuthorization returns the value of this property.
+	// When IsGoToSocialQuoteAuthorization returns false,
+	// GetGoToSocialQuoteAuthorization will return an arbitrary value.
+	GetGoToSocialQuoteAuthorization() GoToSocialQuoteAuthorization
+	// GetGoToSocialQuoteRequest returns the value of this property. When
+	// IsGoToSocialQuoteRequest returns false, GetGoToSocialQuoteRequest
+	// will return an arbitrary value.
+	GetGoToSocialQuoteRequest() GoToSocialQuoteRequest
 	// GetGoToSocialReplyApproval returns the value of this property. When
 	// IsGoToSocialReplyApproval returns false, GetGoToSocialReplyApproval
 	// will return an arbitrary value.
@@ -581,6 +589,15 @@ type ActivityStreamsOrderedItemsPropertyIterator interface {
 	// "LikeRequest". When true, use the GetGoToSocialLikeRequest and
 	// SetGoToSocialLikeRequest methods to access and set this property.
 	IsGoToSocialLikeRequest() bool
+	// IsGoToSocialQuoteAuthorization returns true if this property has a type
+	// of "QuoteAuthorization". When true, use the
+	// GetGoToSocialQuoteAuthorization and SetGoToSocialQuoteAuthorization
+	// methods to access and set this property.
+	IsGoToSocialQuoteAuthorization() bool
+	// IsGoToSocialQuoteRequest returns true if this property has a type of
+	// "QuoteRequest". When true, use the GetGoToSocialQuoteRequest and
+	// SetGoToSocialQuoteRequest methods to access and set this property.
+	IsGoToSocialQuoteRequest() bool
 	// IsGoToSocialReplyApproval returns true if this property has a type of
 	// "ReplyApproval". When true, use the GetGoToSocialReplyApproval and
 	// SetGoToSocialReplyApproval methods to access and set this property.
@@ -832,6 +849,12 @@ type ActivityStreamsOrderedItemsPropertyIterator interface {
 	// SetGoToSocialLikeRequest sets the value of this property. Calling
 	// IsGoToSocialLikeRequest afterwards returns true.
 	SetGoToSocialLikeRequest(v GoToSocialLikeRequest)
+	// SetGoToSocialQuoteAuthorization sets the value of this property.
+	// Calling IsGoToSocialQuoteAuthorization afterwards returns true.
+	SetGoToSocialQuoteAuthorization(v GoToSocialQuoteAuthorization)
+	// SetGoToSocialQuoteRequest sets the value of this property. Calling
+	// IsGoToSocialQuoteRequest afterwards returns true.
+	SetGoToSocialQuoteRequest(v GoToSocialQuoteRequest)
 	// SetGoToSocialReplyApproval sets the value of this property. Calling
 	// IsGoToSocialReplyApproval afterwards returns true.
 	SetGoToSocialReplyApproval(v GoToSocialReplyApproval)
@@ -1142,6 +1165,14 @@ type ActivityStreamsOrderedItemsProperty interface {
 	// a list of the property "orderedItems". Invalidates iterators that
 	// are traversing using Prev.
 	AppendGoToSocialLikeRequest(v GoToSocialLikeRequest)
+	// AppendGoToSocialQuoteAuthorization appends a QuoteAuthorization value
+	// to the back of a list of the property "orderedItems". Invalidates
+	// iterators that are traversing using Prev.
+	AppendGoToSocialQuoteAuthorization(v GoToSocialQuoteAuthorization)
+	// AppendGoToSocialQuoteRequest appends a QuoteRequest value to the back
+	// of a list of the property "orderedItems". Invalidates iterators
+	// that are traversing using Prev.
+	AppendGoToSocialQuoteRequest(v GoToSocialQuoteRequest)
 	// AppendGoToSocialReplyApproval appends a ReplyApproval value to the back
 	// of a list of the property "orderedItems". Invalidates iterators
 	// that are traversing using Prev.
@@ -1468,6 +1499,16 @@ type ActivityStreamsOrderedItemsProperty interface {
 	// that index and higher are shifted back once. Invalidates all
 	// iterators.
 	InsertGoToSocialLikeRequest(idx int, v GoToSocialLikeRequest)
+	// InsertGoToSocialQuoteAuthorization inserts a QuoteAuthorization value
+	// at the specified index for a property "orderedItems". Existing
+	// elements at that index and higher are shifted back once.
+	// Invalidates all iterators.
+	InsertGoToSocialQuoteAuthorization(idx int, v GoToSocialQuoteAuthorization)
+	// InsertGoToSocialQuoteRequest inserts a QuoteRequest value at the
+	// specified index for a property "orderedItems". Existing elements at
+	// that index and higher are shifted back once. Invalidates all
+	// iterators.
+	InsertGoToSocialQuoteRequest(idx int, v GoToSocialQuoteRequest)
 	// InsertGoToSocialReplyApproval inserts a ReplyApproval value at the
 	// specified index for a property "orderedItems". Existing elements at
 	// that index and higher are shifted back once. Invalidates all
@@ -1742,6 +1783,14 @@ type ActivityStreamsOrderedItemsProperty interface {
 	// PrependGoToSocialLikeRequest prepends a LikeRequest value to the front
 	// of a list of the property "orderedItems". Invalidates all iterators.
 	PrependGoToSocialLikeRequest(v GoToSocialLikeRequest)
+	// PrependGoToSocialQuoteAuthorization prepends a QuoteAuthorization value
+	// to the front of a list of the property "orderedItems". Invalidates
+	// all iterators.
+	PrependGoToSocialQuoteAuthorization(v GoToSocialQuoteAuthorization)
+	// PrependGoToSocialQuoteRequest prepends a QuoteRequest value to the
+	// front of a list of the property "orderedItems". Invalidates all
+	// iterators.
+	PrependGoToSocialQuoteRequest(v GoToSocialQuoteRequest)
 	// PrependGoToSocialReplyApproval prepends a ReplyApproval value to the
 	// front of a list of the property "orderedItems". Invalidates all
 	// iterators.
@@ -2042,6 +2091,14 @@ type ActivityStreamsOrderedItemsProperty interface {
 	// specified index for the property "orderedItems". Panics if the
 	// index is out of bounds. Invalidates all iterators.
 	SetGoToSocialLikeRequest(idx int, v GoToSocialLikeRequest)
+	// SetGoToSocialQuoteAuthorization sets a QuoteAuthorization value to be
+	// at the specified index for the property "orderedItems". Panics if
+	// the index is out of bounds. Invalidates all iterators.
+	SetGoToSocialQuoteAuthorization(idx int, v GoToSocialQuoteAuthorization)
+	// SetGoToSocialQuoteRequest sets a QuoteRequest value to be at the
+	// specified index for the property "orderedItems". Panics if the
+	// index is out of bounds. Invalidates all iterators.
+	SetGoToSocialQuoteRequest(idx int, v GoToSocialQuoteRequest)
 	// SetGoToSocialReplyApproval sets a ReplyApproval value to be at the
 	// specified index for the property "orderedItems". Panics if the
 	// index is out of bounds. Invalidates all iterators.

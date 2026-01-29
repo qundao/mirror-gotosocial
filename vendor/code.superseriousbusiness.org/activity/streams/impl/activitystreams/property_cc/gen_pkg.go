@@ -228,6 +228,14 @@ type privateManager interface {
 	// for the "ActivityStreamsQuestion" non-functional property in the
 	// vocabulary "ActivityStreams"
 	DeserializeQuestionActivityStreams() func(map[string]interface{}, map[string]string) (vocab.ActivityStreamsQuestion, error)
+	// DeserializeQuoteAuthorizationGoToSocial returns the deserialization
+	// method for the "GoToSocialQuoteAuthorization" non-functional
+	// property in the vocabulary "GoToSocial"
+	DeserializeQuoteAuthorizationGoToSocial() func(map[string]interface{}, map[string]string) (vocab.GoToSocialQuoteAuthorization, error)
+	// DeserializeQuoteRequestGoToSocial returns the deserialization method
+	// for the "GoToSocialQuoteRequest" non-functional property in the
+	// vocabulary "GoToSocial"
+	DeserializeQuoteRequestGoToSocial() func(map[string]interface{}, map[string]string) (vocab.GoToSocialQuoteRequest, error)
 	// DeserializeReadActivityStreams returns the deserialization method for
 	// the "ActivityStreamsRead" non-functional property in the vocabulary
 	// "ActivityStreams"

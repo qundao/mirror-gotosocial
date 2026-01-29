@@ -152,6 +152,10 @@ func NewTypeResolver(callbacks ...interface{}) (*TypeResolver, error) {
 			// Do nothing, this callback has a correct signature.
 		case func(context.Context, vocab.ActivityStreamsQuestion) error:
 			// Do nothing, this callback has a correct signature.
+		case func(context.Context, vocab.GoToSocialQuoteAuthorization) error:
+			// Do nothing, this callback has a correct signature.
+		case func(context.Context, vocab.GoToSocialQuoteRequest) error:
+			// Do nothing, this callback has a correct signature.
 		case func(context.Context, vocab.ActivityStreamsRead) error:
 			// Do nothing, this callback has a correct signature.
 		case func(context.Context, vocab.ActivityStreamsReject) error:
@@ -753,6 +757,24 @@ func (this TypeResolver) Resolve(ctx context.Context, o ActivityStreamsInterface
 		} else if o.VocabularyURI() == "https://www.w3.org/ns/activitystreams" && o.GetTypeName() == "Question" {
 			if fn, ok := i.(func(context.Context, vocab.ActivityStreamsQuestion) error); ok {
 				if v, ok := o.(vocab.ActivityStreamsQuestion); ok {
+					return fn(ctx, v)
+				} else {
+					// This occurs when the value is either not a go-fed type and is improperly satisfying various interfaces, or there is a bug in the go-fed generated code.
+					return errCannotTypeAssertType
+				}
+			}
+		} else if o.VocabularyURI() == "https://gotosocial.org/ns" && o.GetTypeName() == "QuoteAuthorization" {
+			if fn, ok := i.(func(context.Context, vocab.GoToSocialQuoteAuthorization) error); ok {
+				if v, ok := o.(vocab.GoToSocialQuoteAuthorization); ok {
+					return fn(ctx, v)
+				} else {
+					// This occurs when the value is either not a go-fed type and is improperly satisfying various interfaces, or there is a bug in the go-fed generated code.
+					return errCannotTypeAssertType
+				}
+			}
+		} else if o.VocabularyURI() == "https://gotosocial.org/ns" && o.GetTypeName() == "QuoteRequest" {
+			if fn, ok := i.(func(context.Context, vocab.GoToSocialQuoteRequest) error); ok {
+				if v, ok := o.(vocab.GoToSocialQuoteRequest); ok {
 					return fn(ctx, v)
 				} else {
 					// This occurs when the value is either not a go-fed type and is improperly satisfying various interfaces, or there is a bug in the go-fed generated code.

@@ -118,6 +118,9 @@ type ActivityStreamsArticle interface {
 	// GetGoToSocialInteractionPolicy returns the "interactionPolicy" property
 	// if it exists, and nil otherwise.
 	GetGoToSocialInteractionPolicy() GoToSocialInteractionPolicyProperty
+	// GetGoToSocialQuoteAuthorization returns the "quoteAuthorization"
+	// property if it exists, and nil otherwise.
+	GetGoToSocialQuoteAuthorization() GoToSocialQuoteAuthorizationProperty
 	// GetGoToSocialReplyAuthorization returns the "replyAuthorization"
 	// property if it exists, and nil otherwise.
 	GetGoToSocialReplyAuthorization() GoToSocialReplyAuthorizationProperty
@@ -217,6 +220,8 @@ type ActivityStreamsArticle interface {
 	SetGoToSocialApprovedBy(i GoToSocialApprovedByProperty)
 	// SetGoToSocialInteractionPolicy sets the "interactionPolicy" property.
 	SetGoToSocialInteractionPolicy(i GoToSocialInteractionPolicyProperty)
+	// SetGoToSocialQuoteAuthorization sets the "quoteAuthorization" property.
+	SetGoToSocialQuoteAuthorization(i GoToSocialQuoteAuthorizationProperty)
 	// SetGoToSocialReplyAuthorization sets the "replyAuthorization" property.
 	SetGoToSocialReplyAuthorization(i GoToSocialReplyAuthorizationProperty)
 	// SetJSONLDId sets the "id" property.

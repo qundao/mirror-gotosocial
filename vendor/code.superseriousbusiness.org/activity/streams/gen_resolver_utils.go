@@ -232,6 +232,12 @@ func ToType(c context.Context, m map[string]interface{}) (t vocab.Type, err erro
 	}, func(ctx context.Context, i vocab.ActivityStreamsQuestion) error {
 		t = i
 		return nil
+	}, func(ctx context.Context, i vocab.GoToSocialQuoteAuthorization) error {
+		t = i
+		return nil
+	}, func(ctx context.Context, i vocab.GoToSocialQuoteRequest) error {
+		t = i
+		return nil
 	}, func(ctx context.Context, i vocab.ActivityStreamsRead) error {
 		t = i
 		return nil

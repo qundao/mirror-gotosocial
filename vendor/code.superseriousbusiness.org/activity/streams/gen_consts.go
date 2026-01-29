@@ -188,6 +188,12 @@ var W3IDSecurityV1PublicKeyName string = "PublicKey"
 // ActivityStreamsQuestionName is the string literal of the name for the Question type in the ActivityStreams vocabulary.
 var ActivityStreamsQuestionName string = "Question"
 
+// GoToSocialQuoteAuthorizationName is the string literal of the name for the QuoteAuthorization type in the GoToSocial vocabulary.
+var GoToSocialQuoteAuthorizationName string = "QuoteAuthorization"
+
+// GoToSocialQuoteRequestName is the string literal of the name for the QuoteRequest type in the GoToSocial vocabulary.
+var GoToSocialQuoteRequestName string = "QuoteRequest"
+
 // ActivityStreamsReadName is the string literal of the name for the Read type in the ActivityStreams vocabulary.
 var ActivityStreamsReadName string = "Read"
 
@@ -484,6 +490,9 @@ var W3IDSecurityV1PublicKeyPemPropertyName string = "publicKeyPem"
 
 // ActivityStreamsPublishedPropertyName is the string literal of the name for the published property in the ActivityStreams vocabulary.
 var ActivityStreamsPublishedPropertyName string = "published"
+
+// GoToSocialQuoteAuthorizationPropertyName is the string literal of the name for the quoteAuthorization property in the GoToSocial vocabulary.
+var GoToSocialQuoteAuthorizationPropertyName string = "quoteAuthorization"
 
 // ActivityStreamsRadiusPropertyName is the string literal of the name for the radius property in the ActivityStreams vocabulary.
 var ActivityStreamsRadiusPropertyName string = "radius"

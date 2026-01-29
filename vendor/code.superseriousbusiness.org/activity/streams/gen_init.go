@@ -155,6 +155,7 @@ import (
 	propertyinteractiontarget "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_interactiontarget"
 	propertylikeauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_likeauthorization"
 	propertymanualapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_manualapproval"
+	propertyquoteauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_quoteauthorization"
 	propertyreplyauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_replyauthorization"
 	typeannounceapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_announceapproval"
 	typeannounceauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_announceauthorization"
@@ -167,6 +168,8 @@ import (
 	typelikeapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeapproval"
 	typelikeauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeauthorization"
 	typelikerequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likerequest"
+	typequoteauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoteauthorization"
+	typequoterequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoterequest"
 	typereplyapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyapproval"
 	typereplyauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyauthorization"
 	typereplyrequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyrequest"
@@ -355,6 +358,7 @@ func init() {
 	propertyinteractiontarget.SetManager(mgr)
 	propertylikeauthorization.SetManager(mgr)
 	propertymanualapproval.SetManager(mgr)
+	propertyquoteauthorization.SetManager(mgr)
 	propertyreplyauthorization.SetManager(mgr)
 	typeannounceapproval.SetManager(mgr)
 	typeannounceauthorization.SetManager(mgr)
@@ -367,6 +371,8 @@ func init() {
 	typelikeapproval.SetManager(mgr)
 	typelikeauthorization.SetManager(mgr)
 	typelikerequest.SetManager(mgr)
+	typequoteauthorization.SetManager(mgr)
+	typequoterequest.SetManager(mgr)
 	typereplyapproval.SetManager(mgr)
 	typereplyauthorization.SetManager(mgr)
 	typereplyrequest.SetManager(mgr)
@@ -458,6 +464,8 @@ func init() {
 	typelikeapproval.SetTypePropertyConstructor(NewJSONLDTypeProperty)
 	typelikeauthorization.SetTypePropertyConstructor(NewJSONLDTypeProperty)
 	typelikerequest.SetTypePropertyConstructor(NewJSONLDTypeProperty)
+	typequoteauthorization.SetTypePropertyConstructor(NewJSONLDTypeProperty)
+	typequoterequest.SetTypePropertyConstructor(NewJSONLDTypeProperty)
 	typereplyapproval.SetTypePropertyConstructor(NewJSONLDTypeProperty)
 	typereplyauthorization.SetTypePropertyConstructor(NewJSONLDTypeProperty)
 	typereplyrequest.SetTypePropertyConstructor(NewJSONLDTypeProperty)

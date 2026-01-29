@@ -14,6 +14,8 @@ import (
 	typelikeapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeapproval"
 	typelikeauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeauthorization"
 	typelikerequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likerequest"
+	typequoteauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoteauthorization"
+	typequoterequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoterequest"
 	typereplyapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyapproval"
 	typereplyauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyauthorization"
 	typereplyrequest "code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyrequest"
@@ -73,6 +75,16 @@ func NewGoToSocialLikeAuthorization() vocab.GoToSocialLikeAuthorization {
 // NewGoToSocialLikeRequest creates a new GoToSocialLikeRequest
 func NewGoToSocialLikeRequest() vocab.GoToSocialLikeRequest {
 	return typelikerequest.NewGoToSocialLikeRequest()
+}
+
+// NewGoToSocialQuoteAuthorization creates a new GoToSocialQuoteAuthorization
+func NewGoToSocialQuoteAuthorization() vocab.GoToSocialQuoteAuthorization {
+	return typequoteauthorization.NewGoToSocialQuoteAuthorization()
+}
+
+// NewGoToSocialQuoteRequest creates a new GoToSocialQuoteRequest
+func NewGoToSocialQuoteRequest() vocab.GoToSocialQuoteRequest {
+	return typequoterequest.NewGoToSocialQuoteRequest()
 }
 
 // NewGoToSocialReplyApproval creates a new GoToSocialReplyApproval

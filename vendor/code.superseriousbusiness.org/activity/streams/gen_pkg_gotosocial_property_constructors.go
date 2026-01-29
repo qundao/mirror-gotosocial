@@ -19,6 +19,7 @@ import (
 	propertyinteractiontarget "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_interactiontarget"
 	propertylikeauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_likeauthorization"
 	propertymanualapproval "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_manualapproval"
+	propertyquoteauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_quoteauthorization"
 	propertyreplyauthorization "code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_replyauthorization"
 	vocab "code.superseriousbusiness.org/activity/streams/vocab"
 )
@@ -113,6 +114,12 @@ func NewGoToSocialLikeAuthorizationProperty() vocab.GoToSocialLikeAuthorizationP
 // GoToSocialManualApprovalProperty
 func NewGoToSocialManualApprovalProperty() vocab.GoToSocialManualApprovalProperty {
 	return propertymanualapproval.NewGoToSocialManualApprovalProperty()
+}
+
+// NewGoToSocialGoToSocialQuoteAuthorizationProperty creates a new
+// GoToSocialQuoteAuthorizationProperty
+func NewGoToSocialQuoteAuthorizationProperty() vocab.GoToSocialQuoteAuthorizationProperty {
+	return propertyquoteauthorization.NewGoToSocialQuoteAuthorizationProperty()
 }
 
 // NewGoToSocialGoToSocialReplyAuthorizationProperty creates a new

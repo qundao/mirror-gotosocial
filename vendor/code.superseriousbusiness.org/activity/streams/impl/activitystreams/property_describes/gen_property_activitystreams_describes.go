@@ -66,6 +66,8 @@ type ActivityStreamsDescribesProperty struct {
 	activitystreamsProfileMember               vocab.ActivityStreamsProfile
 	schemaPropertyValueMember                  vocab.SchemaPropertyValue
 	activitystreamsQuestionMember              vocab.ActivityStreamsQuestion
+	gotosocialQuoteAuthorizationMember         vocab.GoToSocialQuoteAuthorization
+	gotosocialQuoteRequestMember               vocab.GoToSocialQuoteRequest
 	activitystreamsReadMember                  vocab.ActivityStreamsRead
 	activitystreamsRejectMember                vocab.ActivityStreamsReject
 	activitystreamsRelationshipMember          vocab.ActivityStreamsRelationship
@@ -428,6 +430,18 @@ func DeserializeDescribesProperty(m map[string]interface{}, aliasMap map[string]
 					alias:                         alias,
 				}
 				return this, nil
+			} else if v, err := mgr.DeserializeQuoteAuthorizationGoToSocial()(m, aliasMap); err == nil {
+				this := &ActivityStreamsDescribesProperty{
+					alias:                              alias,
+					gotosocialQuoteAuthorizationMember: v,
+				}
+				return this, nil
+			} else if v, err := mgr.DeserializeQuoteRequestGoToSocial()(m, aliasMap); err == nil {
+				this := &ActivityStreamsDescribesProperty{
+					alias:                        alias,
+					gotosocialQuoteRequestMember: v,
+				}
+				return this, nil
 			} else if v, err := mgr.DeserializeReadActivityStreams()(m, aliasMap); err == nil {
 				this := &ActivityStreamsDescribesProperty{
 					activitystreamsReadMember: v,
@@ -601,6 +615,8 @@ func (this *ActivityStreamsDescribesProperty) Clear() {
 	this.activitystreamsProfileMember = nil
 	this.schemaPropertyValueMember = nil
 	this.activitystreamsQuestionMember = nil
+	this.gotosocialQuoteAuthorizationMember = nil
+	this.gotosocialQuoteRequestMember = nil
 	this.activitystreamsReadMember = nil
 	this.activitystreamsRejectMember = nil
 	this.activitystreamsRelationshipMember = nil
@@ -1052,6 +1068,20 @@ func (this ActivityStreamsDescribesProperty) GetGoToSocialLikeRequest() vocab.Go
 	return this.gotosocialLikeRequestMember
 }
 
+// GetGoToSocialQuoteAuthorization returns the value of this property. When
+// IsGoToSocialQuoteAuthorization returns false,
+// GetGoToSocialQuoteAuthorization will return an arbitrary value.
+func (this ActivityStreamsDescribesProperty) GetGoToSocialQuoteAuthorization() vocab.GoToSocialQuoteAuthorization {
+	return this.gotosocialQuoteAuthorizationMember
+}
+
+// GetGoToSocialQuoteRequest returns the value of this property. When
+// IsGoToSocialQuoteRequest returns false, GetGoToSocialQuoteRequest will
+// return an arbitrary value.
+func (this ActivityStreamsDescribesProperty) GetGoToSocialQuoteRequest() vocab.GoToSocialQuoteRequest {
+	return this.gotosocialQuoteRequestMember
+}
+
 // GetGoToSocialReplyApproval returns the value of this property. When
 // IsGoToSocialReplyApproval returns false, GetGoToSocialReplyApproval will
 // return an arbitrary value.
@@ -1265,6 +1295,12 @@ func (this ActivityStreamsDescribesProperty) GetType() vocab.Type {
 	if this.IsActivityStreamsQuestion() {
 		return this.GetActivityStreamsQuestion()
 	}
+	if this.IsGoToSocialQuoteAuthorization() {
+		return this.GetGoToSocialQuoteAuthorization()
+	}
+	if this.IsGoToSocialQuoteRequest() {
+		return this.GetGoToSocialQuoteRequest()
+	}
 	if this.IsActivityStreamsRead() {
 		return this.GetActivityStreamsRead()
 	}
@@ -1374,6 +1410,8 @@ func (this ActivityStreamsDescribesProperty) HasAny() bool {
 		this.IsActivityStreamsProfile() ||
 		this.IsSchemaPropertyValue() ||
 		this.IsActivityStreamsQuestion() ||
+		this.IsGoToSocialQuoteAuthorization() ||
+		this.IsGoToSocialQuoteRequest() ||
 		this.IsActivityStreamsRead() ||
 		this.IsActivityStreamsReject() ||
 		this.IsActivityStreamsRelationship() ||
@@ -1834,6 +1872,20 @@ func (this ActivityStreamsDescribesProperty) IsGoToSocialLikeRequest() bool {
 	return this.gotosocialLikeRequestMember != nil
 }
 
+// IsGoToSocialQuoteAuthorization returns true if this property has a type of
+// "QuoteAuthorization". When true, use the GetGoToSocialQuoteAuthorization
+// and SetGoToSocialQuoteAuthorization methods to access and set this property.
+func (this ActivityStreamsDescribesProperty) IsGoToSocialQuoteAuthorization() bool {
+	return this.gotosocialQuoteAuthorizationMember != nil
+}
+
+// IsGoToSocialQuoteRequest returns true if this property has a type of
+// "QuoteRequest". When true, use the GetGoToSocialQuoteRequest and
+// SetGoToSocialQuoteRequest methods to access and set this property.
+func (this ActivityStreamsDescribesProperty) IsGoToSocialQuoteRequest() bool {
+	return this.gotosocialQuoteRequestMember != nil
+}
+
 // IsGoToSocialReplyApproval returns true if this property has a type of
 // "ReplyApproval". When true, use the GetGoToSocialReplyApproval and
 // SetGoToSocialReplyApproval methods to access and set this property.
@@ -1998,6 +2050,10 @@ func (this ActivityStreamsDescribesProperty) JSONLDContext() map[string]string {
 		child = this.GetSchemaPropertyValue().JSONLDContext()
 	} else if this.IsActivityStreamsQuestion() {
 		child = this.GetActivityStreamsQuestion().JSONLDContext()
+	} else if this.IsGoToSocialQuoteAuthorization() {
+		child = this.GetGoToSocialQuoteAuthorization().JSONLDContext()
+	} else if this.IsGoToSocialQuoteRequest() {
+		child = this.GetGoToSocialQuoteRequest().JSONLDContext()
 	} else if this.IsActivityStreamsRead() {
 		child = this.GetActivityStreamsRead().JSONLDContext()
 	} else if this.IsActivityStreamsReject() {
@@ -2204,56 +2260,62 @@ func (this ActivityStreamsDescribesProperty) KindIndex() int {
 	if this.IsActivityStreamsQuestion() {
 		return 51
 	}
-	if this.IsActivityStreamsRead() {
+	if this.IsGoToSocialQuoteAuthorization() {
 		return 52
 	}
-	if this.IsActivityStreamsReject() {
+	if this.IsGoToSocialQuoteRequest() {
 		return 53
 	}
-	if this.IsActivityStreamsRelationship() {
+	if this.IsActivityStreamsRead() {
 		return 54
 	}
-	if this.IsActivityStreamsRemove() {
+	if this.IsActivityStreamsReject() {
 		return 55
 	}
-	if this.IsGoToSocialReplyApproval() {
+	if this.IsActivityStreamsRelationship() {
 		return 56
 	}
-	if this.IsGoToSocialReplyAuthorization() {
+	if this.IsActivityStreamsRemove() {
 		return 57
 	}
-	if this.IsGoToSocialReplyRequest() {
+	if this.IsGoToSocialReplyApproval() {
 		return 58
 	}
-	if this.IsActivityStreamsService() {
+	if this.IsGoToSocialReplyAuthorization() {
 		return 59
 	}
-	if this.IsActivityStreamsTentativeAccept() {
+	if this.IsGoToSocialReplyRequest() {
 		return 60
 	}
-	if this.IsActivityStreamsTentativeReject() {
+	if this.IsActivityStreamsService() {
 		return 61
 	}
-	if this.IsActivityStreamsTombstone() {
+	if this.IsActivityStreamsTentativeAccept() {
 		return 62
 	}
-	if this.IsFunkwhaleTrack() {
+	if this.IsActivityStreamsTentativeReject() {
 		return 63
 	}
-	if this.IsActivityStreamsTravel() {
+	if this.IsActivityStreamsTombstone() {
 		return 64
 	}
-	if this.IsActivityStreamsUndo() {
+	if this.IsFunkwhaleTrack() {
 		return 65
 	}
-	if this.IsActivityStreamsUpdate() {
+	if this.IsActivityStreamsTravel() {
 		return 66
 	}
-	if this.IsActivityStreamsVideo() {
+	if this.IsActivityStreamsUndo() {
 		return 67
 	}
-	if this.IsActivityStreamsView() {
+	if this.IsActivityStreamsUpdate() {
 		return 68
+	}
+	if this.IsActivityStreamsVideo() {
+		return 69
+	}
+	if this.IsActivityStreamsView() {
+		return 70
 	}
 	if this.IsIRI() {
 		return -2
@@ -2376,6 +2438,10 @@ func (this ActivityStreamsDescribesProperty) LessThan(o vocab.ActivityStreamsDes
 		return this.GetSchemaPropertyValue().LessThan(o.GetSchemaPropertyValue())
 	} else if this.IsActivityStreamsQuestion() {
 		return this.GetActivityStreamsQuestion().LessThan(o.GetActivityStreamsQuestion())
+	} else if this.IsGoToSocialQuoteAuthorization() {
+		return this.GetGoToSocialQuoteAuthorization().LessThan(o.GetGoToSocialQuoteAuthorization())
+	} else if this.IsGoToSocialQuoteRequest() {
+		return this.GetGoToSocialQuoteRequest().LessThan(o.GetGoToSocialQuoteRequest())
 	} else if this.IsActivityStreamsRead() {
 		return this.GetActivityStreamsRead().LessThan(o.GetActivityStreamsRead())
 	} else if this.IsActivityStreamsReject() {
@@ -2534,6 +2600,10 @@ func (this ActivityStreamsDescribesProperty) Serialize() (interface{}, error) {
 		return this.GetSchemaPropertyValue().Serialize()
 	} else if this.IsActivityStreamsQuestion() {
 		return this.GetActivityStreamsQuestion().Serialize()
+	} else if this.IsGoToSocialQuoteAuthorization() {
+		return this.GetGoToSocialQuoteAuthorization().Serialize()
+	} else if this.IsGoToSocialQuoteRequest() {
+		return this.GetGoToSocialQuoteRequest().Serialize()
 	} else if this.IsActivityStreamsRead() {
 		return this.GetActivityStreamsRead().Serialize()
 	} else if this.IsActivityStreamsReject() {
@@ -3008,6 +3078,20 @@ func (this *ActivityStreamsDescribesProperty) SetGoToSocialLikeRequest(v vocab.G
 	this.gotosocialLikeRequestMember = v
 }
 
+// SetGoToSocialQuoteAuthorization sets the value of this property. Calling
+// IsGoToSocialQuoteAuthorization afterwards returns true.
+func (this *ActivityStreamsDescribesProperty) SetGoToSocialQuoteAuthorization(v vocab.GoToSocialQuoteAuthorization) {
+	this.Clear()
+	this.gotosocialQuoteAuthorizationMember = v
+}
+
+// SetGoToSocialQuoteRequest sets the value of this property. Calling
+// IsGoToSocialQuoteRequest afterwards returns true.
+func (this *ActivityStreamsDescribesProperty) SetGoToSocialQuoteRequest(v vocab.GoToSocialQuoteRequest) {
+	this.Clear()
+	this.gotosocialQuoteRequestMember = v
+}
+
 // SetGoToSocialReplyApproval sets the value of this property. Calling
 // IsGoToSocialReplyApproval afterwards returns true.
 func (this *ActivityStreamsDescribesProperty) SetGoToSocialReplyApproval(v vocab.GoToSocialReplyApproval) {
@@ -3272,6 +3356,14 @@ func (this *ActivityStreamsDescribesProperty) SetType(t vocab.Type) error {
 	}
 	if v, ok := t.(vocab.ActivityStreamsQuestion); ok {
 		this.SetActivityStreamsQuestion(v)
+		return nil
+	}
+	if v, ok := t.(vocab.GoToSocialQuoteAuthorization); ok {
+		this.SetGoToSocialQuoteAuthorization(v)
+		return nil
+	}
+	if v, ok := t.(vocab.GoToSocialQuoteRequest); ok {
+		this.SetGoToSocialQuoteRequest(v)
 		return nil
 	}
 	if v, ok := t.(vocab.ActivityStreamsRead); ok {

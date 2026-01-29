@@ -155,6 +155,10 @@ func NewJSONResolver(callbacks ...interface{}) (*JSONResolver, error) {
 			// Do nothing, this callback has a correct signature.
 		case func(context.Context, vocab.ActivityStreamsQuestion) error:
 			// Do nothing, this callback has a correct signature.
+		case func(context.Context, vocab.GoToSocialQuoteAuthorization) error:
+			// Do nothing, this callback has a correct signature.
+		case func(context.Context, vocab.GoToSocialQuoteRequest) error:
+			// Do nothing, this callback has a correct signature.
 		case func(context.Context, vocab.ActivityStreamsRead) error:
 			// Do nothing, this callback has a correct signature.
 		case func(context.Context, vocab.ActivityStreamsReject) error:
@@ -989,6 +993,28 @@ func (this JSONResolver) Resolve(ctx context.Context, m map[string]interface{}) 
 			}
 			for _, i := range this.callbacks {
 				if fn, ok := i.(func(context.Context, vocab.ActivityStreamsQuestion) error); ok {
+					return fn(ctx, v)
+				}
+			}
+			return ErrNoCallbackMatch
+		} else if typeString == GoToSocialAlias+"QuoteAuthorization" {
+			v, err := mgr.DeserializeQuoteAuthorizationGoToSocial()(m, aliasMap)
+			if err != nil {
+				return err
+			}
+			for _, i := range this.callbacks {
+				if fn, ok := i.(func(context.Context, vocab.GoToSocialQuoteAuthorization) error); ok {
+					return fn(ctx, v)
+				}
+			}
+			return ErrNoCallbackMatch
+		} else if typeString == GoToSocialAlias+"QuoteRequest" {
+			v, err := mgr.DeserializeQuoteRequestGoToSocial()(m, aliasMap)
+			if err != nil {
+				return err
+			}
+			for _, i := range this.callbacks {
+				if fn, ok := i.(func(context.Context, vocab.GoToSocialQuoteRequest) error); ok {
 					return fn(ctx, v)
 				}
 			}

@@ -76,6 +76,8 @@ type ActivityStreamsClosedPropertyIterator struct {
 	activitystreamsProfileMember               vocab.ActivityStreamsProfile
 	schemaPropertyValueMember                  vocab.SchemaPropertyValue
 	activitystreamsQuestionMember              vocab.ActivityStreamsQuestion
+	gotosocialQuoteAuthorizationMember         vocab.GoToSocialQuoteAuthorization
+	gotosocialQuoteRequestMember               vocab.GoToSocialQuoteRequest
 	activitystreamsReadMember                  vocab.ActivityStreamsRead
 	activitystreamsRejectMember                vocab.ActivityStreamsReject
 	activitystreamsRelationshipMember          vocab.ActivityStreamsRelationship
@@ -454,6 +456,18 @@ func deserializeActivityStreamsClosedPropertyIterator(i interface{}, aliasMap ma
 			this := &ActivityStreamsClosedPropertyIterator{
 				activitystreamsQuestionMember: v,
 				alias:                         alias,
+			}
+			return this, nil
+		} else if v, err := mgr.DeserializeQuoteAuthorizationGoToSocial()(m, aliasMap); err == nil {
+			this := &ActivityStreamsClosedPropertyIterator{
+				alias:                              alias,
+				gotosocialQuoteAuthorizationMember: v,
+			}
+			return this, nil
+		} else if v, err := mgr.DeserializeQuoteRequestGoToSocial()(m, aliasMap); err == nil {
+			this := &ActivityStreamsClosedPropertyIterator{
+				alias:                        alias,
+				gotosocialQuoteRequestMember: v,
 			}
 			return this, nil
 		} else if v, err := mgr.DeserializeReadActivityStreams()(m, aliasMap); err == nil {
@@ -1026,6 +1040,20 @@ func (this ActivityStreamsClosedPropertyIterator) GetGoToSocialLikeRequest() voc
 	return this.gotosocialLikeRequestMember
 }
 
+// GetGoToSocialQuoteAuthorization returns the value of this property. When
+// IsGoToSocialQuoteAuthorization returns false,
+// GetGoToSocialQuoteAuthorization will return an arbitrary value.
+func (this ActivityStreamsClosedPropertyIterator) GetGoToSocialQuoteAuthorization() vocab.GoToSocialQuoteAuthorization {
+	return this.gotosocialQuoteAuthorizationMember
+}
+
+// GetGoToSocialQuoteRequest returns the value of this property. When
+// IsGoToSocialQuoteRequest returns false, GetGoToSocialQuoteRequest will
+// return an arbitrary value.
+func (this ActivityStreamsClosedPropertyIterator) GetGoToSocialQuoteRequest() vocab.GoToSocialQuoteRequest {
+	return this.gotosocialQuoteRequestMember
+}
+
 // GetGoToSocialReplyApproval returns the value of this property. When
 // IsGoToSocialReplyApproval returns false, GetGoToSocialReplyApproval will
 // return an arbitrary value.
@@ -1254,6 +1282,12 @@ func (this ActivityStreamsClosedPropertyIterator) GetType() vocab.Type {
 	if this.IsActivityStreamsQuestion() {
 		return this.GetActivityStreamsQuestion()
 	}
+	if this.IsGoToSocialQuoteAuthorization() {
+		return this.GetGoToSocialQuoteAuthorization()
+	}
+	if this.IsGoToSocialQuoteRequest() {
+		return this.GetGoToSocialQuoteRequest()
+	}
 	if this.IsActivityStreamsRead() {
 		return this.GetActivityStreamsRead()
 	}
@@ -1381,6 +1415,8 @@ func (this ActivityStreamsClosedPropertyIterator) HasAny() bool {
 		this.IsActivityStreamsProfile() ||
 		this.IsSchemaPropertyValue() ||
 		this.IsActivityStreamsQuestion() ||
+		this.IsGoToSocialQuoteAuthorization() ||
+		this.IsGoToSocialQuoteRequest() ||
 		this.IsActivityStreamsRead() ||
 		this.IsActivityStreamsReject() ||
 		this.IsActivityStreamsRelationship() ||
@@ -1855,6 +1891,20 @@ func (this ActivityStreamsClosedPropertyIterator) IsGoToSocialLikeRequest() bool
 	return this.gotosocialLikeRequestMember != nil
 }
 
+// IsGoToSocialQuoteAuthorization returns true if this property has a type of
+// "QuoteAuthorization". When true, use the GetGoToSocialQuoteAuthorization
+// and SetGoToSocialQuoteAuthorization methods to access and set this property.
+func (this ActivityStreamsClosedPropertyIterator) IsGoToSocialQuoteAuthorization() bool {
+	return this.gotosocialQuoteAuthorizationMember != nil
+}
+
+// IsGoToSocialQuoteRequest returns true if this property has a type of
+// "QuoteRequest". When true, use the GetGoToSocialQuoteRequest and
+// SetGoToSocialQuoteRequest methods to access and set this property.
+func (this ActivityStreamsClosedPropertyIterator) IsGoToSocialQuoteRequest() bool {
+	return this.gotosocialQuoteRequestMember != nil
+}
+
 // IsGoToSocialReplyApproval returns true if this property has a type of
 // "ReplyApproval". When true, use the GetGoToSocialReplyApproval and
 // SetGoToSocialReplyApproval methods to access and set this property.
@@ -2046,6 +2096,10 @@ func (this ActivityStreamsClosedPropertyIterator) JSONLDContext() map[string]str
 		child = this.GetSchemaPropertyValue().JSONLDContext()
 	} else if this.IsActivityStreamsQuestion() {
 		child = this.GetActivityStreamsQuestion().JSONLDContext()
+	} else if this.IsGoToSocialQuoteAuthorization() {
+		child = this.GetGoToSocialQuoteAuthorization().JSONLDContext()
+	} else if this.IsGoToSocialQuoteRequest() {
+		child = this.GetGoToSocialQuoteRequest().JSONLDContext()
 	} else if this.IsActivityStreamsRead() {
 		child = this.GetActivityStreamsRead().JSONLDContext()
 	} else if this.IsActivityStreamsReject() {
@@ -2267,56 +2321,62 @@ func (this ActivityStreamsClosedPropertyIterator) KindIndex() int {
 	if this.IsActivityStreamsQuestion() {
 		return 56
 	}
-	if this.IsActivityStreamsRead() {
+	if this.IsGoToSocialQuoteAuthorization() {
 		return 57
 	}
-	if this.IsActivityStreamsReject() {
+	if this.IsGoToSocialQuoteRequest() {
 		return 58
 	}
-	if this.IsActivityStreamsRelationship() {
+	if this.IsActivityStreamsRead() {
 		return 59
 	}
-	if this.IsActivityStreamsRemove() {
+	if this.IsActivityStreamsReject() {
 		return 60
 	}
-	if this.IsGoToSocialReplyApproval() {
+	if this.IsActivityStreamsRelationship() {
 		return 61
 	}
-	if this.IsGoToSocialReplyAuthorization() {
+	if this.IsActivityStreamsRemove() {
 		return 62
 	}
-	if this.IsGoToSocialReplyRequest() {
+	if this.IsGoToSocialReplyApproval() {
 		return 63
 	}
-	if this.IsActivityStreamsService() {
+	if this.IsGoToSocialReplyAuthorization() {
 		return 64
 	}
-	if this.IsActivityStreamsTentativeAccept() {
+	if this.IsGoToSocialReplyRequest() {
 		return 65
 	}
-	if this.IsActivityStreamsTentativeReject() {
+	if this.IsActivityStreamsService() {
 		return 66
 	}
-	if this.IsActivityStreamsTombstone() {
+	if this.IsActivityStreamsTentativeAccept() {
 		return 67
 	}
-	if this.IsFunkwhaleTrack() {
+	if this.IsActivityStreamsTentativeReject() {
 		return 68
 	}
-	if this.IsActivityStreamsTravel() {
+	if this.IsActivityStreamsTombstone() {
 		return 69
 	}
-	if this.IsActivityStreamsUndo() {
+	if this.IsFunkwhaleTrack() {
 		return 70
 	}
-	if this.IsActivityStreamsUpdate() {
+	if this.IsActivityStreamsTravel() {
 		return 71
 	}
-	if this.IsActivityStreamsVideo() {
+	if this.IsActivityStreamsUndo() {
 		return 72
 	}
-	if this.IsActivityStreamsView() {
+	if this.IsActivityStreamsUpdate() {
 		return 73
+	}
+	if this.IsActivityStreamsVideo() {
+		return 74
+	}
+	if this.IsActivityStreamsView() {
+		return 75
 	}
 	if this.IsIRI() {
 		return -2
@@ -2449,6 +2509,10 @@ func (this ActivityStreamsClosedPropertyIterator) LessThan(o vocab.ActivityStrea
 		return this.GetSchemaPropertyValue().LessThan(o.GetSchemaPropertyValue())
 	} else if this.IsActivityStreamsQuestion() {
 		return this.GetActivityStreamsQuestion().LessThan(o.GetActivityStreamsQuestion())
+	} else if this.IsGoToSocialQuoteAuthorization() {
+		return this.GetGoToSocialQuoteAuthorization().LessThan(o.GetGoToSocialQuoteAuthorization())
+	} else if this.IsGoToSocialQuoteRequest() {
+		return this.GetGoToSocialQuoteRequest().LessThan(o.GetGoToSocialQuoteRequest())
 	} else if this.IsActivityStreamsRead() {
 		return this.GetActivityStreamsRead().LessThan(o.GetActivityStreamsRead())
 	} else if this.IsActivityStreamsReject() {
@@ -2964,6 +3028,20 @@ func (this *ActivityStreamsClosedPropertyIterator) SetGoToSocialLikeRequest(v vo
 	this.gotosocialLikeRequestMember = v
 }
 
+// SetGoToSocialQuoteAuthorization sets the value of this property. Calling
+// IsGoToSocialQuoteAuthorization afterwards returns true.
+func (this *ActivityStreamsClosedPropertyIterator) SetGoToSocialQuoteAuthorization(v vocab.GoToSocialQuoteAuthorization) {
+	this.clear()
+	this.gotosocialQuoteAuthorizationMember = v
+}
+
+// SetGoToSocialQuoteRequest sets the value of this property. Calling
+// IsGoToSocialQuoteRequest afterwards returns true.
+func (this *ActivityStreamsClosedPropertyIterator) SetGoToSocialQuoteRequest(v vocab.GoToSocialQuoteRequest) {
+	this.clear()
+	this.gotosocialQuoteRequestMember = v
+}
+
 // SetGoToSocialReplyApproval sets the value of this property. Calling
 // IsGoToSocialReplyApproval afterwards returns true.
 func (this *ActivityStreamsClosedPropertyIterator) SetGoToSocialReplyApproval(v vocab.GoToSocialReplyApproval) {
@@ -3249,6 +3327,14 @@ func (this *ActivityStreamsClosedPropertyIterator) SetType(t vocab.Type) error {
 		this.SetActivityStreamsQuestion(v)
 		return nil
 	}
+	if v, ok := t.(vocab.GoToSocialQuoteAuthorization); ok {
+		this.SetGoToSocialQuoteAuthorization(v)
+		return nil
+	}
+	if v, ok := t.(vocab.GoToSocialQuoteRequest); ok {
+		this.SetGoToSocialQuoteRequest(v)
+		return nil
+	}
 	if v, ok := t.(vocab.ActivityStreamsRead); ok {
 		this.SetActivityStreamsRead(v)
 		return nil
@@ -3397,6 +3483,8 @@ func (this *ActivityStreamsClosedPropertyIterator) clear() {
 	this.activitystreamsProfileMember = nil
 	this.schemaPropertyValueMember = nil
 	this.activitystreamsQuestionMember = nil
+	this.gotosocialQuoteAuthorizationMember = nil
+	this.gotosocialQuoteRequestMember = nil
 	this.activitystreamsReadMember = nil
 	this.activitystreamsRejectMember = nil
 	this.activitystreamsRelationshipMember = nil
@@ -3537,6 +3625,10 @@ func (this ActivityStreamsClosedPropertyIterator) serialize() (interface{}, erro
 		return this.GetSchemaPropertyValue().Serialize()
 	} else if this.IsActivityStreamsQuestion() {
 		return this.GetActivityStreamsQuestion().Serialize()
+	} else if this.IsGoToSocialQuoteAuthorization() {
+		return this.GetGoToSocialQuoteAuthorization().Serialize()
+	} else if this.IsGoToSocialQuoteRequest() {
+		return this.GetGoToSocialQuoteRequest().Serialize()
 	} else if this.IsActivityStreamsRead() {
 		return this.GetActivityStreamsRead().Serialize()
 	} else if this.IsActivityStreamsReject() {
@@ -4350,6 +4442,30 @@ func (this *ActivityStreamsClosedProperty) AppendGoToSocialLikeRequest(v vocab.G
 		gotosocialLikeRequestMember: v,
 		myIdx:                       this.Len(),
 		parent:                      this,
+	})
+}
+
+// AppendGoToSocialQuoteAuthorization appends a QuoteAuthorization value to the
+// back of a list of the property "closed". Invalidates iterators that are
+// traversing using Prev.
+func (this *ActivityStreamsClosedProperty) AppendGoToSocialQuoteAuthorization(v vocab.GoToSocialQuoteAuthorization) {
+	this.properties = append(this.properties, &ActivityStreamsClosedPropertyIterator{
+		alias:                              this.alias,
+		gotosocialQuoteAuthorizationMember: v,
+		myIdx:                              this.Len(),
+		parent:                             this,
+	})
+}
+
+// AppendGoToSocialQuoteRequest appends a QuoteRequest value to the back of a list
+// of the property "closed". Invalidates iterators that are traversing using
+// Prev.
+func (this *ActivityStreamsClosedProperty) AppendGoToSocialQuoteRequest(v vocab.GoToSocialQuoteRequest) {
+	this.properties = append(this.properties, &ActivityStreamsClosedPropertyIterator{
+		alias:                        this.alias,
+		gotosocialQuoteRequestMember: v,
+		myIdx:                        this.Len(),
+		parent:                       this,
 	})
 }
 
@@ -5612,6 +5728,40 @@ func (this *ActivityStreamsClosedProperty) InsertGoToSocialLikeRequest(idx int, 
 	}
 }
 
+// InsertGoToSocialQuoteAuthorization inserts a QuoteAuthorization value at the
+// specified index for a property "closed". Existing elements at that index
+// and higher are shifted back once. Invalidates all iterators.
+func (this *ActivityStreamsClosedProperty) InsertGoToSocialQuoteAuthorization(idx int, v vocab.GoToSocialQuoteAuthorization) {
+	this.properties = append(this.properties, nil)
+	copy(this.properties[idx+1:], this.properties[idx:])
+	this.properties[idx] = &ActivityStreamsClosedPropertyIterator{
+		alias:                              this.alias,
+		gotosocialQuoteAuthorizationMember: v,
+		myIdx:                              idx,
+		parent:                             this,
+	}
+	for i := idx; i < this.Len(); i++ {
+		(this.properties)[i].myIdx = i
+	}
+}
+
+// InsertGoToSocialQuoteRequest inserts a QuoteRequest value at the specified
+// index for a property "closed". Existing elements at that index and higher
+// are shifted back once. Invalidates all iterators.
+func (this *ActivityStreamsClosedProperty) InsertGoToSocialQuoteRequest(idx int, v vocab.GoToSocialQuoteRequest) {
+	this.properties = append(this.properties, nil)
+	copy(this.properties[idx+1:], this.properties[idx:])
+	this.properties[idx] = &ActivityStreamsClosedPropertyIterator{
+		alias:                        this.alias,
+		gotosocialQuoteRequestMember: v,
+		myIdx:                        idx,
+		parent:                       this,
+	}
+	for i := idx; i < this.Len(); i++ {
+		(this.properties)[i].myIdx = i
+	}
+}
+
 // InsertGoToSocialReplyApproval inserts a ReplyApproval value at the specified
 // index for a property "closed". Existing elements at that index and higher
 // are shifted back once. Invalidates all iterators.
@@ -6091,70 +6241,78 @@ func (this ActivityStreamsClosedProperty) Less(i, j int) bool {
 			rhs := this.properties[j].GetActivityStreamsQuestion()
 			return lhs.LessThan(rhs)
 		} else if idx1 == 57 {
+			lhs := this.properties[i].GetGoToSocialQuoteAuthorization()
+			rhs := this.properties[j].GetGoToSocialQuoteAuthorization()
+			return lhs.LessThan(rhs)
+		} else if idx1 == 58 {
+			lhs := this.properties[i].GetGoToSocialQuoteRequest()
+			rhs := this.properties[j].GetGoToSocialQuoteRequest()
+			return lhs.LessThan(rhs)
+		} else if idx1 == 59 {
 			lhs := this.properties[i].GetActivityStreamsRead()
 			rhs := this.properties[j].GetActivityStreamsRead()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 58 {
+		} else if idx1 == 60 {
 			lhs := this.properties[i].GetActivityStreamsReject()
 			rhs := this.properties[j].GetActivityStreamsReject()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 59 {
+		} else if idx1 == 61 {
 			lhs := this.properties[i].GetActivityStreamsRelationship()
 			rhs := this.properties[j].GetActivityStreamsRelationship()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 60 {
+		} else if idx1 == 62 {
 			lhs := this.properties[i].GetActivityStreamsRemove()
 			rhs := this.properties[j].GetActivityStreamsRemove()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 61 {
+		} else if idx1 == 63 {
 			lhs := this.properties[i].GetGoToSocialReplyApproval()
 			rhs := this.properties[j].GetGoToSocialReplyApproval()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 62 {
+		} else if idx1 == 64 {
 			lhs := this.properties[i].GetGoToSocialReplyAuthorization()
 			rhs := this.properties[j].GetGoToSocialReplyAuthorization()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 63 {
+		} else if idx1 == 65 {
 			lhs := this.properties[i].GetGoToSocialReplyRequest()
 			rhs := this.properties[j].GetGoToSocialReplyRequest()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 64 {
+		} else if idx1 == 66 {
 			lhs := this.properties[i].GetActivityStreamsService()
 			rhs := this.properties[j].GetActivityStreamsService()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 65 {
+		} else if idx1 == 67 {
 			lhs := this.properties[i].GetActivityStreamsTentativeAccept()
 			rhs := this.properties[j].GetActivityStreamsTentativeAccept()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 66 {
+		} else if idx1 == 68 {
 			lhs := this.properties[i].GetActivityStreamsTentativeReject()
 			rhs := this.properties[j].GetActivityStreamsTentativeReject()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 67 {
+		} else if idx1 == 69 {
 			lhs := this.properties[i].GetActivityStreamsTombstone()
 			rhs := this.properties[j].GetActivityStreamsTombstone()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 68 {
+		} else if idx1 == 70 {
 			lhs := this.properties[i].GetFunkwhaleTrack()
 			rhs := this.properties[j].GetFunkwhaleTrack()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 69 {
+		} else if idx1 == 71 {
 			lhs := this.properties[i].GetActivityStreamsTravel()
 			rhs := this.properties[j].GetActivityStreamsTravel()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 70 {
+		} else if idx1 == 72 {
 			lhs := this.properties[i].GetActivityStreamsUndo()
 			rhs := this.properties[j].GetActivityStreamsUndo()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 71 {
+		} else if idx1 == 73 {
 			lhs := this.properties[i].GetActivityStreamsUpdate()
 			rhs := this.properties[j].GetActivityStreamsUpdate()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 72 {
+		} else if idx1 == 74 {
 			lhs := this.properties[i].GetActivityStreamsVideo()
 			rhs := this.properties[j].GetActivityStreamsVideo()
 			return lhs.LessThan(rhs)
-		} else if idx1 == 73 {
+		} else if idx1 == 75 {
 			lhs := this.properties[i].GetActivityStreamsView()
 			rhs := this.properties[j].GetActivityStreamsView()
 			return lhs.LessThan(rhs)
@@ -7089,6 +7247,34 @@ func (this *ActivityStreamsClosedProperty) PrependGoToSocialLikeRequest(v vocab.
 		gotosocialLikeRequestMember: v,
 		myIdx:                       0,
 		parent:                      this,
+	}}, this.properties...)
+	for i := 1; i < this.Len(); i++ {
+		(this.properties)[i].myIdx = i
+	}
+}
+
+// PrependGoToSocialQuoteAuthorization prepends a QuoteAuthorization value to the
+// front of a list of the property "closed". Invalidates all iterators.
+func (this *ActivityStreamsClosedProperty) PrependGoToSocialQuoteAuthorization(v vocab.GoToSocialQuoteAuthorization) {
+	this.properties = append([]*ActivityStreamsClosedPropertyIterator{{
+		alias:                              this.alias,
+		gotosocialQuoteAuthorizationMember: v,
+		myIdx:                              0,
+		parent:                             this,
+	}}, this.properties...)
+	for i := 1; i < this.Len(); i++ {
+		(this.properties)[i].myIdx = i
+	}
+}
+
+// PrependGoToSocialQuoteRequest prepends a QuoteRequest value to the front of a
+// list of the property "closed". Invalidates all iterators.
+func (this *ActivityStreamsClosedProperty) PrependGoToSocialQuoteRequest(v vocab.GoToSocialQuoteRequest) {
+	this.properties = append([]*ActivityStreamsClosedPropertyIterator{{
+		alias:                        this.alias,
+		gotosocialQuoteRequestMember: v,
+		myIdx:                        0,
+		parent:                       this,
 	}}, this.properties...)
 	for i := 1; i < this.Len(); i++ {
 		(this.properties)[i].myIdx = i
@@ -8132,6 +8318,32 @@ func (this *ActivityStreamsClosedProperty) SetGoToSocialLikeRequest(idx int, v v
 		gotosocialLikeRequestMember: v,
 		myIdx:                       idx,
 		parent:                      this,
+	}
+}
+
+// SetGoToSocialQuoteAuthorization sets a QuoteAuthorization value to be at the
+// specified index for the property "closed". Panics if the index is out of
+// bounds. Invalidates all iterators.
+func (this *ActivityStreamsClosedProperty) SetGoToSocialQuoteAuthorization(idx int, v vocab.GoToSocialQuoteAuthorization) {
+	(this.properties)[idx].parent = nil
+	(this.properties)[idx] = &ActivityStreamsClosedPropertyIterator{
+		alias:                              this.alias,
+		gotosocialQuoteAuthorizationMember: v,
+		myIdx:                              idx,
+		parent:                             this,
+	}
+}
+
+// SetGoToSocialQuoteRequest sets a QuoteRequest value to be at the specified
+// index for the property "closed". Panics if the index is out of bounds.
+// Invalidates all iterators.
+func (this *ActivityStreamsClosedProperty) SetGoToSocialQuoteRequest(idx int, v vocab.GoToSocialQuoteRequest) {
+	(this.properties)[idx].parent = nil
+	(this.properties)[idx] = &ActivityStreamsClosedPropertyIterator{
+		alias:                        this.alias,
+		gotosocialQuoteRequestMember: v,
+		myIdx:                        idx,
+		parent:                       this,
 	}
 }
 

@@ -1,4 +1,4 @@
-# code.superseriousbusiness.org/activity v1.18.0
+# code.superseriousbusiness.org/activity v1.19.0
 ## explicit; go 1.23
 code.superseriousbusiness.org/activity/pub
 code.superseriousbusiness.org/activity/streams
@@ -154,6 +154,7 @@ code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_interact
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_interactiontarget
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_likeauthorization
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_manualapproval
+code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_quoteauthorization
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/property_replyauthorization
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_announceapproval
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_announceauthorization
@@ -166,6 +167,8 @@ code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_interactionp
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeapproval
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likeauthorization
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_likerequest
+code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoteauthorization
+code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_quoterequest
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyapproval
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyauthorization
 code.superseriousbusiness.org/activity/streams/impl/gotosocial/type_replyrequest

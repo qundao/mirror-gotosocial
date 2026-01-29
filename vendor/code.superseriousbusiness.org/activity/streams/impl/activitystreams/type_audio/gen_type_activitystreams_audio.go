@@ -49,6 +49,7 @@ type ActivityStreamsAudio struct {
 	ActivityStreamsObject        vocab.ActivityStreamsObjectProperty
 	ActivityStreamsPreview       vocab.ActivityStreamsPreviewProperty
 	ActivityStreamsPublished     vocab.ActivityStreamsPublishedProperty
+	GoToSocialQuoteAuthorization vocab.GoToSocialQuoteAuthorizationProperty
 	ActivityStreamsReplies       vocab.ActivityStreamsRepliesProperty
 	GoToSocialReplyAuthorization vocab.GoToSocialReplyAuthorizationProperty
 	ActivityStreamsSensitive     vocab.ActivityStreamsSensitiveProperty
@@ -269,6 +270,11 @@ func DeserializeAudio(m map[string]interface{}, aliasMap map[string]string) (*Ac
 	} else if p != nil {
 		this.ActivityStreamsPublished = p
 	}
+	if p, err := mgr.DeserializeQuoteAuthorizationPropertyGoToSocial()(m, aliasMap); err != nil {
+		return nil, err
+	} else if p != nil {
+		this.GoToSocialQuoteAuthorization = p
+	}
 	if p, err := mgr.DeserializeRepliesPropertyActivityStreams()(m, aliasMap); err != nil {
 		return nil, err
 	} else if p != nil {
@@ -391,6 +397,8 @@ func DeserializeAudio(m map[string]interface{}, aliasMap map[string]string) (*Ac
 		} else if k == "preview" {
 			continue
 		} else if k == "published" {
+			continue
+		} else if k == "quoteAuthorization" {
 			continue
 		} else if k == "replies" {
 			continue
@@ -649,6 +657,12 @@ func (this ActivityStreamsAudio) GetGoToSocialInteractionPolicy() vocab.GoToSoci
 	return this.GoToSocialInteractionPolicy
 }
 
+// GetGoToSocialQuoteAuthorization returns the "quoteAuthorization" property if it
+// exists, and nil otherwise.
+func (this ActivityStreamsAudio) GetGoToSocialQuoteAuthorization() vocab.GoToSocialQuoteAuthorizationProperty {
+	return this.GoToSocialQuoteAuthorization
+}
+
 // GetGoToSocialReplyAuthorization returns the "replyAuthorization" property if it
 // exists, and nil otherwise.
 func (this ActivityStreamsAudio) GetGoToSocialReplyAuthorization() vocab.GoToSocialReplyAuthorizationProperty {
@@ -728,6 +742,7 @@ func (this ActivityStreamsAudio) JSONLDContext() map[string]string {
 	m = this.helperJSONLDContext(this.ActivityStreamsObject, m)
 	m = this.helperJSONLDContext(this.ActivityStreamsPreview, m)
 	m = this.helperJSONLDContext(this.ActivityStreamsPublished, m)
+	m = this.helperJSONLDContext(this.GoToSocialQuoteAuthorization, m)
 	m = this.helperJSONLDContext(this.ActivityStreamsReplies, m)
 	m = this.helperJSONLDContext(this.GoToSocialReplyAuthorization, m)
 	m = this.helperJSONLDContext(this.ActivityStreamsSensitive, m)
@@ -1114,6 +1129,20 @@ func (this ActivityStreamsAudio) LessThan(o vocab.ActivityStreamsAudio) bool {
 	} // Else: Both are nil
 	// Compare property "published"
 	if lhs, rhs := this.ActivityStreamsPublished, o.GetActivityStreamsPublished(); lhs != nil && rhs != nil {
+		if lhs.LessThan(rhs) {
+			return true
+		} else if rhs.LessThan(lhs) {
+			return false
+		}
+	} else if lhs == nil && rhs != nil {
+		// Nil is less than anything else
+		return true
+	} else if rhs != nil && rhs == nil {
+		// Anything else is greater than nil
+		return false
+	} // Else: Both are nil
+	// Compare property "quoteAuthorization"
+	if lhs, rhs := this.GoToSocialQuoteAuthorization, o.GetGoToSocialQuoteAuthorization(); lhs != nil && rhs != nil {
 		if lhs.LessThan(rhs) {
 			return true
 		} else if rhs.LessThan(lhs) {
@@ -1533,6 +1562,14 @@ func (this ActivityStreamsAudio) Serialize() (map[string]interface{}, error) {
 			m[this.ActivityStreamsPublished.Name()] = i
 		}
 	}
+	// Maybe serialize property "quoteAuthorization"
+	if this.GoToSocialQuoteAuthorization != nil {
+		if i, err := this.GoToSocialQuoteAuthorization.Serialize(); err != nil {
+			return nil, err
+		} else if i != nil {
+			m[this.GoToSocialQuoteAuthorization.Name()] = i
+		}
+	}
 	// Maybe serialize property "replies"
 	if this.ActivityStreamsReplies != nil {
 		if i, err := this.ActivityStreamsReplies.Serialize(); err != nil {
@@ -1811,6 +1848,11 @@ func (this *ActivityStreamsAudio) SetGoToSocialApprovedBy(i vocab.GoToSocialAppr
 // SetGoToSocialInteractionPolicy sets the "interactionPolicy" property.
 func (this *ActivityStreamsAudio) SetGoToSocialInteractionPolicy(i vocab.GoToSocialInteractionPolicyProperty) {
 	this.GoToSocialInteractionPolicy = i
+}
+
+// SetGoToSocialQuoteAuthorization sets the "quoteAuthorization" property.
+func (this *ActivityStreamsAudio) SetGoToSocialQuoteAuthorization(i vocab.GoToSocialQuoteAuthorizationProperty) {
+	this.GoToSocialQuoteAuthorization = i
 }
 
 // SetGoToSocialReplyAuthorization sets the "replyAuthorization" property.

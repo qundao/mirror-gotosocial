@@ -19,11 +19,13 @@ package federation
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 
 	"code.superseriousbusiness.org/activity/pub"
 	"code.superseriousbusiness.org/activity/streams/vocab"
@@ -296,9 +298,37 @@ func (f *federatingActor) PostInboxScheme(ctx context.Context, w http.ResponseWr
 			return false, errWithCode
 		}
 
-		// Default: there's been some real error.
-		err := gtserror.Newf("error calling sideEffectActor.PostInbox: %w", err)
-		return false, gtserror.NewErrorInternalError(err)
+		// There's been some other error.
+		//
+		// Serialize it if possible so we can log
+		// it in a useful way + hopefully fix it!
+		var b []byte
+		if raw, sErr := activity.Serialize(); sErr == nil {
+			b, _ = json.Marshal(raw)
+		}
+
+		// Check for errors "cannot determine id of activitystreams property" or
+		// "cannot determine id of activitystreams value" from activity/pub/util.go
+		// This likely means we've been delivered a type we just don't recognise.
+		// If this is so, just log it and return `false, nil` so caller gets 202.
+		if strings.Contains(err.Error(), "cannot determine id of activitystreams") {
+			var l = "ignored unhandleable Activity posted to inbox"
+			if b != nil {
+				l += ": " + string(b)
+			}
+			log.Warnf(ctx, l)
+			return false, nil
+		}
+
+		// Something else went wrong, what the heck!
+		// This is an actual 500-able error.
+		var wrappedErr error
+		if b != nil {
+			wrappedErr = gtserror.Newf("error calling sideEffectActor.PostInbox with activity %s: %w", string(b), err)
+		} else {
+			wrappedErr = gtserror.Newf("error calling sideEffectActor.PostInbox with unserializable activity: %w", err)
+		}
+		return false, gtserror.NewErrorInternalError(wrappedErr)
 	}
 
 	// Side effects are complete. Now delegate determining whether

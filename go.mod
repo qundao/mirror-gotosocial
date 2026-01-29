@@ -9,7 +9,7 @@ replace modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.44.3-concurre
 replace github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.0-array-binding-fix-2
 
 require (
-	code.superseriousbusiness.org/activity v1.18.0
+	code.superseriousbusiness.org/activity v1.19.0
 	code.superseriousbusiness.org/exif-terminator v0.11.0
 	code.superseriousbusiness.org/gopkg v0.0.0-20260117214252-d095ed821f5a
 	code.superseriousbusiness.org/httpsig v1.5.0

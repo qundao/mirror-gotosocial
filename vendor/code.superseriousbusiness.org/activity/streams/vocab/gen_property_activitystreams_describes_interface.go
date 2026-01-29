@@ -272,6 +272,14 @@ type ActivityStreamsDescribesProperty interface {
 	// IsGoToSocialLikeRequest returns false, GetGoToSocialLikeRequest
 	// will return an arbitrary value.
 	GetGoToSocialLikeRequest() GoToSocialLikeRequest
+	// GetGoToSocialQuoteAuthorization returns the value of this property.
+	// When IsGoToSocialQuoteAuthorization returns false,
+	// GetGoToSocialQuoteAuthorization will return an arbitrary value.
+	GetGoToSocialQuoteAuthorization() GoToSocialQuoteAuthorization
+	// GetGoToSocialQuoteRequest returns the value of this property. When
+	// IsGoToSocialQuoteRequest returns false, GetGoToSocialQuoteRequest
+	// will return an arbitrary value.
+	GetGoToSocialQuoteRequest() GoToSocialQuoteRequest
 	// GetGoToSocialReplyApproval returns the value of this property. When
 	// IsGoToSocialReplyApproval returns false, GetGoToSocialReplyApproval
 	// will return an arbitrary value.
@@ -577,6 +585,15 @@ type ActivityStreamsDescribesProperty interface {
 	// "LikeRequest". When true, use the GetGoToSocialLikeRequest and
 	// SetGoToSocialLikeRequest methods to access and set this property.
 	IsGoToSocialLikeRequest() bool
+	// IsGoToSocialQuoteAuthorization returns true if this property has a type
+	// of "QuoteAuthorization". When true, use the
+	// GetGoToSocialQuoteAuthorization and SetGoToSocialQuoteAuthorization
+	// methods to access and set this property.
+	IsGoToSocialQuoteAuthorization() bool
+	// IsGoToSocialQuoteRequest returns true if this property has a type of
+	// "QuoteRequest". When true, use the GetGoToSocialQuoteRequest and
+	// SetGoToSocialQuoteRequest methods to access and set this property.
+	IsGoToSocialQuoteRequest() bool
 	// IsGoToSocialReplyApproval returns true if this property has a type of
 	// "ReplyApproval". When true, use the GetGoToSocialReplyApproval and
 	// SetGoToSocialReplyApproval methods to access and set this property.
@@ -819,6 +836,12 @@ type ActivityStreamsDescribesProperty interface {
 	// SetGoToSocialLikeRequest sets the value of this property. Calling
 	// IsGoToSocialLikeRequest afterwards returns true.
 	SetGoToSocialLikeRequest(v GoToSocialLikeRequest)
+	// SetGoToSocialQuoteAuthorization sets the value of this property.
+	// Calling IsGoToSocialQuoteAuthorization afterwards returns true.
+	SetGoToSocialQuoteAuthorization(v GoToSocialQuoteAuthorization)
+	// SetGoToSocialQuoteRequest sets the value of this property. Calling
+	// IsGoToSocialQuoteRequest afterwards returns true.
+	SetGoToSocialQuoteRequest(v GoToSocialQuoteRequest)
 	// SetGoToSocialReplyApproval sets the value of this property. Calling
 	// IsGoToSocialReplyApproval afterwards returns true.
 	SetGoToSocialReplyApproval(v GoToSocialReplyApproval)
