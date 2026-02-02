@@ -410,6 +410,10 @@ func CreateAccount(form *apimodel.AccountCreateRequest) error {
 		return errors.New("registration is not open for this server")
 	}
 
+	if config.GetOIDCEnabled() {
+		return errors.New("oidc is enabled for this instance, new sign ups must go through the OIDC provider")
+	}
+
 	if err := Username(form.Username); err != nil {
 		return err
 	}

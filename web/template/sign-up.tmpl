@@ -21,7 +21,9 @@
 <main>
     <section class="with-form" aria-labelledby="sign-up">
         <h2 id="sign-up">Sign up for an account on {{ .instance.Title -}}</h2>
-        {{- if not .registrationOpen }}
+        {{- if .oidcEnabled }}
+        <p>To sign up for an account on this instance, you must register with its OIDC provider. Contact the instance admin for more details.</p>
+        {{- else if not .registrationOpen }}
         <p>This instance is not currently open to new sign-ups.</p>
         {{- else }}
         <form action="/signup" method="POST">
