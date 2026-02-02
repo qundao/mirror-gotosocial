@@ -81,6 +81,17 @@ func RateLimit(limit int, except []netip.Prefix) gin.HandlerFunc {
 		// proxies and trusted proxies setting.
 		clientIP := c.ClientIP()
 
+		// ClientIP must be set.
+		if clientIP == "" {
+			log.Warn(
+				c.Request.Context(),
+				"cannot do rate limiting for this request as client IP discovered by gin was empty;"+
+					" your upstream reverse proxy may be misconfigured",
+			)
+			c.Next()
+			return
+		}
+
 		// ClientIP must be parseable.
 		ip, err := netip.ParseAddr(clientIP)
 		if err != nil {

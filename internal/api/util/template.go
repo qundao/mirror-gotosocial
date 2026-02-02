@@ -20,6 +20,7 @@ package util
 import (
 	"net/http"
 	"net/netip"
+	"slices"
 
 	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
@@ -109,10 +110,29 @@ func TemplateWebPage(
 	templatePage(c, page.Template, http.StatusOK, obj)
 }
 
+// realIPHeaderKeys contains keys for headers
+// commonly set by reverse proxies to indicate
+// "real" IP address of an incoming request.
+var realIPHeaderKeys = []string{
+	"X-Forwarded-For",
+	"X-Real-IP",
+}
+
+// DockerSubnet is a prefix that lets one make hazy guesses
+// as to whether an address is within the ranges Docker
+// uses for subnets, ie., 172.16.0.0 -> 172.31.255.255.
+var DockerSubnet = netip.MustParsePrefix("172.16.0.0/12")
+
 func injectTrustedProxiesRec(
 	c *gin.Context,
 	obj map[string]any,
 ) {
+	const (
+		ipv4CIDR       = "/32"
+		ipv6CIDR       = "/128"
+		dockerIPv4CIDR = "/16"
+	)
+
 	if config.GetAdvancedRateLimitRequests() <= 0 {
 		// If rate limiting is disabled entirely
 		// there's no point in giving a trusted
@@ -125,27 +145,39 @@ func injectTrustedProxiesRec(
 	// derives based on x-forwarded-for
 	// and current trusted proxies.
 	clientIP := c.ClientIP()
-	if clientIP == "127.0.0.1" {
-		// Suggest precise 127.0.0.1/32.
-		trustedProxiesRec := clientIP + "/32"
+
+	switch clientIP {
+
+	// Ensure clientIP set.
+	case "":
+		log.Warn(
+			c.Request.Context(),
+			"gin returned empty clientIP",
+		)
+		return
+
+	// Check if clientIP is set
+	// to loopback / localhost.
+	case "::1", "0:0:0:0:0:0:0:1":
+		// Suggest precise ipv6 loopback.
+		trustedProxiesRec := clientIP + ipv6CIDR
+		obj["trustedProxiesRec"] = trustedProxiesRec
+		return
+	case "127.0.0.1":
+		// Suggest precise ipv4 loopback.
+		trustedProxiesRec := clientIP + ipv4CIDR
 		obj["trustedProxiesRec"] = trustedProxiesRec
 		return
 	}
 
-	// True if "X-Forwarded-For"
-	// or "X-Real-IP" were set.
-	var hasRemoteIPHeader bool
-	for _, k := range []string{
-		"X-Forwarded-For",
-		"X-Real-IP",
-	} {
-		if v := c.GetHeader(k); v != "" {
-			hasRemoteIPHeader = true
-			break
-		}
-	}
-
-	if !hasRemoteIPHeader {
+	// Check for common real IP headers
+	// "X-Forwarded-For" or "X-Real-IP".
+	if !slices.ContainsFunc(
+		realIPHeaderKeys,
+		func(key string) bool {
+			return c.GetHeader(key) != ""
+		},
+	) {
 		// Upstream hasn't set a
 		// remote IP header so we're
 		// probably not in a reverse
@@ -153,6 +185,8 @@ func injectTrustedProxiesRec(
 		return
 	}
 
+	// ClientIP is set and not localhost
+	// or equivalent, try to parse it.
 	ip, err := netip.ParseAddr(clientIP)
 	if err != nil {
 		log.Warnf(
@@ -160,6 +194,7 @@ func injectTrustedProxiesRec(
 			"gin returned invalid clientIP %s: %v",
 			clientIP, err,
 		)
+		return
 	}
 
 	if !ip.IsPrivate() {
@@ -186,21 +221,22 @@ func injectTrustedProxiesRec(
 		// Suggest a CIDR that likely
 		// covers this Docker subnet,
 		// eg., 172.17.0.0 -> 172.17.255.255.
-		trustedProxiesRec := clientIP + "/16"
+		trustedProxiesRec := clientIP + dockerIPv4CIDR
 		obj["trustedProxiesRec"] = trustedProxiesRec
 		return
 	}
 
 	// Private IP but we don't know
 	// what it is. Suggest precise CIDR.
-	trustedProxiesRec := clientIP + "/32"
+	var cidr string
+	if ip.Is6() {
+		cidr = ipv6CIDR
+	} else {
+		cidr = ipv4CIDR
+	}
+	trustedProxiesRec := clientIP + cidr
 	obj["trustedProxiesRec"] = trustedProxiesRec
 }
-
-// DockerSubnet is a CIDR that lets one make hazy guesses
-// as to whether an address is within the ranges Docker
-// uses for subnets, ie., 172.16.0.0 -> 172.31.255.255.
-var DockerSubnet = netip.MustParsePrefix("172.16.0.0/12")
 
 // templateErrorPage renders the given
 // HTTP code, error, and request ID
