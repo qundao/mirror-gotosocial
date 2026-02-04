@@ -20,6 +20,7 @@ package webpush
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"slices"
@@ -29,6 +30,7 @@ import (
 	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
+	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
@@ -193,8 +195,16 @@ func (r *realSender) sendToSubscription(
 
 	// Get the associated access token.
 	token, err := r.state.DB.GetTokenByID(ctx, subscription.TokenID)
-	if err != nil {
-		return gtserror.Newf("error getting token %s: %w", subscription.TokenID, err)
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		return gtserror.Newf("db error getting token %s: %w", subscription.TokenID, err)
+	}
+
+	// If the token can't be found it was
+	// probably invalidated by its owner,
+	// clean up this web push subscription.
+	if token == nil {
+		const reason = "token no longer exists"
+		return r.cleanUpWebPushSubscription(ctx, subscription, reason)
 	}
 
 	// Create push notification payload struct.
@@ -266,22 +276,30 @@ func (r *realSender) sendToSubscription(
 	// Some serious error that indicates auth problems, not a Web Push server, etc.
 	// We should not send any more notifications to this subscription. Try to delete it.
 	default:
-		err := r.state.DB.DeleteWebPushSubscriptionByTokenID(ctx, subscription.TokenID)
-		if err != nil {
-			return gtserror.Newf(
-				"received HTTP status %s but failed to delete subscription: %s",
-				resp.Status,
-				err,
-			)
-		}
-
-		log.Infof(
-			ctx,
-			"Deleted Web Push subscription with token ID %s because push server sent HTTP status %s",
-			subscription.TokenID, resp.Status,
-		)
-		return nil
+		deleteReason := "push server returned HTTP status " + resp.Status
+		return r.cleanUpWebPushSubscription(ctx, subscription, deleteReason)
 	}
+}
+
+// Little util function that can handle cleaning
+// up web push subscriptions on certain failures.
+func (r *realSender) cleanUpWebPushSubscription(
+	ctx context.Context,
+	subscription *gtsmodel.WebPushSubscription,
+	reason string,
+) error {
+	err := r.state.DB.DeleteWebPushSubscriptionByTokenID(ctx, subscription.TokenID)
+	if err != nil {
+		return gtserror.NewfAt(3, reason+" but failed to delete subscription: %w", err)
+	}
+
+	log.Infof(
+		ctx,
+		"deleted Web Push subscription %s with token ID %s because %s",
+		subscription.ID, subscription.TokenID, reason,
+	)
+
+	return nil
 }
 
 // formatNotificationTitle creates a title for a Web Push notification from the notification type and account's name.
