@@ -124,6 +124,8 @@ func (p *Processor) ScheduledStatusesGetOne(
 }
 
 func (p *Processor) ScheduledStatusesScheduleAll(ctx context.Context) error {
+	log.Info(ctx, "scheduling statuses...")
+
 	// Fetch all pending statuses from the database (barebones models are enough).
 	statuses, err := p.state.DB.GetAllScheduledStatuses(gtscontext.SetBarebones(ctx))
 	if err != nil {

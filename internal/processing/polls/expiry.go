@@ -30,6 +30,8 @@ import (
 )
 
 func (p *Processor) ScheduleAll(ctx context.Context) error {
+	log.Info(ctx, "scheduling poll expiries...")
+
 	// Fetch all open polls from the database (barebones models are enough).
 	polls, err := p.state.DB.GetOpenPolls(gtscontext.SetBarebones(ctx))
 	if err != nil {

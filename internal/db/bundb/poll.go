@@ -88,13 +88,23 @@ func (p *pollDB) GetOpenPolls(ctx context.Context) ([]*gtsmodel.Poll, error) {
 	var pollIDs []string
 
 	// Select all polls with:
-	// - UNSET `closed_at`
-	// - SET   `expires_at`
+	//	SELECT "polls"."id" FROM "polls"
+	//	JOIN "statuses" ON "polls"."id" = "statuses"."poll_id"
+	//	WHERE (
+	//		("statuses"."local" = TRUE) AND
+	//		("polls"."expires_at" IS NOT NULL) AND
+	//		("polls"."closed_at" IS NULL)
+	//	);
+
 	if err := p.db.NewSelect().
 		Table("polls").
 		Column("polls.id").
-		Join("JOIN ? ON ? = ?", bun.Ident("statuses"), bun.Ident("polls.id"), bun.Ident("statuses.poll_id")).
-		Where("? = true", bun.Ident("statuses.local")).
+		Join(
+			"JOIN ? ON ? = ?",
+			bun.Ident("statuses"),
+			bun.Ident("polls.id"), bun.Ident("statuses.poll_id"),
+		).
+		Where("? = ?", bun.Ident("statuses.local"), true).
 		Where("? IS NOT NULL", bun.Ident("polls.expires_at")).
 		Where("? IS NULL", bun.Ident("polls.closed_at")).
 		Scan(ctx, &pollIDs); err != nil {
