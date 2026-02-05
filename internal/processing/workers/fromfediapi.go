@@ -28,6 +28,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/federation/dereferencing"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
+	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
 	"codeberg.org/gruf/go-kv/v2"
@@ -37,7 +38,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/account"
-	"code.superseriousbusiness.org/gotosocial/internal/processing/common"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
@@ -47,10 +47,9 @@ import (
 // from the federation/ActivityPub API.
 type fediAPI struct {
 	state    *state.State
-	surface  *Surface
+	surfacer *surfacing.Surfacer
 	federate *federate
 	account  *account.Processor
-	common   *common.Processor
 	utils    *utils
 }
 
@@ -270,8 +269,13 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 			fMsg.Receiving.Username,
 			bareStatus,
 			statusable,
-			// Force refresh within 5min window.
+			// Force refresh
+			// within 5min window.
 			dereferencing.Fresh,
+			// Pass callback to insert
+			// other statuses in thread
+			// into timelines (as appropriate).
+			p.surfacer.TimelineAndNotifyStatus,
 		)
 		if err != nil {
 			return gtserror.Newf("error processing new status %s: %w", bareStatus.URI, err)
@@ -280,9 +284,13 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 	case fMsg.APIRI != nil:
 		// Model was not set, deref with IRI (this is a forward).
 		// This will also cause the status to be inserted into the db.
-		status, statusable, err = p.federate.GetStatusByURI(ctx,
+		status, statusable, _, err = p.federate.GetStatusByURI(ctx,
 			fMsg.Receiving.Username,
 			fMsg.APIRI,
+			// Pass callback to insert
+			// other statuses in thread
+			// into timelines (as appropriate).
+			p.surfacer.TimelineAndNotifyStatus,
 		)
 		if err != nil {
 			return gtserror.Newf("error dereferencing forwarded status %s: %w", fMsg.APIRI, err)
@@ -332,7 +340,7 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 			}
 
 			// Notify target account (if local) of pending reply.
-			if err := p.surface.notifyPendingReply(ctx, intReq.Reply); err != nil {
+			if err := p.surfacer.NotifyPendingReply(ctx, intReq.Reply); err != nil {
 				return gtserror.Newf("error notifying pending reply: %w", err)
 			}
 
@@ -382,7 +390,7 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		// side effects as normal.
 	}
 
-	if err := p.surface.timelineAndNotifyStatus(ctx, status); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, status); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
@@ -411,8 +419,13 @@ func (p *fediAPI) CreateReplyRequest(ctx context.Context, fMsg *messages.FromFed
 			Local: util.Ptr(false),
 		},
 		statusable,
-		// Force refresh within 5min window.
+		// Force refresh
+		// within 5min window.
 		dereferencing.Fresh,
+		// Don't pass callback;
+		// we're only interested
+		// in enriching the reply.
+		nil,
 	)
 
 	switch {
@@ -445,7 +458,7 @@ func (p *fediAPI) CreateReplyRequest(ctx context.Context, fMsg *messages.FromFed
 		//
 		// Just notify target account about
 		// the requested interaction.
-		if err := p.surface.notifyPendingReply(ctx, reply); err != nil {
+		if err := p.surfacer.NotifyPendingReply(ctx, reply); err != nil {
 			return gtserror.Newf("error notifying pending reply: %w", err)
 		}
 
@@ -499,7 +512,7 @@ func (p *fediAPI) CreateReplyRequest(ctx context.Context, fMsg *messages.FromFed
 	}
 
 	// Timeline the reply + notify recipient(s).
-	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, reply); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
@@ -693,7 +706,7 @@ func (p *fediAPI) CreateFollowReq(ctx context.Context, fMsg *messages.FromFediAP
 	// request automatically, just notify
 	// about it and leave.
 	if !accept {
-		if err := p.surface.notifyFollowRequest(ctx, followReq); err != nil {
+		if err := p.surfacer.NotifyFollowRequest(ctx, followReq); err != nil {
 			return gtserror.Newf("error notifying follow request: %w", err)
 		}
 
@@ -715,7 +728,7 @@ func (p *fediAPI) CreateFollowReq(ctx context.Context, fMsg *messages.FromFediAP
 		log.Errorf(ctx, "error federating follow request accept: %v", err)
 	}
 
-	if err := p.surface.notifyFollow(ctx, follow); err != nil {
+	if err := p.surfacer.NotifyFollow(ctx, follow); err != nil {
 		log.Errorf(ctx, "error notifying follow: %v", err)
 	}
 
@@ -767,7 +780,7 @@ func (p *fediAPI) CreateLike(ctx context.Context, fMsg *messages.FromFediAPI) er
 			}
 
 			// Notify target account (if local) of pending like.
-			if err := p.surface.notifyPendingFave(ctx, intReq.Like); err != nil {
+			if err := p.surfacer.NotifyPendingFave(ctx, intReq.Like); err != nil {
 				return gtserror.Newf("error notifying pending fave: %w", err)
 			}
 
@@ -817,7 +830,7 @@ func (p *fediAPI) CreateLike(ctx context.Context, fMsg *messages.FromFediAPI) er
 		// side effects as normal.
 	}
 
-	if err := p.surface.notifyFave(ctx, fave); err != nil {
+	if err := p.surfacer.NotifyFave(ctx, fave); err != nil {
 		log.Errorf(ctx, "error notifying fave: %v", err)
 	}
 
@@ -843,7 +856,7 @@ func (p *fediAPI) CreateLikeRequest(ctx context.Context, fMsg *messages.FromFedi
 		//
 		// Just notify target account about
 		// the requested interaction.
-		if err := p.surface.notifyPendingFave(ctx, req.Like); err != nil {
+		if err := p.surfacer.NotifyPendingFave(ctx, req.Like); err != nil {
 			return gtserror.Newf("error notifying pending like: %w", err)
 		}
 
@@ -893,7 +906,7 @@ func (p *fediAPI) CreateLikeRequest(ctx context.Context, fMsg *messages.FromFedi
 	}
 
 	// Notify the faved account.
-	if err := p.surface.notifyFave(ctx, req.Like); err != nil {
+	if err := p.surfacer.NotifyFave(ctx, req.Like); err != nil {
 		log.Errorf(ctx, "error notifying fave: %v", err)
 	}
 
@@ -911,11 +924,18 @@ func (p *fediAPI) CreateAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 	// Note: this will handle storing the boost in
 	// the db, and dereferencing the target status
 	// ancestors / descendants where appropriate.
-	var err error
-	boost, err = p.federate.EnrichAnnounce(
+	var (
+		targetIsNew bool
+		err         error
+	)
+	boost, targetIsNew, err = p.federate.EnrichAnnounce(
 		ctx,
 		boost,
 		fMsg.Receiving.Username,
+		// Pass callback to insert
+		// other statuses in thread
+		// into timelines (as appropriate).
+		p.surfacer.TimelineAndNotifyStatus,
 	)
 	if err != nil {
 		if gtserror.IsUnretrievable(err) ||
@@ -962,7 +982,7 @@ func (p *fediAPI) CreateAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 			}
 
 			// Notify target account (if local) of pending announce.
-			if err := p.surface.notifyPendingAnnounce(ctx, intReq.Announce); err != nil {
+			if err := p.surfacer.NotifyPendingAnnounce(ctx, intReq.Announce); err != nil {
 				return gtserror.Newf("error notifying pending announce: %w", err)
 			}
 
@@ -1011,12 +1031,30 @@ func (p *fediAPI) CreateAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 		// side effects as normal.
 	}
 
-	// Timeline and notify the announce.
-	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
-		log.Errorf(ctx, "error timelining and notifying status: %v", err)
+	// Timeline the target of the announce (if appropriate).
+	//
+	// This is done to avoid cases where we follow both the announcer
+	// of a status and the original creator of that status, and we
+	// receive the Announce of a status *before* we receive the Create
+	// of that status (say because the creator has a big queue of
+	// followers to deliver to, and someone gets it before us and
+	// boosts it to us), and we end up not timelining the original
+	// status, or notifying it, etc.
+	if targetIsNew {
+		if err := p.surfacer.TimelineAndNotifyStatus(ctx, boost.BoostOf); err != nil {
+			log.Errorf(ctx, "error timelining and notifying boosted status: %v", err)
+		}
 	}
 
-	if err := p.surface.notifyAnnounce(ctx, boost); err != nil {
+	// Timeline and notify the announce itself.
+	//
+	// This is specifically done *after* timelining the original
+	// status, so that boost depth can be taken into account.
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, boost); err != nil {
+		log.Errorf(ctx, "error timelining and notifying boost: %v", err)
+	}
+
+	if err := p.surfacer.NotifyAnnounce(ctx, boost); err != nil {
 		log.Errorf(ctx, "error notifying announce: %v", err)
 	}
 
@@ -1034,10 +1072,14 @@ func (p *fediAPI) CreateAnnounceRequest(ctx context.Context, fMsg *messages.From
 	//
 	// We can check permissions for the announce *and*
 	// put it in the db (if acceptable) by doing Enrich.
-	boost, err := p.federate.EnrichAnnounce(
+	boost, targetIsNew, err := p.federate.EnrichAnnounce(
 		ctx,
 		req.Announce,
 		fMsg.Receiving.Username,
+		// Don't pass callback;
+		// we're only interested
+		// in enriching the announce.
+		nil,
 	)
 
 	switch {
@@ -1070,7 +1112,7 @@ func (p *fediAPI) CreateAnnounceRequest(ctx context.Context, fMsg *messages.From
 		//
 		// Just notify target account about
 		// the requested interaction.
-		if err := p.surface.notifyPendingAnnounce(ctx, boost); err != nil {
+		if err := p.surfacer.NotifyPendingAnnounce(ctx, boost); err != nil {
 			return gtserror.Newf("error notifying pending announce: %w", err)
 		}
 
@@ -1117,9 +1159,24 @@ func (p *fediAPI) CreateAnnounceRequest(ctx context.Context, fMsg *messages.From
 		log.Errorf(ctx, "error federating accept: %v", err)
 	}
 
+	// Timeline the target of the announce (if appropriate).
+	//
+	// This is done to avoid cases where we follow both the announcer
+	// of a status and the original creator of that status, and we
+	// receive the Announce of a status *before* we receive the Create
+	// of that status (say because the creator has a big queue of
+	// followers to deliver to, and someone gets it before us and
+	// boosts it to us), and we end up not timelining the original
+	// status, or notifying it, etc.
+	if targetIsNew {
+		if err := p.surfacer.TimelineAndNotifyStatus(ctx, boost.BoostOf); err != nil {
+			log.Errorf(ctx, "error timelining and notifying boosted status: %v", err)
+		}
+	}
+
 	// Timeline the boost + notify recipient(s).
-	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
-		log.Errorf(ctx, "error timelining and notifying status: %v", err)
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, boost); err != nil {
+		log.Errorf(ctx, "error timelining and notifying boost: %v", err)
 	}
 
 	return nil
@@ -1133,7 +1190,7 @@ func (p *fediAPI) CreateBlock(ctx context.Context, fMsg *messages.FromFediAPI) e
 
 	if block.Account.IsLocal() {
 		// Remove posts by target from origin's timelines.
-		p.surface.removeRelationshipFromTimelines(ctx,
+		p.surfacer.RemoveRelationshipFromTimelines(ctx,
 			block.AccountID,
 			block.TargetAccountID,
 		)
@@ -1141,7 +1198,7 @@ func (p *fediAPI) CreateBlock(ctx context.Context, fMsg *messages.FromFediAPI) e
 
 	if block.TargetAccount.IsLocal() {
 		// Remove posts by origin from target's timelines.
-		p.surface.removeRelationshipFromTimelines(ctx,
+		p.surfacer.RemoveRelationshipFromTimelines(ctx,
 			block.TargetAccountID,
 			block.AccountID,
 		)
@@ -1190,7 +1247,7 @@ func (p *fediAPI) CreateFlag(ctx context.Context, fMsg *messages.FromFediAPI) er
 	// TODO: handle additional side effects of flag creation:
 	// - notify admins by dm / notification
 
-	if err := p.surface.emailAdminReportOpened(ctx, incomingReport); err != nil {
+	if err := p.surfacer.EmailAdminReportOpened(ctx, incomingReport); err != nil {
 		log.Errorf(ctx, "error emailing report opened: %v", err)
 	}
 
@@ -1248,7 +1305,7 @@ func (p *fediAPI) AcceptReply(ctx context.Context, fMsg *messages.FromFediAPI) e
 	}
 
 	// Timeline and notify the status.
-	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, reply); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
@@ -1290,6 +1347,10 @@ func (p *fediAPI) AcceptRemoteStatus(ctx context.Context, fMsg *messages.FromFed
 		fMsg.Receiving.Username,
 		bareStatus,
 		nil, nil,
+		// Pass callback to insert
+		// other statuses in thread
+		// into timelines (as appropriate).
+		p.surfacer.TimelineAndNotifyStatus,
 	)
 	if err != nil {
 		return gtserror.Newf("error processing accepted status %s: %w", bareStatus.URI, err)
@@ -1297,7 +1358,7 @@ func (p *fediAPI) AcceptRemoteStatus(ctx context.Context, fMsg *messages.FromFed
 
 	// No error means it was indeed a remote status, and the
 	// given approvedByURI permitted it. Timeline and notify it.
-	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, reply); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
@@ -1333,7 +1394,7 @@ func (p *fediAPI) AcceptPoliteReplyRequest(ctx context.Context, fMsg *messages.F
 	}
 
 	// Timeline and notify the status.
-	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, reply); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
@@ -1352,7 +1413,7 @@ func (p *fediAPI) AcceptAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 	}
 
 	// Timeline and notify the boost wrapper status.
-	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, boost); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
@@ -1390,13 +1451,17 @@ func (p *fediAPI) UpdateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		existing,
 		apStatus,
 		freshness,
+		// Pass callback to insert
+		// other statuses in thread
+		// into timelines (as appropriate).
+		p.surfacer.TimelineAndNotifyStatus,
 	)
 	if err != nil {
 		log.Errorf(ctx, "error refreshing status: %v", err)
 	}
 
 	// Stream and notify relevant local users that the status has been edited.
-	if err := p.surface.timelineAndNotifyStatusUpdate(ctx, status); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatusUpdate(ctx, status); err != nil {
 		log.Errorf(ctx, "error streaming status edit: %v", err)
 	}
 
@@ -1474,7 +1539,7 @@ func (p *fediAPI) DeleteAccount(ctx context.Context, fMsg *messages.FromFediAPI)
 	p.state.Workers.Federator.Queue.Delete("TargetURI", account.URI)
 
 	// Remove any entries authored by account from timelines.
-	p.surface.removeTimelineEntriesByAccount(account.ID)
+	p.surfacer.RemoveTimelineEntriesByAccount(account.ID)
 
 	// And finally, perform the actual account deletion synchronously.
 	if err := p.account.Delete(ctx, account, account.ID); err != nil {
@@ -1616,7 +1681,7 @@ func (p *fediAPI) UndoFollow(ctx context.Context, fMsg *messages.FromFediAPI) er
 
 	if follow.Account.IsLocal() {
 		// Remove posts by target from origin's timelines.
-		p.surface.removeRelationshipFromTimelines(ctx,
+		p.surfacer.RemoveRelationshipFromTimelines(ctx,
 			follow.AccountID,
 			follow.TargetAccountID,
 		)
@@ -1624,7 +1689,7 @@ func (p *fediAPI) UndoFollow(ctx context.Context, fMsg *messages.FromFediAPI) er
 
 	if follow.TargetAccount.IsLocal() {
 		// Remove posts by origin from target's timelines.
-		p.surface.removeRelationshipFromTimelines(ctx,
+		p.surfacer.RemoveRelationshipFromTimelines(ctx,
 			follow.TargetAccountID,
 			follow.AccountID,
 		)
@@ -1659,7 +1724,7 @@ func (p *fediAPI) UndoAnnounce(
 	}
 
 	// Remove the boost wrapper from all timelines.
-	p.surface.deleteStatusFromTimelines(ctx, boost.ID)
+	p.surfacer.DeleteStatusFromTimelines(ctx, boost.ID)
 
 	return nil
 }

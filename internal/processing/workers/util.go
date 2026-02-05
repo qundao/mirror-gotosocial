@@ -30,6 +30,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/processing/account"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/media"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
+	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
@@ -39,7 +40,7 @@ type utils struct {
 	state     *state.State
 	media     *media.Processor
 	account   *account.Processor
-	surface   *Surface
+	surfacer  *surfacing.Surfacer
 	converter *typeutils.Converter
 }
 
@@ -171,11 +172,11 @@ func (u *utils) wipeStatus(
 		}
 
 		// Remove the boost from any and all timelines.
-		u.surface.deleteStatusFromTimelines(ctx, boost.ID)
+		u.surfacer.DeleteStatusFromTimelines(ctx, boost.ID)
 	}
 
 	// Delete the status itself from any and all timelines.
-	u.surface.deleteStatusFromTimelines(ctx, status.ID)
+	u.surfacer.DeleteStatusFromTimelines(ctx, status.ID)
 
 	// Delete this status from any conversations it's part of.
 	if err := u.state.DB.DeleteStatusFromConversations(ctx, status.ID); err != nil {

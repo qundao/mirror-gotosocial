@@ -74,13 +74,35 @@ func statusFresh(
 	return !time.Now().After(staleAt)
 }
 
-// GetStatusByURI will attempt to fetch a status by its URI, first checking the database. In the case of a newly-met remote model, or a remote model whose 'last_fetched' date
-// is beyond a certain interval, the status will be dereferenced. In the case of dereferencing, some low-priority status information may be enqueued for asynchronous fetching,
-// e.g. dereferencing the status thread. An ActivityPub object indicates the status was dereferenced.
-func (d *Dereferencer) GetStatusByURI(ctx context.Context, requestUser string, uri *url.URL) (*gtsmodel.Status, ap.Statusable, error) {
+// GetStatusByURI will attempt to fetch a status by its URI,
+// first checking the database. In the case of a newly-met
+// remote model, or a remote model whose 'last_fetched' date
+// is beyond a certain interval, the status will be dereferenced.
+//
+// A returned AP statusable indicates the status was dereferenced.
+// The returned bool indicates whether the status was new (to us).
+//
+// In the case of dereferencing, some low-priority status info
+// will be enqueued for asynchronous fetching, e.g. dereferencing
+// the status thread.
+//
+// If newThreadEntryCallback is set, it will be called for each
+// newly-discovered status in the thread other than the requested
+// status itself.
+func (d *Dereferencer) GetStatusByURI(
+	ctx context.Context,
+	requestUser string,
+	uri *url.URL,
+	newThreadEntryCallback func(context.Context, *gtsmodel.Status) error,
+) (
+	status *gtsmodel.Status,
+	statusable ap.Statusable,
+	isNew bool,
+	err error,
+) {
 
 	// Fetch and dereference / update status if necessary.
-	status, statusable, isNew, err := d.getStatusByURI(ctx,
+	status, statusable, isNew, err = d.getStatusByURI(ctx,
 		requestUser,
 		uri,
 	)
@@ -89,7 +111,7 @@ func (d *Dereferencer) GetStatusByURI(ctx context.Context, requestUser string, u
 		if status == nil {
 			// err with no existing
 			// status for fallback.
-			return nil, nil, err
+			return nil, nil, false, err
 		}
 
 		log.Errorf(ctx, "error updating status %s: %v", uri, err)
@@ -103,21 +125,29 @@ func (d *Dereferencer) GetStatusByURI(ctx context.Context, requestUser string, u
 			status,
 			statusable,
 			isNew,
+			newThreadEntryCallback,
 		)
 	}
 
-	return status, statusable, nil
+	return status, statusable, isNew, nil
 }
 
-// getStatusByURI is a package internal form of .GetStatusByURI() that doesn't dereference thread on update, and may return an existing status with error on failed re-fetch.
-func (d *Dereferencer) getStatusByURI(ctx context.Context, requestUser string, uri *url.URL) (*gtsmodel.Status, ap.Statusable, bool, error) {
-	var (
-		status *gtsmodel.Status
-		uriStr = uri.String()
-		err    error
-	)
-
-	// Search the database for existing by URI.
+// getStatusByURI is a package internal form of .GetStatusByURI()
+// that doesn't dereference thread on update, and may return
+// an existing status with error on failed re-fetch.
+func (d *Dereferencer) getStatusByURI(
+	ctx context.Context,
+	requestUser string,
+	uri *url.URL,
+) (
+	status *gtsmodel.Status,
+	statusable ap.Statusable,
+	isNew bool,
+	err error,
+) {
+	// Search the database
+	// for existing by URI.
+	uriStr := uri.String()
 	status, err = d.state.DB.GetStatusByURI(
 
 		// request a barebones object, it may be in the
@@ -165,7 +195,8 @@ func (d *Dereferencer) getStatusByURI(ctx context.Context, requestUser string, u
 		return status, nil, false, nil
 	}
 
-	// Try to deref and update existing.
+	// Status not found in db or not fresh.
+	// Try to deref new or update existing.
 	return d.enrichStatusSafely(ctx,
 		requestUser,
 		uri,
@@ -174,15 +205,28 @@ func (d *Dereferencer) getStatusByURI(ctx context.Context, requestUser string, u
 	)
 }
 
-// RefreshStatus is functionally equivalent to GetStatusByURI(), except that it requires a pre
-// populated status model (with AT LEAST uri set), and ALL thread dereferencing is asynchronous.
+// RefreshStatus is functionally equivalent to GetStatusByURI(),
+// except that it requires a pre populated status model (with AT
+// LEAST uri set), and ALL thread dereferencing is asynchronous.
+//
+// A returned AP statusable indicates the status was dereferenced.
+// The returned bool indicates whether the status was new (to us).
+//
+// If newThreadEntryCallback is set, it will be called for each
+// newly-discovered status in the thread other than the requested
+// status itself.
 func (d *Dereferencer) RefreshStatus(
 	ctx context.Context,
 	requestUser string,
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
 	window *FreshnessWindow,
-) (*gtsmodel.Status, ap.Statusable, error) {
+	newThreadEntryCallback func(context.Context, *gtsmodel.Status) error,
+) (
+	latest *gtsmodel.Status,
+	latestStatusable ap.Statusable,
+	err error,
+) {
 	// If no incoming data is provided,
 	// check whether status needs update.
 	if statusable == nil &&
@@ -196,72 +240,29 @@ func (d *Dereferencer) RefreshStatus(
 		return nil, nil, gtserror.Newf("invalid status uri %q: %w", status.URI, err)
 	}
 
-	// Try to update + dereference the passed status model.
-	latest, statusable, isNew, err := d.enrichStatusSafely(ctx,
+	// Try to update + dereference
+	// the passed status model.
+	var isNew bool
+	latest, latestStatusable, isNew, err = d.enrichStatusSafely(ctx,
 		requestUser,
 		uri,
 		status,
 		statusable,
 	)
 
-	if statusable != nil {
+	if latestStatusable != nil {
 		// Deref parents + children.
 		d.dereferenceThread(ctx,
 			requestUser,
 			uri,
 			latest,
-			statusable,
+			latestStatusable,
 			isNew,
+			newThreadEntryCallback,
 		)
 	}
 
-	return latest, statusable, err
-}
-
-// RefreshStatusAsync is functionally equivalent to RefreshStatus(), except that ALL
-// dereferencing is queued for asynchronous processing, (both thread AND status).
-func (d *Dereferencer) RefreshStatusAsync(
-	ctx context.Context,
-	requestUser string,
-	status *gtsmodel.Status,
-	statusable ap.Statusable,
-	window *FreshnessWindow,
-) {
-	// If no incoming data is provided,
-	// check whether status needs update.
-	if statusable == nil &&
-		statusFresh(status, window) {
-		return
-	}
-
-	// Parse the URI from status.
-	uri, err := url.Parse(status.URI)
-	if err != nil {
-		log.Errorf(ctx, "invalid status uri %q: %v", status.URI, err)
-		return
-	}
-
-	// Enqueue a worker function to re-fetch this status entirely async.
-	d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-		latest, statusable, _, err := d.enrichStatusSafely(ctx,
-			requestUser,
-			uri,
-			status,
-			statusable,
-		)
-		if err != nil {
-			log.Errorf(ctx, "error enriching remote status: %v", err)
-			return
-		}
-		if statusable != nil {
-			if err := d.DereferenceStatusAncestors(ctx, requestUser, latest); err != nil {
-				log.Error(ctx, err)
-			}
-			if err := d.DereferenceStatusDescendants(ctx, requestUser, uri, statusable); err != nil {
-				log.Error(ctx, err)
-			}
-		}
-	})
+	return latest, latestStatusable, err
 }
 
 // enrichStatusSafely wraps enrichStatus() to perform it within

@@ -24,6 +24,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/media"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
+	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
@@ -38,6 +39,7 @@ type Processor struct {
 	visFilter    *visibility.Filter
 	muteFilter   *mutes.Filter
 	statusFilter *status.Filter
+	surfacer     *surfacing.Surfacer
 }
 
 // New returns a new Processor instance.
@@ -49,6 +51,7 @@ func New(
 	visFilter *visibility.Filter,
 	muteFilter *mutes.Filter,
 	statusFilter *status.Filter,
+	surfacer *surfacing.Surfacer,
 ) Processor {
 	return Processor{
 		state:        state,
@@ -58,5 +61,6 @@ func New(
 		visFilter:    visFilter,
 		muteFilter:   muteFilter,
 		statusFilter: statusFilter,
+		surfacer:     surfacer,
 	}
 }

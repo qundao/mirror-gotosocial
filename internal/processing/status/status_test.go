@@ -99,8 +99,8 @@ func (suite *StatusStandardTestSuite) SetupTest() {
 	muteFilter := mutes.NewFilter(&suite.state)
 	intFilter := interaction.NewFilter(&suite.state)
 	statusFilter := statusfilter.NewFilter(&suite.state)
-
-	common := common.New(&suite.state, suite.mediaManager, suite.typeConverter, suite.federator, visFilter, muteFilter, statusFilter)
+	surfacer := testrig.NewTestSurfacer(&suite.state, testrig.NewEmailSender("../../../web/template", nil), testrig.NewNoopWebPushSender())
+	common := common.New(&suite.state, suite.mediaManager, suite.typeConverter, suite.federator, visFilter, muteFilter, statusFilter, surfacer)
 	polls := polls.New(&common, &suite.state, suite.typeConverter)
 	intReqs := interactionrequests.New(&common, &suite.state, suite.typeConverter)
 

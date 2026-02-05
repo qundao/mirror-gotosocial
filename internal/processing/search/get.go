@@ -625,11 +625,27 @@ func (p *Processor) statusByURI(
 	if resolve {
 		// We're allowed to resolve, leave the
 		// rest up to the dereferencer functions.
-		status, _, err := p.federator.GetStatusByURI(
+		status, _, isNew, err := p.federator.GetStatusByURI(
 			gtscontext.SetFastFail(ctx),
 			requestingAccount.Username,
 			uri,
+			// Pass callback to insert
+			// other statuses in thread
+			// into timelines (as appropriate).
+			p.surfacer.TimelineAndNotifyStatus,
 		)
+
+		// If the status is successfully and newly
+		// dereferenced, put it in timelines
+		// (as appropriate) before returning.
+		if err == nil && status != nil && isNew {
+			if err := p.surfacer.TimelineAndNotifyStatus(ctx, status); err != nil {
+				// Not a deal breaker but
+				// definitely error log this.
+				log.Errorf(ctx, "error timelining and notifying status after search: %v", err)
+			}
+		}
+
 		return status, err
 	}
 

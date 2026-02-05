@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package workers
+package testrig
 
 import (
 	"code.superseriousbusiness.org/gotosocial/internal/email"
@@ -25,24 +25,31 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/processing/conversations"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/stream"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
+	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
+	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"code.superseriousbusiness.org/gotosocial/internal/webpush"
 )
 
-// Surface wraps functions for 'surfacing' the result
-// of processing a message, eg:
-//   - timelining a status
-//   - removing a status from timelines
-//   - sending a notification to a user
-//   - sending an email
-type Surface struct {
-	State         *state.State
-	Converter     *typeutils.Converter
-	Stream        *stream.Processor
-	VisFilter     *visibility.Filter
-	MuteFilter    *mutes.Filter
-	StatusFilter  *status.Filter
-	EmailSender   email.Sender
-	WebPushSender webpush.Sender
-	Conversations *conversations.Processor
+func NewTestSurfacer(
+	state *state.State,
+	emailSender email.Sender,
+	webPushSender webpush.Sender,
+) *surfacing.Surfacer {
+	converter := typeutils.NewConverter(state)
+	visFilter := visibility.NewFilter(state)
+	muteFilter := mutes.NewFilter(state)
+	statusFilter := status.NewFilter(state)
+
+	return surfacing.New(
+		state,
+		converter,
+		util.Ptr(stream.New(state, NewTestOauthServer(state))),
+		visFilter,
+		muteFilter,
+		statusFilter,
+		emailSender,
+		webPushSender,
+		util.Ptr(conversations.New(state, converter, visFilter, muteFilter, statusFilter)),
+	)
 }

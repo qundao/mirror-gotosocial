@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package workers
+package surfacing
 
 import (
 	"context"
@@ -31,15 +31,15 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
-// notifyPendingReply notifies the account replied-to
+// NotifyPendingReply notifies the account replied-to
 // by the given status that they have a new reply,
 // and that approval is pending.
-func (s *Surface) notifyPendingReply(
+func (s *Surfacer) NotifyPendingReply(
 	ctx context.Context,
 	status *gtsmodel.Status,
 ) error {
 	// Beforehand, ensure the passed status is fully populated.
-	if err := s.State.DB.PopulateStatus(ctx, status); err != nil {
+	if err := s.state.DB.PopulateStatus(ctx, status); err != nil {
 		return gtserror.Newf("error populating status %s: %w", status.ID, err)
 	}
 
@@ -57,7 +57,7 @@ func (s *Surface) notifyPendingReply(
 
 	// Ensure thread not muted
 	// by replied-to account.
-	muted, err := s.State.DB.IsThreadMutedByAccount(ctx,
+	muted, err := s.state.DB.IsThreadMutedByAccount(ctx,
 		status.ThreadID,
 		status.InReplyToAccountID,
 	)
@@ -90,7 +90,7 @@ func (s *Surface) notifyPendingReply(
 // notifyMentions iterates through mentions on the
 // given status, and notifies each mentioned account
 // that they have a new mention.
-func (s *Surface) notifyMentions(
+func (s *Surfacer) notifyMentions(
 	ctx context.Context,
 	status *gtsmodel.Status,
 ) error {
@@ -113,12 +113,12 @@ func (s *Surface) notifyMentions(
 // notifyMention notifies the target
 // of the given mention that they've
 // been mentioned in a status.
-func (s *Surface) notifyMention(
+func (s *Surfacer) notifyMention(
 	ctx context.Context,
 	mention *gtsmodel.Mention,
 ) error {
 	// Beforehand, ensure the passed mention is fully populated.
-	if err := s.State.DB.PopulateMention(ctx, mention); err != nil {
+	if err := s.state.DB.PopulateMention(ctx, mention); err != nil {
 		return gtserror.Newf(
 			"error populating mention %s: %w",
 			mention.ID, err,
@@ -133,7 +133,7 @@ func (s *Surface) notifyMention(
 
 	// Ensure thread not muted
 	// by mentioned account.
-	muted, err := s.State.DB.IsThreadMutedByAccount(ctx,
+	muted, err := s.state.DB.IsThreadMutedByAccount(ctx,
 		mention.Status.ThreadID,
 		mention.TargetAccountID,
 	)
@@ -169,14 +169,14 @@ func (s *Surface) notifyMention(
 	return nil
 }
 
-// notifyFollowRequest notifies the target of the given
+// NotifyFollowRequest notifies the target of the given
 // follow request that they have a new follow request.
-func (s *Surface) notifyFollowRequest(
+func (s *Surfacer) NotifyFollowRequest(
 	ctx context.Context,
 	followReq *gtsmodel.FollowRequest,
 ) error {
 	// Beforehand, ensure the passed follow request is fully populated.
-	if err := s.State.DB.PopulateFollowRequest(ctx, followReq); err != nil {
+	if err := s.state.DB.PopulateFollowRequest(ctx, followReq); err != nil {
 		return gtserror.Newf("error populating follow request %s: %w", followReq.ID, err)
 	}
 
@@ -200,16 +200,16 @@ func (s *Surface) notifyFollowRequest(
 	return nil
 }
 
-// notifyFollow notifies the target of the given follow that
+// NotifyFollow notifies the target of the given follow that
 // they have a new follow. It will also remove any previous
 // notification of a follow request, essentially replacing
 // that notification.
-func (s *Surface) notifyFollow(
+func (s *Surfacer) NotifyFollow(
 	ctx context.Context,
 	follow *gtsmodel.Follow,
 ) error {
 	// Beforehand, ensure the passed follow is fully populated.
-	if err := s.State.DB.PopulateFollow(ctx, follow); err != nil {
+	if err := s.state.DB.PopulateFollow(ctx, follow); err != nil {
 		return gtserror.Newf("error populating follow %s: %w", follow.ID, err)
 	}
 
@@ -220,7 +220,7 @@ func (s *Surface) notifyFollow(
 	}
 
 	// Check if previous follow req notif exists.
-	prevNotif, err := s.State.DB.GetNotification(
+	prevNotif, err := s.state.DB.GetNotification(
 		gtscontext.SetBarebones(ctx),
 		gtsmodel.NotificationFollowRequest,
 		follow.TargetAccountID,
@@ -233,7 +233,7 @@ func (s *Surface) notifyFollow(
 
 	if prevNotif != nil {
 		// Previous follow request notif existed, delete it before creating new.
-		if err := s.State.DB.DeleteNotificationByID(ctx, prevNotif.ID); // nocollapse
+		if err := s.state.DB.DeleteNotificationByID(ctx, prevNotif.ID); // nocollapse
 		err != nil && !errors.Is(err, db.ErrNoEntries) {
 			return gtserror.Newf("error deleting notification %s: %w", prevNotif.ID, err)
 		}
@@ -253,9 +253,9 @@ func (s *Surface) notifyFollow(
 	return nil
 }
 
-// notifyFave notifies the target of the given
+// NotifyFave notifies the target of the given
 // fave that their status has been liked/faved.
-func (s *Surface) notifyFave(
+func (s *Surfacer) NotifyFave(
 	ctx context.Context,
 	fave *gtsmodel.StatusFave,
 ) error {
@@ -284,10 +284,10 @@ func (s *Surface) notifyFave(
 	return nil
 }
 
-// notifyPendingFave notifies the target of the
+// NotifyPendingFave notifies the target of the
 // given fave that their status has been faved
 // and that approval is required.
-func (s *Surface) notifyPendingFave(
+func (s *Surfacer) NotifyPendingFave(
 	ctx context.Context,
 	fave *gtsmodel.StatusFave,
 ) error {
@@ -319,7 +319,7 @@ func (s *Surface) notifyPendingFave(
 // notifyableFave checks that the given
 // fave should be notified, taking account
 // of localness of receiving account, and mutes.
-func (s *Surface) notifyableFave(
+func (s *Surfacer) notifyableFave(
 	ctx context.Context,
 	fave *gtsmodel.StatusFave,
 ) (bool, error) {
@@ -329,7 +329,7 @@ func (s *Surface) notifyableFave(
 	}
 
 	// Beforehand, ensure the passed status fave is fully populated.
-	if err := s.State.DB.PopulateStatusFave(ctx, fave); err != nil {
+	if err := s.state.DB.PopulateStatusFave(ctx, fave); err != nil {
 		return false, gtserror.Newf("error populating fave %s: %w", fave.ID, err)
 	}
 
@@ -341,7 +341,7 @@ func (s *Surface) notifyableFave(
 
 	// Ensure favee hasn't
 	// muted the thread.
-	muted, err := s.State.DB.IsThreadMutedByAccount(ctx,
+	muted, err := s.state.DB.IsThreadMutedByAccount(ctx,
 		fave.Status.ThreadID,
 		fave.TargetAccountID,
 	)
@@ -358,9 +358,9 @@ func (s *Surface) notifyableFave(
 	return true, nil
 }
 
-// notifyAnnounce notifies the status boost target
+// NotifyAnnounce notifies the status boost target
 // account that their status has been boosted.
-func (s *Surface) notifyAnnounce(
+func (s *Surfacer) NotifyAnnounce(
 	ctx context.Context,
 	boost *gtsmodel.Status,
 ) error {
@@ -389,10 +389,10 @@ func (s *Surface) notifyAnnounce(
 	return nil
 }
 
-// notifyPendingAnnounce notifies the status boost
+// NotifyPendingAnnounce notifies the status boost
 // target account that their status has been boosted,
 // and that the boost requires approval.
-func (s *Surface) notifyPendingAnnounce(
+func (s *Surfacer) NotifyPendingAnnounce(
 	ctx context.Context,
 	boost *gtsmodel.Status,
 ) error {
@@ -424,7 +424,7 @@ func (s *Surface) notifyPendingAnnounce(
 // notifyableAnnounce checks that the given
 // announce should be notified, taking account
 // of localness of receiving account, and mutes.
-func (s *Surface) notifyableAnnounce(
+func (s *Surfacer) notifyableAnnounce(
 	ctx context.Context,
 	status *gtsmodel.Status,
 ) (bool, error) {
@@ -439,7 +439,7 @@ func (s *Surface) notifyableAnnounce(
 	}
 
 	// Beforehand, ensure the passed status is fully populated.
-	if err := s.State.DB.PopulateStatus(ctx, status); err != nil {
+	if err := s.state.DB.PopulateStatus(ctx, status); err != nil {
 		return false, gtserror.Newf("error populating status %s: %w", status.ID, err)
 	}
 
@@ -451,7 +451,7 @@ func (s *Surface) notifyableAnnounce(
 
 	// Ensure boostee hasn't
 	// muted the thread.
-	muted, err := s.State.DB.IsThreadMutedByAccount(ctx,
+	muted, err := s.state.DB.IsThreadMutedByAccount(ctx,
 		status.BoostOf.ThreadID,
 		status.BoostOfAccountID,
 	)
@@ -469,14 +469,14 @@ func (s *Surface) notifyableAnnounce(
 	return true, nil
 }
 
-func (s *Surface) notifyPollClose(ctx context.Context, status *gtsmodel.Status) error {
+func (s *Surfacer) notifyPollClose(ctx context.Context, status *gtsmodel.Status) error {
 	// Beforehand, ensure the passed status is fully populated.
-	if err := s.State.DB.PopulateStatus(ctx, status); err != nil {
+	if err := s.state.DB.PopulateStatus(ctx, status); err != nil {
 		return gtserror.Newf("error populating status %s: %w", status.ID, err)
 	}
 
 	// Fetch all votes in the attached status poll.
-	votes, err := s.State.DB.GetPollVotes(ctx, status.PollID)
+	votes, err := s.state.DB.GetPollVotes(ctx, status.PollID)
 	if err != nil {
 		return gtserror.Newf("error getting poll %s votes: %w", status.PollID, err)
 	}
@@ -521,8 +521,8 @@ func (s *Surface) notifyPollClose(ctx context.Context, status *gtsmodel.Status) 
 	return errs.Combine()
 }
 
-func (s *Surface) notifySignup(ctx context.Context, newUser *gtsmodel.User) error {
-	modAccounts, err := s.State.DB.GetInstanceModerators(ctx)
+func (s *Surfacer) NotifySignup(ctx context.Context, newUser *gtsmodel.User) error {
+	modAccounts, err := s.state.DB.GetInstanceModerators(ctx)
 	if err != nil {
 		if errors.Is(err, db.ErrNoEntries) {
 			// No registered
@@ -535,11 +535,11 @@ func (s *Surface) notifySignup(ctx context.Context, newUser *gtsmodel.User) erro
 	}
 
 	// Ensure user + account populated.
-	if err := s.State.DB.PopulateUser(ctx, newUser); err != nil {
+	if err := s.state.DB.PopulateUser(ctx, newUser); err != nil {
 		return gtserror.Newf("db error populating new user: %w", err)
 	}
 
-	if err := s.State.DB.PopulateAccount(ctx, newUser.Account); err != nil {
+	if err := s.state.DB.PopulateAccount(ctx, newUser.Account); err != nil {
 		return gtserror.Newf("db error populating new user's account: %w", err)
 	}
 
@@ -589,7 +589,7 @@ func getNotifyLockURI(
 //
 // targetAccount and originAccount must be
 // set, but statusOrEditID can be empty.
-func (s *Surface) Notify(
+func (s *Surfacer) Notify(
 	ctx context.Context,
 	notificationType gtsmodel.NotificationType,
 	targetAccount *gtsmodel.Account,
@@ -614,7 +614,7 @@ func (s *Surface) Notify(
 
 	// We're doing state-y stuff so get a
 	// lock on this combo of notif params.
-	unlock := s.State.ProcessingLocks.Lock(getNotifyLockURI(
+	unlock := s.state.ProcessingLocks.Lock(getNotifyLockURI(
 		notificationType,
 		targetAccount,
 		originAccount,
@@ -628,7 +628,7 @@ func (s *Surface) Notify(
 
 	// Make sure a notification doesn't
 	// already exist with these params.
-	if _, err := s.State.DB.GetNotification(
+	if _, err := s.state.DB.GetNotification(
 		gtscontext.SetBarebones(ctx),
 		notificationType,
 		targetAccount.ID,
@@ -655,7 +655,7 @@ func (s *Surface) Notify(
 		StatusOrEditID:   statusOrEditID,
 	}
 
-	if err := s.State.DB.PutNotification(ctx, notif); err != nil {
+	if err := s.state.DB.PutNotification(ctx, notif); err != nil {
 		return gtserror.Newf("error putting notification in database: %w", err)
 	}
 
@@ -664,7 +664,7 @@ func (s *Surface) Notify(
 	unlock()
 
 	// Check whether origin account is muted by target account.
-	muted, err := s.MuteFilter.AccountNotificationsMuted(ctx,
+	muted, err := s.muteFilter.AccountNotificationsMuted(ctx,
 		targetAccount.ID,
 		originAccount.ID,
 	)
@@ -681,7 +681,7 @@ func (s *Surface) Notify(
 
 	if status != nil {
 		// Check whether status is muted by the target account.
-		muted, err := s.MuteFilter.StatusNotificationsMuted(ctx,
+		muted, err := s.muteFilter.StatusNotificationsMuted(ctx,
 			targetAccount,
 			status,
 		)
@@ -697,7 +697,7 @@ func (s *Surface) Notify(
 		var hide bool
 
 		// Check whether notification status is filtered by requester in notifs.
-		filtered, hide, err = s.StatusFilter.StatusFilterResultsInContext(ctx,
+		filtered, hide, err = s.statusFilter.StatusFilterResultsInContext(ctx,
 			targetAccount,
 			status,
 			gtsmodel.FilterContextNotifications,
@@ -713,7 +713,7 @@ func (s *Surface) Notify(
 	}
 
 	// Convert notification to frontend API model for streaming / web push.
-	apiNotif, err := s.Converter.NotificationToAPINotification(ctx, notif)
+	apiNotif, err := s.converter.NotificationToAPINotification(ctx, notif)
 	if err != nil {
 		return gtserror.Newf("error converting notification to api representation: %w", err)
 	}
@@ -725,10 +725,10 @@ func (s *Surface) Notify(
 	}
 
 	// Stream notification to the user.
-	s.Stream.Notify(ctx, targetAccount, apiNotif)
+	s.stream.Notify(ctx, targetAccount, apiNotif)
 
 	// Send Web Push notification to the user.
-	if err = s.WebPushSender.Send(ctx, notif, apiNotif); err != nil {
+	if err = s.webPushSender.Send(ctx, notif, apiNotif); err != nil {
 		return gtserror.Newf("error sending Web Push notifications: %w", err)
 	}
 

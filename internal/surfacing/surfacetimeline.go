@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package workers
+package surfacing
 
 import (
 	"context"
@@ -34,13 +34,13 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
-// timelineAndNotifyStatus handles streaming a create event for the given status model to HOME, LIST, LOCAL
+// TimelineAndNotifyStatus handles streaming a create event for the given status model to HOME, LIST, LOCAL
 // and PUBLIC timelines, as well as adding to their relevant in-memory caches. It also handles sending any
 // relevant notifications for the received status, e.g. mentions, followers with notify flag, conversations.
-func (s *Surface) timelineAndNotifyStatus(ctx context.Context, status *gtsmodel.Status) error {
+func (s *Surfacer) TimelineAndNotifyStatus(ctx context.Context, status *gtsmodel.Status) error {
 
 	// Ensure status fully populated; including account, mentions, etc.
-	if err := s.State.DB.PopulateStatus(ctx, status); err != nil {
+	if err := s.state.DB.PopulateStatus(ctx, status); err != nil {
 		return gtserror.Newf("error populating status with id %s: %w", status.ID, err)
 	}
 
@@ -59,11 +59,11 @@ func (s *Surface) timelineAndNotifyStatus(ctx context.Context, status *gtsmodel.
 				localOnce = true
 
 				// Insert the status into the local timeline cache.
-				_ = s.State.Caches.Timelines.Local.InsertOne(status)
+				_ = s.state.Caches.Timelines.Local.InsertOne(status)
 			}
 
 			// Stream the status model as local timeline update event.
-			s.Stream.Update(ctx, account, apiStatus, stream.TimelineLocal)
+			s.stream.Update(ctx, account, apiStatus, stream.TimelineLocal)
 		},
 
 		// public timelining and streaming function
@@ -72,11 +72,11 @@ func (s *Surface) timelineAndNotifyStatus(ctx context.Context, status *gtsmodel.
 				publicOnce = true
 
 				// Insert the status into the public timeline cache.
-				_ = s.State.Caches.Timelines.Public.InsertOne(status)
+				_ = s.state.Caches.Timelines.Public.InsertOne(status)
 			}
 
 			// Stream the status model as public timeline update event.
-			s.Stream.Update(ctx, account, apiStatus, stream.TimelinePublic)
+			s.stream.Update(ctx, account, apiStatus, stream.TimelinePublic)
 		},
 	)
 
@@ -89,11 +89,11 @@ func (s *Surface) timelineAndNotifyStatus(ctx context.Context, status *gtsmodel.
 		func(account *gtsmodel.Account, apiStatus *apimodel.Status) {
 
 			// Insert this new status into the relevant list timeline cache.
-			repeatBoost := s.State.Caches.Timelines.Home.InsertOne(account.ID, status)
+			repeatBoost := s.state.Caches.Timelines.Home.InsertOne(account.ID, status)
 
 			if !repeatBoost {
 				// Only stream if not repeated boost of recent status.
-				s.Stream.Update(ctx, account, apiStatus, stream.TimelineHome)
+				s.stream.Update(ctx, account, apiStatus, stream.TimelineHome)
 			}
 		},
 
@@ -101,12 +101,12 @@ func (s *Surface) timelineAndNotifyStatus(ctx context.Context, status *gtsmodel.
 		func(list *gtsmodel.List, account *gtsmodel.Account, apiStatus *apimodel.Status) {
 
 			// Insert this new status into the relevant list timeline cache.
-			repeatBoost := s.State.Caches.Timelines.List.InsertOne(list.ID, status)
+			repeatBoost := s.state.Caches.Timelines.List.InsertOne(list.ID, status)
 
 			if !repeatBoost {
 				// Only stream if not repeated boost of recent status.
 				streamType := stream.TimelineList + ":" + list.ID
-				s.Stream.Update(ctx, account, apiStatus, streamType)
+				s.stream.Update(ctx, account, apiStatus, streamType)
 			}
 		},
 
@@ -133,27 +133,27 @@ func (s *Surface) timelineAndNotifyStatus(ctx context.Context, status *gtsmodel.
 	}
 
 	// Update conversations containing this status, and get notifications for them.
-	notifications, err := s.Conversations.UpdateConversationsForStatus(ctx, status)
+	notifications, err := s.conversations.UpdateConversationsForStatus(ctx, status)
 	if err != nil {
 		return gtserror.Newf("error updating conversations for status %s: %w", status.URI, err)
 	}
 
 	// Stream these conversation notfications.
 	for _, notification := range notifications {
-		s.Stream.Conversation(ctx, notification.AccountID, notification.Conversation)
+		s.stream.Conversation(ctx, notification.AccountID, notification.Conversation)
 	}
 
 	return nil
 }
 
-// timelineAndNotifyStatusUpdate handles streaming an update event for the given status model to HOME,
+// TimelineAndNotifyStatusUpdate handles streaming an update event for the given status model to HOME,
 // LIST, LOCAL and PUBLIC timelines, as well as adding to their relevant in-memory caches. It also handles
 // sending any relevant notifications for the received updated status, e.g. new mentions, poll closing,
 // followers with the notify flag, and edits to a status that anyone local has previously interacted with.
-func (s *Surface) timelineAndNotifyStatusUpdate(ctx context.Context, status *gtsmodel.Status) error {
+func (s *Surfacer) TimelineAndNotifyStatusUpdate(ctx context.Context, status *gtsmodel.Status) error {
 
 	// Ensure fully populated; including account, mentions, etc.
-	if err := s.State.DB.PopulateStatus(ctx, status); err != nil {
+	if err := s.state.DB.PopulateStatus(ctx, status); err != nil {
 		return gtserror.Newf("error populating status with id %s: %w", status.ID, err)
 	}
 
@@ -171,7 +171,7 @@ func (s *Surface) timelineAndNotifyStatusUpdate(ctx context.Context, status *gts
 	var notifyAccount func(*gtsmodel.Account)
 
 	// Ensure edits are fully populated for this status before anything.
-	if err := s.State.DB.PopulateStatusEdits(ctx, status); err != nil {
+	if err := s.state.DB.PopulateStatusEdits(ctx, status); err != nil {
 
 		// we can still continue from here, just without
 		// notifying local followers for it below here.
@@ -218,14 +218,14 @@ func (s *Surface) timelineAndNotifyStatusUpdate(ctx context.Context, status *gts
 		func(account *gtsmodel.Account, apiStatus *apimodel.Status) {
 			// NOTE: timeline invalidation is handled separately
 			// as we don't need to perform it per user account.
-			s.Stream.StatusUpdate(ctx, account, apiStatus, stream.TimelineLocal)
+			s.stream.StatusUpdate(ctx, account, apiStatus, stream.TimelineLocal)
 		},
 
 		// public timelining and streaming function
 		func(account *gtsmodel.Account, apiStatus *apimodel.Status) {
 			// NOTE: timeline invalidation is handled separately
 			// as we don't need to perform it per user account.
-			s.Stream.StatusUpdate(ctx, account, apiStatus, stream.TimelinePublic)
+			s.stream.StatusUpdate(ctx, account, apiStatus, stream.TimelinePublic)
 		},
 	)
 
@@ -237,7 +237,7 @@ func (s *Surface) timelineAndNotifyStatusUpdate(ctx context.Context, status *gts
 		func(account *gtsmodel.Account, apiStatus *apimodel.Status) {
 			// NOTE: timeline invalidation is handled separately
 			// as we don't need to perform it per account or list.
-			s.Stream.StatusUpdate(ctx, account, apiStatus, stream.TimelineHome)
+			s.stream.StatusUpdate(ctx, account, apiStatus, stream.TimelineHome)
 		},
 
 		// list timelining and streaming function
@@ -245,7 +245,7 @@ func (s *Surface) timelineAndNotifyStatusUpdate(ctx context.Context, status *gts
 			// NOTE: timeline invalidation is handled separately
 			// as we don't need to perform it per account or list.
 			streamType := stream.TimelineList + ":" + list.ID
-			s.Stream.StatusUpdate(ctx, account, apiStatus, streamType)
+			s.stream.StatusUpdate(ctx, account, apiStatus, streamType)
 		},
 
 		// notify status for
@@ -277,7 +277,7 @@ func (s *Surface) timelineAndNotifyStatusUpdate(ctx context.Context, status *gts
 	}
 
 	// Get local-only interactions (we can't notify remotes).
-	interactions, err := s.State.DB.GetStatusInteractions(ctx,
+	interactions, err := s.state.DB.GetStatusInteractions(ctx,
 		status.ID,
 		true, // local-only
 	)
@@ -299,7 +299,7 @@ func (s *Surface) timelineAndNotifyStatusUpdate(ctx context.Context, status *gts
 //
 // much of the core logic is handled by functions passed as arguments
 // to usage of this function with both creation and update events.
-func (s *Surface) timelineStatusForPublic(
+func (s *Surfacer) timelineStatusForPublic(
 	ctx context.Context,
 	status *gtsmodel.Status,
 	localTimelineFn func(*gtsmodel.Account, *apimodel.Status),
@@ -317,7 +317,7 @@ func (s *Surface) timelineStatusForPublic(
 	}
 
 	// Get a list of all local instance users.
-	users, err := s.State.DB.GetAllUsers(ctx)
+	users, err := s.state.DB.GetAllUsers(ctx)
 	if err != nil {
 		log.Errorf(ctx, "db error getting local users: %v", err)
 		return
@@ -358,7 +358,7 @@ func (s *Surface) timelineStatusForPublic(
 //
 // much of the core logic is handled by functions passed as arguments
 // to usage of this function with both creation and update events.
-func (s *Surface) timelineAndNotifyStatusForFollowers(
+func (s *Surfacer) timelineAndNotifyStatusForFollowers(
 	ctx context.Context,
 	status *gtsmodel.Status,
 	homeTimelineFn func(*gtsmodel.Account, *apimodel.Status),
@@ -370,7 +370,7 @@ func (s *Surface) timelineAndNotifyStatusForFollowers(
 	}
 
 	// Get all local followers of the account that posted the status.
-	follows, err := s.State.DB.GetAccountLocalFollowers(ctx, status.AccountID)
+	follows, err := s.state.DB.GetAccountLocalFollowers(ctx, status.AccountID)
 	if err != nil {
 		log.Errorf(ctx, "db error getting local followers of account %s: %v", status.Account.URI, err)
 		return
@@ -423,7 +423,7 @@ func (s *Surface) timelineAndNotifyStatusForFollowers(
 		}
 
 		// Get all lists that contain this given follow.
-		lists, err := s.State.DB.GetListsContainingFollowID(
+		lists, err := s.state.DB.GetListsContainingFollowID(
 			gtscontext.SetBarebones(ctx), // no sub-models
 			follow.ID,
 		)
@@ -512,7 +512,7 @@ func (s *Surface) timelineAndNotifyStatusForFollowers(
 	}
 
 	// Get the list of account IDs following determined useable tag IDs.
-	accountIDs, err := s.State.DB.GetAccountIDsFollowingTagIDs(ctx, tagIDs)
+	accountIDs, err := s.state.DB.GetAccountIDsFollowingTagIDs(ctx, tagIDs)
 	if err != nil {
 		log.Errorf(ctx, "db error getting tag followers: %v", err)
 		return
@@ -534,7 +534,7 @@ func (s *Surface) timelineAndNotifyStatusForFollowers(
 	}
 
 	// Fetch account models for enumerated IDs.
-	accounts, err := s.State.DB.GetAccountsByIDs(
+	accounts, err := s.state.DB.GetAccountsByIDs(
 		gtscontext.SetBarebones(ctx),
 		accountIDs,
 	)
@@ -566,7 +566,7 @@ func (s *Surface) timelineAndNotifyStatusForFollowers(
 }
 
 // timelineStatusForTags attempts to insert given status into relevant tag timeline caches.
-func (s *Surface) timelineStatusForTags(status *gtsmodel.Status) {
+func (s *Surfacer) timelineStatusForTags(status *gtsmodel.Status) {
 	if status.Visibility != gtsmodel.VisibilityPublic ||
 		status.BoostOfID != "" {
 		// Only include "public" non-boost
@@ -589,7 +589,7 @@ func (s *Surface) timelineStatusForTags(status *gtsmodel.Status) {
 
 	for _, tagID := range tagIDs {
 		// Insert new status into the relevant tag timeline cache.
-		_ = s.State.Caches.Timelines.Tag.InsertOne(tagID, status)
+		_ = s.state.Caches.Timelines.Tag.InsertOne(tagID, status)
 	}
 }
 
@@ -598,7 +598,7 @@ func (s *Surface) timelineStatusForTags(status *gtsmodel.Status) {
 // appropriate visibility function, mute checks and status filtering
 // checks applicable in the given filter context. finally, it will
 // return a prepared frontend API model for timeline insertion.
-func (s *Surface) prepareStatusForTimeline(
+func (s *Surfacer) prepareStatusForTimeline(
 	ctx context.Context,
 	account *gtsmodel.Account,
 	status *gtsmodel.Status,
@@ -610,7 +610,7 @@ func (s *Surface) prepareStatusForTimeline(
 	err error,
 ) {
 	// Check status visibility for account's appropriate timeline.
-	visible, err := isVisibleFn(s.VisFilter, ctx, account, status)
+	visible, err := isVisibleFn(s.visFilter, ctx, account, status)
 	if err != nil {
 		return nil, false, gtserror.Newf("error checking status %s visibility: %w", status.URI, err)
 	}
@@ -620,7 +620,7 @@ func (s *Surface) prepareStatusForTimeline(
 	}
 
 	// Check if the status muted by this account.
-	muted, err := s.MuteFilter.StatusMuted(ctx,
+	muted, err := s.muteFilter.StatusMuted(ctx,
 		account,
 		status,
 	)
@@ -633,7 +633,7 @@ func (s *Surface) prepareStatusForTimeline(
 	}
 
 	// Check whether status is filtered in this context by timeline account.
-	filtered, hide, err := s.StatusFilter.StatusFilterResultsInContext(ctx,
+	filtered, hide, err := s.statusFilter.StatusFilterResultsInContext(ctx,
 		account,
 		status,
 		filterCtx,
@@ -647,7 +647,7 @@ func (s *Surface) prepareStatusForTimeline(
 	}
 
 	// Attempt to convert status to frontend API model.
-	apiStatus, err = s.Converter.StatusToAPIStatus(ctx,
+	apiStatus, err = s.converter.StatusToAPIStatus(ctx,
 		status,
 		account,
 	)
@@ -665,7 +665,7 @@ func (s *Surface) prepareStatusForTimeline(
 // listEligible checks if the given status is eligible
 // for inclusion in the list that that the given listEntry
 // belongs to, based on the replies policy of the list.
-func (s *Surface) isListEligible(
+func (s *Surfacer) isListEligible(
 	ctx context.Context,
 	list *gtsmodel.List,
 	status *gtsmodel.Status,
@@ -694,7 +694,7 @@ func (s *Surface) isListEligible(
 		//
 		// Check if replied-to account is
 		// also included in this list.
-		in, err := s.State.DB.IsAccountInList(ctx,
+		in, err := s.state.DB.IsAccountInList(ctx,
 			list.ID,
 			status.InReplyToAccountID,
 		)
@@ -711,7 +711,7 @@ func (s *Surface) isListEligible(
 		//
 		// Check if replied-to account is
 		// followed by list owner account.
-		follows, err := s.State.DB.IsFollowing(ctx,
+		follows, err := s.state.DB.IsFollowing(ctx,
 			list.AccountID,
 			status.InReplyToAccountID,
 		)
@@ -726,35 +726,35 @@ func (s *Surface) isListEligible(
 	}
 }
 
-// deleteStatusFromTimelines completely removes the given status from all timelines.
+// DeleteStatusFromTimelines completely removes the given status from all timelines.
 // It will also stream deletion of the status to all open streams.
-func (s *Surface) deleteStatusFromTimelines(ctx context.Context, statusID string) {
-	s.State.Caches.Timelines.Public.RemoveByStatusIDs(statusID)
-	s.State.Caches.Timelines.Local.RemoveByStatusIDs(statusID)
-	s.State.Caches.Timelines.Home.RemoveByStatusIDs(statusID)
-	s.State.Caches.Timelines.List.RemoveByStatusIDs(statusID)
-	s.State.Caches.Timelines.Tag.RemoveByStatusIDs(statusID)
-	s.Stream.Delete(ctx, statusID)
+func (s *Surfacer) DeleteStatusFromTimelines(ctx context.Context, statusID string) {
+	s.state.Caches.Timelines.Public.RemoveByStatusIDs(statusID)
+	s.state.Caches.Timelines.Local.RemoveByStatusIDs(statusID)
+	s.state.Caches.Timelines.Home.RemoveByStatusIDs(statusID)
+	s.state.Caches.Timelines.List.RemoveByStatusIDs(statusID)
+	s.state.Caches.Timelines.Tag.RemoveByStatusIDs(statusID)
+	s.stream.Delete(ctx, statusID)
 }
 
-// removeTimelineEntriesByAccount removes all cached timeline entries authored by account ID.
-func (s *Surface) removeTimelineEntriesByAccount(accountID string) {
-	s.State.Caches.Timelines.Public.RemoveByAccountIDs(accountID)
-	s.State.Caches.Timelines.Local.RemoveByAccountIDs(accountID)
-	s.State.Caches.Timelines.Home.RemoveByAccountIDs(accountID)
-	s.State.Caches.Timelines.List.RemoveByAccountIDs(accountID)
-	s.State.Caches.Timelines.Tag.RemoveByAccountIDs(accountID)
+// RemoveTimelineEntriesByAccount removes all cached timeline entries authored by account ID.
+func (s *Surfacer) RemoveTimelineEntriesByAccount(accountID string) {
+	s.state.Caches.Timelines.Public.RemoveByAccountIDs(accountID)
+	s.state.Caches.Timelines.Local.RemoveByAccountIDs(accountID)
+	s.state.Caches.Timelines.Home.RemoveByAccountIDs(accountID)
+	s.state.Caches.Timelines.List.RemoveByAccountIDs(accountID)
+	s.state.Caches.Timelines.Tag.RemoveByAccountIDs(accountID)
 }
 
-func (s *Surface) removeRelationshipFromTimelines(ctx context.Context, timelineAccountID string, targetAccountID string) {
+func (s *Surfacer) RemoveRelationshipFromTimelines(ctx context.Context, timelineAccountID string, targetAccountID string) {
 	// Remove all statuses by target account
 	// from given account's home timeline.
-	s.State.Caches.Timelines.Home.
+	s.state.Caches.Timelines.Home.
 		MustGet(timelineAccountID).
 		RemoveByAccountIDs(targetAccountID)
 
 	// Get the IDs of all the lists owned by the given account ID.
-	listIDs, err := s.State.DB.GetListIDsByAccountID(ctx, timelineAccountID)
+	listIDs, err := s.state.DB.GetListIDsByAccountID(ctx, timelineAccountID)
 	if err != nil {
 		log.Errorf(ctx, "error getting lists for account %s: %v", timelineAccountID, err)
 	}
@@ -762,7 +762,7 @@ func (s *Surface) removeRelationshipFromTimelines(ctx context.Context, timelineA
 	for _, listID := range listIDs {
 		// Remove all statuses by target account
 		// from given account's list timelines.
-		s.State.Caches.Timelines.List.MustGet(listID).
+		s.state.Caches.Timelines.List.MustGet(listID).
 			RemoveByAccountIDs(targetAccountID)
 	}
 }

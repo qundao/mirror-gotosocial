@@ -21,6 +21,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/federation"
 	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
+	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 )
 
@@ -29,14 +30,21 @@ type Processor struct {
 	federator *federation.Federator
 	converter *typeutils.Converter
 	visFilter *visibility.Filter
+	surfacer  *surfacing.Surfacer
 }
 
-// New returns a new status processor.
-func New(state *state.State, federator *federation.Federator, converter *typeutils.Converter, visFilter *visibility.Filter) Processor {
+func New(
+	state *state.State,
+	federator *federation.Federator,
+	converter *typeutils.Converter,
+	visFilter *visibility.Filter,
+	surfacer *surfacing.Surfacer,
+) Processor {
 	return Processor{
 		state:     state,
 		federator: federator,
 		converter: converter,
 		visFilter: visFilter,
+		surfacer:  surfacer,
 	}
 }

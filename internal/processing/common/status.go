@@ -112,6 +112,10 @@ func (p *Processor) GetTargetStatusBy(
 			target,
 			nil,
 			window,
+			// Pass callback to insert
+			// other statuses in thread
+			// into timelines (as appropriate).
+			p.surfacer.TimelineAndNotifyStatus,
 		)
 		if err != nil {
 			log.Errorf(ctx, "error refreshing target %s: %v", target.URI, err)

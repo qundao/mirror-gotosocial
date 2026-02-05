@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package workers_test
+package surfacing_test
 
 import (
 	"sync"
@@ -26,29 +26,45 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/processing/workers"
+	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
 
-type SurfaceNotifyTestSuite struct {
-	WorkersTestSuite
+type SurfacingTestSuite struct {
+	suite.Suite
+	testAccounts map[string]*gtsmodel.Account
 }
 
-func (suite *SurfaceNotifyTestSuite) TestSpamNotifs() {
+func (suite *SurfacingTestSuite) SetupSuite() {
+	suite.testAccounts = testrig.NewTestAccounts()
+}
+
+func (suite *SurfacingTestSuite) SetupTest() {
+	testrig.InitTestConfig()
+	testrig.InitTestLog()
+}
+
+const (
+	rMediaPath    = "../../testrig/media"
+	rTemplatePath = "../../web/template"
+)
+
+func (suite *SurfacingTestSuite) TestSpamNotifs() {
 	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
 	defer testrig.TearDownTestStructs(testStructs)
 
-	surface := &workers.Surface{
-		State:         testStructs.State,
-		Converter:     testStructs.TypeConverter,
-		Stream:        testStructs.Processor.Stream(),
-		VisFilter:     visibility.NewFilter(testStructs.State),
-		MuteFilter:    mutes.NewFilter(testStructs.State),
-		EmailSender:   testStructs.EmailSender,
-		WebPushSender: testStructs.WebPushSender,
-		Conversations: testStructs.Processor.Conversations(),
-	}
+	surface := surfacing.New(
+		testStructs.State,
+		testStructs.TypeConverter,
+		testStructs.Processor.Stream(),
+		visibility.NewFilter(testStructs.State),
+		mutes.NewFilter(testStructs.State),
+		testStructs.StatusFilter,
+		testStructs.EmailSender,
+		testStructs.WebPushSender,
+		testStructs.Processor.Conversations(),
+	)
 
 	var (
 		ctx              = suite.T().Context()
@@ -116,5 +132,5 @@ func (suite *SurfaceNotifyTestSuite) TestSpamNotifs() {
 }
 
 func TestSurfaceNotifyTestSuite(t *testing.T) {
-	suite.Run(t, new(SurfaceNotifyTestSuite))
+	suite.Run(t, new(SurfacingTestSuite))
 }

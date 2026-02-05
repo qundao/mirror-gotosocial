@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package workers
+package surfacing
 
 import (
 	"context"
@@ -31,10 +31,10 @@ import (
 	"github.com/google/uuid"
 )
 
-// emailUserReportClosed emails the user who created the
+// EmailUserReportClosed emails the user who created the
 // given report, to inform them the report has been closed.
-func (s *Surface) emailUserReportClosed(ctx context.Context, report *gtsmodel.Report) error {
-	user, err := s.State.DB.GetUserByAccountID(ctx, report.Account.ID)
+func (s *Surfacer) EmailUserReportClosed(ctx context.Context, report *gtsmodel.Report) error {
+	user, err := s.state.DB.GetUserByAccountID(ctx, report.Account.ID)
 	if err != nil {
 		return gtserror.Newf("db error getting user: %w", err)
 	}
@@ -51,12 +51,12 @@ func (s *Surface) emailUserReportClosed(ctx context.Context, report *gtsmodel.Re
 		return nil
 	}
 
-	instance, err := s.State.DB.GetInstance(ctx, config.GetHost())
+	instance, err := s.state.DB.GetInstance(ctx, config.GetHost())
 	if err != nil {
 		return gtserror.Newf("db error getting instance: %w", err)
 	}
 
-	if err := s.State.DB.PopulateReport(ctx, report); err != nil {
+	if err := s.state.DB.PopulateReport(ctx, report); err != nil {
 		return gtserror.Newf("error populating report: %w", err)
 	}
 
@@ -69,15 +69,15 @@ func (s *Surface) emailUserReportClosed(ctx context.Context, report *gtsmodel.Re
 		ActionTakenComment:   report.ActionTaken,
 	}
 
-	return s.EmailSender.SendReportClosedEmail(user.Email, reportClosedData)
+	return s.emailSender.SendReportClosedEmail(user.Email, reportClosedData)
 }
 
-// emailUserPleaseConfirm emails the given user
+// EmailUserPleaseConfirm emails the given user
 // to ask them to confirm their email address.
 //
 // If newSignup is true, template will be geared
 // towards someone who just created an account.
-func (s *Surface) emailUserPleaseConfirm(ctx context.Context, user *gtsmodel.User, newSignup bool) error {
+func (s *Surfacer) EmailUserPleaseConfirm(ctx context.Context, user *gtsmodel.User, newSignup bool) error {
 	if user.UnconfirmedEmail == "" ||
 		user.UnconfirmedEmail == user.Email {
 		// User has already confirmed this
@@ -85,7 +85,7 @@ func (s *Surface) emailUserPleaseConfirm(ctx context.Context, user *gtsmodel.Use
 		return nil
 	}
 
-	instance, err := s.State.DB.GetInstance(ctx, config.GetHost())
+	instance, err := s.state.DB.GetInstance(ctx, config.GetHost())
 	if err != nil {
 		return gtserror.Newf("db error getting instance: %w", err)
 	}
@@ -100,7 +100,7 @@ func (s *Surface) emailUserPleaseConfirm(ctx context.Context, user *gtsmodel.Use
 	)
 
 	// Assemble email contents and send the email.
-	if err := s.EmailSender.SendConfirmEmail(
+	if err := s.emailSender.SendConfirmEmail(
 		user.UnconfirmedEmail,
 		email.ConfirmData{
 			Username:     user.Account.Username,
@@ -120,7 +120,7 @@ func (s *Surface) emailUserPleaseConfirm(ctx context.Context, user *gtsmodel.Use
 	user.ConfirmationSentAt = now
 	user.LastEmailedAt = now
 
-	if err := s.State.DB.UpdateUser(
+	if err := s.state.DB.UpdateUser(
 		ctx,
 		user,
 		"confirmation_token",
@@ -133,9 +133,9 @@ func (s *Surface) emailUserPleaseConfirm(ctx context.Context, user *gtsmodel.Use
 	return nil
 }
 
-// emailUserSignupApproved emails the given user
+// EmailUserSignupApproved emails the given user
 // to inform them their sign-up has been approved.
-func (s *Surface) emailUserSignupApproved(ctx context.Context, user *gtsmodel.User) error {
+func (s *Surfacer) EmailUserSignupApproved(ctx context.Context, user *gtsmodel.User) error {
 	// User may have been approved without
 	// their email address being confirmed
 	// yet. Just send to whatever we have.
@@ -144,13 +144,13 @@ func (s *Surface) emailUserSignupApproved(ctx context.Context, user *gtsmodel.Us
 		emailAddr = user.UnconfirmedEmail
 	}
 
-	instance, err := s.State.DB.GetInstance(ctx, config.GetHost())
+	instance, err := s.state.DB.GetInstance(ctx, config.GetHost())
 	if err != nil {
 		return gtserror.Newf("db error getting instance: %w", err)
 	}
 
 	// Assemble email contents and send the email.
-	if err := s.EmailSender.SendSignupApprovedEmail(
+	if err := s.emailSender.SendSignupApprovedEmail(
 		emailAddr,
 		email.SignupApprovedData{
 			Username:     user.Account.Username,
@@ -166,7 +166,7 @@ func (s *Surface) emailUserSignupApproved(ctx context.Context, user *gtsmodel.Us
 	now := time.Now()
 	user.LastEmailedAt = now
 
-	if err := s.State.DB.UpdateUser(
+	if err := s.state.DB.UpdateUser(
 		ctx,
 		user,
 		"last_emailed_at",
@@ -179,14 +179,14 @@ func (s *Surface) emailUserSignupApproved(ctx context.Context, user *gtsmodel.Us
 
 // emailUserSignupApproved emails the given user
 // to inform them their sign-up has been approved.
-func (s *Surface) emailUserSignupRejected(ctx context.Context, deniedUser *gtsmodel.DeniedUser) error {
-	instance, err := s.State.DB.GetInstance(ctx, config.GetHost())
+func (s *Surfacer) EmailUserSignupRejected(ctx context.Context, deniedUser *gtsmodel.DeniedUser) error {
+	instance, err := s.state.DB.GetInstance(ctx, config.GetHost())
 	if err != nil {
 		return gtserror.Newf("db error getting instance: %w", err)
 	}
 
 	// Assemble email contents and send the email.
-	return s.EmailSender.SendSignupRejectedEmail(
+	return s.emailSender.SendSignupRejectedEmail(
 		deniedUser.Email,
 		email.SignupRejectedData{
 			Message:      deniedUser.Message,
@@ -196,15 +196,15 @@ func (s *Surface) emailUserSignupRejected(ctx context.Context, deniedUser *gtsmo
 	)
 }
 
-// emailAdminReportOpened emails all active moderators/admins
+// EmailAdminReportOpened emails all active moderators/admins
 // of this instance that a new report has been created.
-func (s *Surface) emailAdminReportOpened(ctx context.Context, report *gtsmodel.Report) error {
-	instance, err := s.State.DB.GetInstance(ctx, config.GetHost())
+func (s *Surfacer) EmailAdminReportOpened(ctx context.Context, report *gtsmodel.Report) error {
+	instance, err := s.state.DB.GetInstance(ctx, config.GetHost())
 	if err != nil {
 		return gtserror.Newf("error getting instance: %w", err)
 	}
 
-	toAddresses, err := s.State.DB.GetInstanceModeratorAddresses(ctx)
+	toAddresses, err := s.state.DB.GetInstanceModeratorAddresses(ctx)
 	if err != nil {
 		if errors.Is(err, db.ErrNoEntries) {
 			// No registered moderator addresses.
@@ -213,7 +213,7 @@ func (s *Surface) emailAdminReportOpened(ctx context.Context, report *gtsmodel.R
 		return gtserror.Newf("error getting instance moderator addresses: %w", err)
 	}
 
-	if err := s.State.DB.PopulateReport(ctx, report); err != nil {
+	if err := s.state.DB.PopulateReport(ctx, report); err != nil {
 		return gtserror.Newf("error populating report: %w", err)
 	}
 
@@ -225,22 +225,22 @@ func (s *Surface) emailAdminReportOpened(ctx context.Context, report *gtsmodel.R
 		ReportTargetDomain: report.TargetAccount.Domain,
 	}
 
-	if err := s.EmailSender.SendNewReportEmail(toAddresses, reportData); err != nil {
+	if err := s.emailSender.SendNewReportEmail(toAddresses, reportData); err != nil {
 		return gtserror.Newf("error emailing instance moderators: %w", err)
 	}
 
 	return nil
 }
 
-// emailAdminNewSignup emails all active moderators/admins of this
+// EmailAdminNewSignup emails all active moderators/admins of this
 // instance that a new account sign-up has been submitted to the instance.
-func (s *Surface) emailAdminNewSignup(ctx context.Context, newUser *gtsmodel.User) error {
-	instance, err := s.State.DB.GetInstance(ctx, config.GetHost())
+func (s *Surfacer) EmailAdminNewSignup(ctx context.Context, newUser *gtsmodel.User) error {
+	instance, err := s.state.DB.GetInstance(ctx, config.GetHost())
 	if err != nil {
 		return gtserror.Newf("error getting instance: %w", err)
 	}
 
-	toAddresses, err := s.State.DB.GetInstanceModeratorAddresses(ctx)
+	toAddresses, err := s.state.DB.GetInstanceModeratorAddresses(ctx)
 	if err != nil {
 		if errors.Is(err, db.ErrNoEntries) {
 			// No registered moderator addresses.
@@ -250,7 +250,7 @@ func (s *Surface) emailAdminNewSignup(ctx context.Context, newUser *gtsmodel.Use
 	}
 
 	// Ensure user populated.
-	if err := s.State.DB.PopulateUser(ctx, newUser); err != nil {
+	if err := s.state.DB.PopulateUser(ctx, newUser); err != nil {
 		return gtserror.Newf("error populating user: %w", err)
 	}
 
@@ -263,7 +263,7 @@ func (s *Surface) emailAdminNewSignup(ctx context.Context, newUser *gtsmodel.Use
 		SignupURL:      instance.URI + "/settings/moderation/accounts/" + newUser.AccountID,
 	}
 
-	if err := s.EmailSender.SendNewSignupEmail(toAddresses, newSignupData); err != nil {
+	if err := s.emailSender.SendNewSignupEmail(toAddresses, newSignupData); err != nil {
 		return gtserror.Newf("error emailing instance moderators: %w", err)
 	}
 

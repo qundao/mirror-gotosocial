@@ -30,8 +30,8 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/account"
-	"code.superseriousbusiness.org/gotosocial/internal/processing/common"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
+	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
@@ -42,13 +42,11 @@ import (
 // specifically for messages originating
 // from the client/REST API.
 type clientAPI struct {
-	state     *state.State
-	converter *typeutils.Converter
-	surface   *Surface
-	federate  *federate
-	account   *account.Processor
-	common    *common.Processor
-	utils     *utils
+	state    *state.State
+	surfacer *surfacing.Surfacer
+	federate *federate
+	account  *account.Processor
+	utils    *utils
 }
 
 func (p *Processor) ProcessFromClientAPI(ctx context.Context, cMsg *messages.FromClientAPI) error {
@@ -253,17 +251,17 @@ func (p *clientAPI) CreateUser(ctx context.Context, cMsg *messages.FromClientAPI
 	}
 
 	// Notify mods of the new signup.
-	if err := p.surface.notifySignup(ctx, newUser); err != nil {
+	if err := p.surfacer.NotifySignup(ctx, newUser); err != nil {
 		log.Errorf(ctx, "error notifying mods of new sign-up: %v", err)
 	}
 
 	// Send "new sign up" email to mods.
-	if err := p.surface.emailAdminNewSignup(ctx, newUser); err != nil {
+	if err := p.surfacer.EmailAdminNewSignup(ctx, newUser); err != nil {
 		log.Errorf(ctx, "error emailing new signup: %v", err)
 	}
 
 	// Send "please confirm your address" email to the new user.
-	if err := p.surface.emailUserPleaseConfirm(ctx, newUser, true); err != nil {
+	if err := p.surfacer.EmailUserPleaseConfirm(ctx, newUser, true); err != nil {
 		log.Errorf(ctx, "error emailing confirm: %v", err)
 	}
 
@@ -276,7 +274,7 @@ func (p *clientAPI) CreateStatus(ctx context.Context, cMsg *messages.FromClientA
 		return gtserror.Newf("%T not parseable as *gtsmodel.Status", cMsg.GTSModel)
 	}
 
-	if err := p.surface.timelineAndNotifyStatus(ctx, status); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, status); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
@@ -321,7 +319,7 @@ func (p *clientAPI) CreateReplyRequest(ctx context.Context, cMsg *messages.FromC
 		}
 
 		// Notify target account (if local) of pending reply.
-		if err := p.surface.notifyPendingReply(ctx, intReq.Reply); err != nil {
+		if err := p.surfacer.NotifyPendingReply(ctx, intReq.Reply); err != nil {
 			return gtserror.Newf("error notifying pending reply: %w", err)
 		}
 
@@ -373,7 +371,7 @@ func (p *clientAPI) CreateReplyRequest(ctx context.Context, cMsg *messages.FromC
 	}
 
 	// Timeline + notify the reply.
-	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, reply); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
@@ -453,7 +451,7 @@ func (p *clientAPI) CreateFollowReq(ctx context.Context, cMsg *messages.FromClie
 		})
 	}
 
-	if err := p.surface.notifyFollowRequest(ctx, followRequest); err != nil {
+	if err := p.surfacer.NotifyFollowRequest(ctx, followRequest); err != nil {
 		log.Errorf(ctx, "error notifying follow request: %v", err)
 	}
 
@@ -481,7 +479,7 @@ func (p *clientAPI) CreateLike(ctx context.Context, cMsg *messages.FromClientAPI
 		return gtserror.Newf("error populating status fave: %w", err)
 	}
 
-	if err := p.surface.notifyFave(ctx, fave); err != nil {
+	if err := p.surfacer.NotifyFave(ctx, fave); err != nil {
 		log.Errorf(ctx, "error notifying fave: %v", err)
 	}
 
@@ -526,7 +524,7 @@ func (p *clientAPI) CreateLikeRequest(ctx context.Context, cMsg *messages.FromCl
 		}
 
 		// Notify target account (if local) of pending fave.
-		if err := p.surface.notifyPendingFave(ctx, intReq.Like); err != nil {
+		if err := p.surfacer.NotifyPendingFave(ctx, intReq.Like); err != nil {
 			return gtserror.Newf("error notifying pending fave: %w", err)
 		}
 
@@ -578,7 +576,7 @@ func (p *clientAPI) CreateLikeRequest(ctx context.Context, cMsg *messages.FromCl
 	}
 
 	// Notify the status author about the fave.
-	if err := p.surface.notifyFave(ctx, fave); err != nil {
+	if err := p.surfacer.NotifyFave(ctx, fave); err != nil {
 		log.Errorf(ctx, "error notifying fave: %v", err)
 	}
 
@@ -596,12 +594,12 @@ func (p *clientAPI) CreateAnnounce(ctx context.Context, cMsg *messages.FromClien
 	}
 
 	// Timeline and notify the boost wrapper status.
-	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, boost); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
 	// Notify the boost target account (if local).
-	if err := p.surface.notifyAnnounce(ctx, boost); err != nil {
+	if err := p.surfacer.NotifyAnnounce(ctx, boost); err != nil {
 		log.Errorf(ctx, "error notifying boost: %v", err)
 	}
 
@@ -647,7 +645,7 @@ func (p *clientAPI) CreateAnnounceRequest(ctx context.Context, cMsg *messages.Fr
 		}
 
 		// Notify target account (if local) of pending announce.
-		if err := p.surface.notifyPendingAnnounce(ctx, intReq.Announce); err != nil {
+		if err := p.surfacer.NotifyPendingAnnounce(ctx, intReq.Announce); err != nil {
 			return gtserror.Newf("error notifying pending announce: %w", err)
 		}
 
@@ -694,12 +692,12 @@ func (p *clientAPI) CreateAnnounceRequest(ctx context.Context, cMsg *messages.Fr
 	}
 
 	// Timeline and notify the boost wrapper status.
-	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, boost); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
 	// Notify the boost target account.
-	if err := p.surface.notifyAnnounce(ctx, boost); err != nil {
+	if err := p.surfacer.NotifyAnnounce(ctx, boost); err != nil {
 		log.Errorf(ctx, "error notifying boost: %v", err)
 	}
 
@@ -724,7 +722,7 @@ func (p *clientAPI) CreateBlock(ctx context.Context, cMsg *messages.FromClientAP
 
 	if block.Account.IsLocal() {
 		// Remove posts by target from origin's timelines.
-		p.surface.removeRelationshipFromTimelines(ctx,
+		p.surfacer.RemoveRelationshipFromTimelines(ctx,
 			block.AccountID,
 			block.TargetAccountID,
 		)
@@ -732,7 +730,7 @@ func (p *clientAPI) CreateBlock(ctx context.Context, cMsg *messages.FromClientAP
 
 	if block.TargetAccount.IsLocal() {
 		// Remove posts by origin from target's timelines.
-		p.surface.removeRelationshipFromTimelines(ctx,
+		p.surfacer.RemoveRelationshipFromTimelines(ctx,
 			block.TargetAccountID,
 			block.AccountID,
 		)
@@ -761,7 +759,7 @@ func (p *clientAPI) UpdateStatus(ctx context.Context, cMsg *messages.FromClientA
 	}
 
 	// Stream and notify relevant local users that the status has been edited.
-	if err := p.surface.timelineAndNotifyStatusUpdate(ctx, status); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatusUpdate(ctx, status); err != nil {
 		log.Errorf(ctx, "error streaming status edit: %v", err)
 	}
 
@@ -793,7 +791,7 @@ func (p *clientAPI) UpdateReport(ctx context.Context, cMsg *messages.FromClientA
 		return nil
 	}
 
-	if err := p.surface.emailUserReportClosed(ctx, report); err != nil {
+	if err := p.surfacer.EmailUserReportClosed(ctx, report); err != nil {
 		log.Errorf(ctx, "error emailing report closed: %v", err)
 	}
 
@@ -809,7 +807,7 @@ func (p *clientAPI) UpdateUser(ctx context.Context, cMsg *messages.FromClientAPI
 	// The only possible "UpdateUser" action is to update the
 	// user's email address, so we can safely assume by this
 	// point that a new unconfirmed email address has been set.
-	if err := p.surface.emailUserPleaseConfirm(ctx, user, false); err != nil {
+	if err := p.surfacer.EmailUserPleaseConfirm(ctx, user, false); err != nil {
 		log.Errorf(ctx, "error emailing report closed: %v", err)
 	}
 
@@ -822,7 +820,7 @@ func (p *clientAPI) AcceptFollow(ctx context.Context, cMsg *messages.FromClientA
 		return gtserror.Newf("%T not parseable as *gtsmodel.Follow", cMsg.GTSModel)
 	}
 
-	if err := p.surface.notifyFollow(ctx, follow); err != nil {
+	if err := p.surfacer.NotifyFollow(ctx, follow); err != nil {
 		log.Errorf(ctx, "error notifying follow: %v", err)
 	}
 
@@ -856,7 +854,7 @@ func (p *clientAPI) UndoFollow(ctx context.Context, cMsg *messages.FromClientAPI
 
 	if follow.Account.IsLocal() {
 		// Remove posts by target from origin's timelines.
-		p.surface.removeRelationshipFromTimelines(ctx,
+		p.surfacer.RemoveRelationshipFromTimelines(ctx,
 			follow.AccountID,
 			follow.TargetAccountID,
 		)
@@ -864,7 +862,7 @@ func (p *clientAPI) UndoFollow(ctx context.Context, cMsg *messages.FromClientAPI
 
 	if follow.TargetAccount.IsLocal() {
 		// Remove posts by origin from target's timelines.
-		p.surface.removeRelationshipFromTimelines(ctx,
+		p.surfacer.RemoveRelationshipFromTimelines(ctx,
 			follow.TargetAccountID,
 			follow.AccountID,
 		)
@@ -924,7 +922,7 @@ func (p *clientAPI) UndoAnnounce(ctx context.Context, cMsg *messages.FromClientA
 	}
 
 	// Delete the boost wrapper status from timelines.
-	p.surface.deleteStatusFromTimelines(ctx, status.ID)
+	p.surfacer.DeleteStatusFromTimelines(ctx, status.ID)
 
 	if err := p.federate.UndoAnnounce(ctx, status); err != nil {
 		log.Errorf(ctx, "error federating announce undo: %v", err)
@@ -1024,7 +1022,7 @@ func (p *clientAPI) DeleteAccountOrUser(ctx context.Context, cMsg *messages.From
 	p.state.Workers.Federator.Queue.Delete("TargetURI", account.URI)
 
 	// Remove any entries authored by account from timelines.
-	p.surface.removeTimelineEntriesByAccount(account.ID)
+	p.surfacer.RemoveTimelineEntriesByAccount(account.ID)
 
 	// Remove any of their cached timelines.
 	p.state.Caches.Timelines.Home.Delete(account.ID)
@@ -1067,7 +1065,7 @@ func (p *clientAPI) ReportAccount(ctx context.Context, cMsg *messages.FromClient
 		}
 	}
 
-	if err := p.surface.emailAdminReportOpened(ctx, report); err != nil {
+	if err := p.surfacer.EmailAdminReportOpened(ctx, report); err != nil {
 		log.Errorf(ctx, "error emailing report opened: %v", err)
 	}
 
@@ -1120,7 +1118,7 @@ func (p *clientAPI) AcceptUser(ctx context.Context, cMsg *messages.FromClientAPI
 	}
 
 	// Send "your sign-up has been approved" email to the new user.
-	if err := p.surface.emailUserSignupApproved(ctx, newUser); err != nil {
+	if err := p.surfacer.EmailUserSignupApproved(ctx, newUser); err != nil {
 		log.Errorf(ctx, "error emailing: %v", err)
 	}
 
@@ -1159,7 +1157,7 @@ func (p *clientAPI) RejectUser(ctx context.Context, cMsg *messages.FromClientAPI
 
 	if *deniedUser.SendEmail {
 		// Send "your sign-up has been rejected" email to the denied user.
-		if err := p.surface.emailUserSignupRejected(ctx, deniedUser); err != nil {
+		if err := p.surfacer.EmailUserSignupRejected(ctx, deniedUser); err != nil {
 			log.Errorf(ctx, "error emailing: %v", err)
 		}
 	}
@@ -1174,7 +1172,7 @@ func (p *clientAPI) AcceptLike(ctx context.Context, cMsg *messages.FromClientAPI
 	}
 
 	// Notify the fave (distinct from the notif for the pending fave).
-	if err := p.surface.notifyFave(ctx, req.Like); err != nil {
+	if err := p.surfacer.NotifyFave(ctx, req.Like); err != nil {
 		log.Errorf(ctx, "error notifying fave: %v", err)
 	}
 
@@ -1195,7 +1193,7 @@ func (p *clientAPI) AcceptReply(ctx context.Context, cMsg *messages.FromClientAP
 	reply := req.Reply
 
 	// Timeline the reply + notify relevant accounts.
-	if err := p.surface.timelineAndNotifyStatus(ctx, reply); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, reply); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status reply: %v", err)
 	}
 
@@ -1216,12 +1214,12 @@ func (p *clientAPI) AcceptAnnounce(ctx context.Context, cMsg *messages.FromClien
 	boost := req.Announce
 
 	// Timeline and notify the announce.
-	if err := p.surface.timelineAndNotifyStatus(ctx, boost); err != nil {
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, boost); err != nil {
 		log.Errorf(ctx, "error timelining and notifying status: %v", err)
 	}
 
 	// Notify the announce (distinct from the notif for the pending announce).
-	if err := p.surface.notifyAnnounce(ctx, boost); err != nil {
+	if err := p.surfacer.NotifyAnnounce(ctx, boost); err != nil {
 		log.Errorf(ctx, "error notifying announce: %v", err)
 	}
 

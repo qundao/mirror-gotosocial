@@ -85,6 +85,7 @@ func SetupTestStructs(
 	oauthServer := NewTestOauthServer(&state)
 	emailSender := NewEmailSender(rTemplatePath, nil)
 	webPushSender := NewWebPushMockSender()
+	surfacer := NewTestSurfacer(&state, emailSender, webPushSender)
 
 	common := common.New(
 		&state,
@@ -94,6 +95,7 @@ func SetupTestStructs(
 		visFilter,
 		muteFilter,
 		statusFilter,
+		surfacer,
 	)
 
 	processor := processing.NewProcessor(

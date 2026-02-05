@@ -18,19 +18,12 @@
 package workers
 
 import (
-	"code.superseriousbusiness.org/gotosocial/internal/email"
 	"code.superseriousbusiness.org/gotosocial/internal/federation"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/mutes"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/status"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/account"
-	"code.superseriousbusiness.org/gotosocial/internal/processing/common"
-	"code.superseriousbusiness.org/gotosocial/internal/processing/conversations"
 	"code.superseriousbusiness.org/gotosocial/internal/processing/media"
-	"code.superseriousbusiness.org/gotosocial/internal/processing/stream"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
+	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
-	"code.superseriousbusiness.org/gotosocial/internal/webpush"
 	"code.superseriousbusiness.org/gotosocial/internal/workers"
 )
 
@@ -42,18 +35,11 @@ type Processor struct {
 
 func New(
 	state *state.State,
-	common *common.Processor,
 	federator *federation.Federator,
 	converter *typeutils.Converter,
-	visFilter *visibility.Filter,
-	muteFilter *mutes.Filter,
-	statusFilter *status.Filter,
-	emailSender email.Sender,
-	webPushSender webpush.Sender,
+	surfacer *surfacing.Surfacer,
 	account *account.Processor,
 	media *media.Processor,
-	stream *stream.Processor,
-	conversations *conversations.Processor,
 ) Processor {
 	// Init federate logic
 	// wrapper struct.
@@ -63,46 +49,29 @@ func New(
 		converter: converter,
 	}
 
-	// Init surface logic
-	// wrapper struct.
-	surface := &Surface{
-		State:         state,
-		Converter:     converter,
-		Stream:        stream,
-		VisFilter:     visFilter,
-		MuteFilter:    muteFilter,
-		StatusFilter:  statusFilter,
-		EmailSender:   emailSender,
-		WebPushSender: webPushSender,
-		Conversations: conversations,
-	}
-
 	// Init shared util funcs.
 	utils := &utils{
 		state:     state,
 		media:     media,
 		account:   account,
-		surface:   surface,
+		surfacer:  surfacer,
 		converter: converter,
 	}
 
 	return Processor{
 		workers: &state.Workers,
 		clientAPI: clientAPI{
-			state:     state,
-			converter: converter,
-			surface:   surface,
-			federate:  federate,
-			account:   account,
-			common:    common,
-			utils:     utils,
+			state:    state,
+			surfacer: surfacer,
+			federate: federate,
+			account:  account,
+			utils:    utils,
 		},
 		fediAPI: fediAPI{
 			state:    state,
-			surface:  surface,
+			surfacer: surfacer,
 			federate: federate,
 			account:  account,
-			common:   common,
 			utils:    utils,
 		},
 	}
