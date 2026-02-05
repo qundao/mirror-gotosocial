@@ -12,7 +12,6 @@ import (
 	"github.com/tetratelabs/wazero/api"
 
 	"github.com/ncruces/go-sqlite3/internal/util"
-	"github.com/ncruces/go-sqlite3/util/sql3util"
 	"github.com/ncruces/julianday"
 )
 
@@ -50,8 +49,7 @@ func ExportHostFunctions(env wazero.HostModuleBuilder) wazero.HostModuleBuilder 
 }
 
 func vfsFind(ctx context.Context, mod api.Module, zVfsName ptr_t) uint32 {
-	name := util.ReadString(mod, zVfsName, _MAX_NAME)
-	if vfs := Find(name); vfs != nil && vfs != (vfsOS{}) {
+	if find(util.ReadString(mod, zVfsName, _MAX_NAME)) != nil {
 		return 1
 	}
 	return 0
@@ -138,7 +136,7 @@ func vfsOpen(ctx context.Context, mod api.Module, pVfs, zPath, pFile ptr_t, flag
 	}
 
 	if file, ok := file.(FilePowersafeOverwrite); ok {
-		if b, ok := sql3util.ParseBool(name.URIParameter("psow")); ok {
+		if b, ok := util.ParseBool(name.URIParameter("psow")); ok {
 			file.SetPowersafeOverwrite(b)
 		}
 	}
