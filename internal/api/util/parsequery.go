@@ -99,7 +99,7 @@ const (
 	InteractionReblogsKey    = "reblogs"
 
 	/* Web view keys */
-	
+
 	WebIncludeBoostsKey = "include_boosts"
 )
 

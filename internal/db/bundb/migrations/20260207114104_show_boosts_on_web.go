@@ -21,6 +21,7 @@ import (
 	"context"
 	"reflect"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	gtsmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20260207114104_show_boosts_on_web/newmodel"
 	"github.com/uptrace/bun"
 )
@@ -46,21 +47,63 @@ func init() {
 				return err
 			}
 
-			// Create index for including boosts in web view.
-			// This is the same as the existing index but
-			// doesn't include the "boost_of_id" column.
-			err = createIndex(ctx, tx,
-				"statuses_profile_web_view_including_boosts_idx",
-				"statuses",
-				"?, ?, ?, ?, ? DESC",
-				bun.Ident("account_id"),
-				bun.Ident("visibility"),
-				bun.Ident("in_reply_to_uri"),
-				bun.Ident("federated"),
-				bun.Ident("id"),
-			)
+			log.Info(ctx, "recreating statuses web view indexes, this may take a little while...")
 
-			return err
+			// Remove existing web index.
+			if _, err := tx.
+				NewDropIndex().
+				Index("statuses_profile_web_view_idx").
+				IfExists().
+				Exec(ctx); err != nil {
+				return err
+			}
+
+			// Create index for standard web view
+			// (local, no boosts, no replies).
+			if _, err := tx.NewCreateIndex().
+				Table("statuses").
+				Index("statuses_profile_web_view_idx").
+				Column(
+					"local",
+					"account_id",
+					"visibility",
+					"in_reply_to_uri",
+					"boost_of_id",
+					"federated",
+				).
+				ColumnExpr("? DESC", bun.Ident("id")).
+				Where("? = ?", bun.Ident("local"), true).
+				Where("? IS NULL", bun.Ident("in_reply_to_uri")).
+				Where("? IS NULL", bun.Ident("boost_of_id")).
+				Where("? = ?", bun.Ident("federated"), true).
+				IfNotExists().
+				Exec(ctx); err != nil {
+				return err
+			}
+
+			// Create index for including boosts in web view.
+			// This is the same as the above index but ignores
+			// "boost_of_id" column as this may or may not be set.
+			if _, err := tx.NewCreateIndex().
+				Table("statuses").
+				Index("statuses_profile_web_view_including_boosts_idx").
+				Column(
+					"local",
+					"account_id",
+					"visibility",
+					"in_reply_to_uri",
+					"federated",
+				).
+				ColumnExpr("? DESC", bun.Ident("id")).
+				Where("? = ?", bun.Ident("local"), true).
+				Where("? IS NULL", bun.Ident("in_reply_to_uri")).
+				Where("? = ?", bun.Ident("federated"), true).
+				IfNotExists().
+				Exec(ctx); err != nil {
+				return err
+			}
+
+			return nil
 		})
 	}
 

@@ -1101,6 +1101,10 @@ func (a *accountDB) GetAccountWebStatuses(
 				)
 			}
 
+			// Local posts only, we don't show
+			// remote account's posts on the web view.
+			q = q.Where("? = ?", bun.Ident("status.local"), true)
+
 			// Select statuses created by the target account.
 			q = q.Where("? = ?", bun.Ident("status.account_id"), account.ID)
 
