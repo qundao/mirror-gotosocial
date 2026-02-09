@@ -46,14 +46,16 @@ func init() {
 				return err
 			}
 
-			// Create statuses index for
-			// including boosts in web view.
+			// Create index for including boosts in web view.
+			// This is the same as the existing index but
+			// doesn't include the "boost_of_id" column.
 			err = createIndex(ctx, tx,
 				"statuses_profile_web_view_including_boosts_idx",
 				"statuses",
-				"?, ?, ?, ? DESC",
+				"?, ?, ?, ?, ? DESC",
 				bun.Ident("account_id"),
 				bun.Ident("visibility"),
+				bun.Ident("in_reply_to_uri"),
 				bun.Ident("federated"),
 				bun.Ident("id"),
 			)
