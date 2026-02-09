@@ -4257,7 +4257,7 @@ paths:
                   name: agreement
                   type: boolean
                   x-go-name: Agreement
-                - description: The language of the confirmation email that will be sent.
+                - description: The preferred language of the account user (optional).
                   in: query
                   name: locale
                   type: string

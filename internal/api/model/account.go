@@ -196,11 +196,10 @@ type AccountCreateRequest struct {
 	// swagger:parameters
 	// required: true
 	Agreement bool `form:"agreement"  json:"agreement" xml:"agreement" binding:"required"`
-	// The language of the confirmation email that will be sent.
+	// The preferred language of the account user (optional).
 	// swagger:parameters
 	// example: en
-	// Required: true
-	Locale string `form:"locale" json:"locale" xml:"locale" binding:"required"`
+	Locale string `form:"locale" json:"locale" xml:"locale"`
 	// The IP of the sign up request, will not be parsed from the form.
 	// swagger:parameters
 	// swagger:ignore

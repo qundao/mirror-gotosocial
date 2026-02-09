@@ -430,11 +430,15 @@ func CreateAccount(form *apimodel.AccountCreateRequest) error {
 		return errors.New("agreement to terms and conditions not given")
 	}
 
-	locale, err := Language(form.Locale)
-	if err != nil {
-		return err
+	// Validate + normalize
+	// locale if provided.
+	if form.Locale != "" {
+		locale, err := Language(form.Locale)
+		if err != nil {
+			return err
+		}
+		form.Locale = locale
 	}
-	form.Locale = locale
 
 	return SignUpReason(form.Reason, config.GetAccountsReasonRequired())
 }
