@@ -137,10 +137,27 @@ func (a *adminDB) NewSignup(ctx context.Context, newSignup gtsmodel.NewSignup) (
 			return nil, err
 		}
 
+		// Take user locale from form if set.
+		// If not, fall back to first instance
+		// language if that's set, and if it's
+		// not, fall back to db default "en".
+		locale := newSignup.Locale
+		if locale == "" {
+			instanceLanguages := config.GetInstanceLanguages()
+			if len(instanceLanguages) != 0 {
+				// Use first instance lang.
+				locale = instanceLanguages[0].TagStr
+			} else {
+				// Use db default "en".
+				locale = "en"
+			}
+		}
+
 		// Insert basic settings for new account.
 		account.Settings = &gtsmodel.AccountSettings{
 			AccountID: accountID,
 			Privacy:   gtsmodel.VisibilityDefault,
+			Language:  locale,
 		}
 		if err := a.state.DB.PutAccountSettings(ctx, account.Settings); err != nil {
 			return nil, err
@@ -208,7 +225,7 @@ func (a *adminDB) NewSignup(ctx context.Context, newSignup gtsmodel.NewSignup) (
 		EncryptedPassword:      string(encryptedPassword),
 		SignUpIP:               newSignup.SignUpIP.To4(),
 		Reason:                 newSignup.Reason,
-		Locale:                 newSignup.Locale,
+		Locale:                 account.Settings.Language,
 		UnconfirmedEmail:       newSignup.Email,
 		CreatedByApplicationID: newSignup.AppID,
 		ExternalID:             newSignup.ExternalID,
