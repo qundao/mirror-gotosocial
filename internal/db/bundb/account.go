@@ -908,14 +908,14 @@ func selectOnlyWithMedia(q *bun.SelectQuery) *bun.SelectQuery {
 		switch d := q.Dialect().Name(); d {
 		case dialect.PG:
 			return q.
-				Where("? IS NOT NULL", bun.Ident("attachments")).
-				Where("? != '{}'", bun.Ident("attachments"))
+				Where("? IS NOT NULL", bun.Ident("status.attachments")).
+				Where("? != '{}'", bun.Ident("status.attachments"))
 
 		case dialect.SQLite:
 			return q.
-				Where("? IS NOT NULL", bun.Ident("attachments")).
-				Where("? != 'null'", bun.Ident("attachments")).
-				Where("? != '[]'", bun.Ident("attachments"))
+				Where("? IS NOT NULL", bun.Ident("status.attachments")).
+				Where("? != 'null'", bun.Ident("status.attachments")).
+				Where("? != '[]'", bun.Ident("status.attachments"))
 
 		default:
 			panic("dialect " + d.String() + " was neither pg nor sqlite")
@@ -1051,6 +1051,7 @@ func (a *accountDB) GetAccountWebStatuses(
 	account *gtsmodel.Account,
 	page *paging.Page,
 	mediaOnly bool,
+	includeBoosts bool,
 ) ([]*gtsmodel.Status, error) {
 	if account.Username == config.GetHost() {
 		// Instance account
@@ -1083,18 +1084,79 @@ func (a *accountDB) GetAccountWebStatuses(
 
 		// The actual meat of the account web statuses query.
 		func(q *bun.SelectQuery) (*bun.SelectQuery, error) {
-			q = q.Where("? = ?", bun.Ident("account_id"), account.ID)
 
-			if publicOnly {
-				q = q.Where("? = ?", bun.Ident("visibility"), gtsmodel.VisibilityPublic)
-			} else {
-				q = q.Where("? IN (?)", bun.Ident("visibility"), webStatusVisibilities)
+			if includeBoosts {
+				// Join on boosted account.
+				q = q.Join(
+					"LEFT JOIN ? AS ? ON ? = ?",
+					bun.Ident("accounts"), bun.Ident("boost_of_account"),
+					bun.Ident("status.boost_of_account_id"), bun.Ident("boost_of_account.id"),
+				)
+
+				// Join on boosted status.
+				q = q.Join(
+					"LEFT JOIN ? AS ? ON ? = ?",
+					bun.Ident("statuses"), bun.Ident("boost_of"),
+					bun.Ident("status.boost_of_id"), bun.Ident("boost_of.id"),
+				)
 			}
 
-			// Don't show replies, boosts, or local-only in web view.
-			q = q.Where("? IS NULL", bun.Ident("in_reply_to_uri")).
-				Where("? IS NULL", bun.Ident("boost_of_id")).
-				Where("? = ?", bun.Ident("federated"), true)
+			// Select statuses created by the target account.
+			q = q.Where("? = ?", bun.Ident("status.account_id"), account.ID)
+
+			// Select only public or the account's
+			// permitted visibilities for the web view.
+			if publicOnly {
+				q = q.Where("? = ?", bun.Ident("status.visibility"), gtsmodel.VisibilityPublic)
+			} else {
+				q = q.Where("? IN (?)", bun.Ident("status.visibility"), webStatusVisibilities)
+			}
+
+			// Don't show replies.
+			q = q.Where("? IS NULL", bun.Ident("status.in_reply_to_uri"))
+
+			if !includeBoosts {
+				// Don't include boosts.
+				q = q.Where("? IS NULL", bun.Ident("status.boost_of_id"))
+			} else {
+				// Allow public statuses from
+				// boosted accounts if possible.
+				q = q.WhereGroup(" AND ", func(q *bun.SelectQuery) *bun.SelectQuery {
+					return q.
+						// Include non-boosts.
+						Where("? IS NULL", bun.Ident("status.boost_of_id")).
+						// OR boosts that meet vis requirements.
+						// Use joined tables to check this.
+						WhereGroup(" OR ", func(q *bun.SelectQuery) *bun.SelectQuery {
+							if publicOnly {
+								// Allow boosts of public statuses
+								// if permitted by the boostee.
+								q = q.
+									// Boosted status visibility must be public.
+									Where("? = ?", bun.Ident("boost_of.visibility"), gtsmodel.VisibilityPublic).
+									// Boosted status must be federated.
+									Where("? = ?", bun.Ident("boost_of.federated"), true).
+									// Boostee's visibility settings must permit showing on the web.
+									Where("? = ?", bun.Ident("boost_of_account.hides_to_public_from_unauthed_web"), false)
+							} else {
+								// Allow boosts of public or unlisted
+								// statuses if permitted by the boostee.
+								q = q.
+									// Boosted status visibility must be public or unlisted.
+									Where("? IN (?)", bun.Ident("boost_of.visibility"), webStatusVisibilities).
+									// Boosted status must be federated.
+									Where("? = ?", bun.Ident("boost_of.federated"), true).
+									// Boostee's visibility settings must permit showing on the web.
+									Where("? = ?", bun.Ident("boost_of_account.hides_to_public_from_unauthed_web"), false).
+									Where("? = ?", bun.Ident("boost_of_account.hides_cc_public_from_unauthed_web"), false)
+							}
+							return q
+						})
+				})
+			}
+
+			// Don't show local only / unfederated.
+			q = q.Where("? = ?", bun.Ident("status.federated"), true)
 
 			if mediaOnly {
 				// Respect mediaOnly pref.

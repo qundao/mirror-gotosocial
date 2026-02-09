@@ -155,6 +155,7 @@ func (c *Converter) AccountToAPIAccountSensitive(ctx context.Context, a *gtsmode
 		Privacy:             VisToAPIVis(a.Settings.Privacy),
 		WebVisibility:       webVisibility,
 		WebLayout:           a.Settings.WebLayout.String(),
+		WebIncludeBoosts:    *a.Settings.WebIncludeBoosts,
 		Sensitive:           *a.Settings.Sensitive,
 		Language:            a.Settings.Language,
 		StatusContentType:   statusContentType,
@@ -988,6 +989,18 @@ func (c *Converter) StatusToWebStatus(
 		Status:         apiStatus,
 		SpoilerContent: s.ContentWarning,
 		Account:        acct,
+	}
+
+	// If this is a boost, set Reblog on it
+	// and return early, we only care about
+	// the boost + boosting account.
+	if s.BoostOf != nil {
+		reblog, err := c.StatusToWebStatus(ctx, s.BoostOf)
+		if err != nil {
+			return nil, err
+		}
+		webStatus.Reblog = &apimodel.WebStatusReblogged{reblog}
+		return webStatus, nil
 	}
 
 	// Whack a newline before and after each "pre" to make it easier to outdent it.

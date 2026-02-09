@@ -150,6 +150,7 @@ func (p *Processor) GetRSSFeedForUsername(ctx context.Context, username string, 
 			account,
 			page,
 			mediaOnly,
+			false, // don't include boosts
 		)
 		if err != nil && !errors.Is(err, db.ErrNoEntries) {
 			err := gtserror.Newf("db error getting account web statuses: %w", err)

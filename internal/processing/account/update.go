@@ -335,6 +335,11 @@ func (p *Processor) Update(ctx context.Context, account *gtsmodel.Account, form 
 		settingsColumns = append(settingsColumns, "web_layout")
 	}
 
+	if form.WebIncludeBoosts != nil {
+		account.Settings.WebIncludeBoosts = form.WebIncludeBoosts
+		settingsColumns = append(settingsColumns, "web_include_boosts")
+	}
+
 	// We've parsed + set everything, do
 	// necessary database updates now.
 

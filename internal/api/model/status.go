@@ -120,6 +120,13 @@ type Status struct {
 	InteractionPolicy InteractionPolicy `json:"interaction_policy"`
 }
 
+// StatusReblogged represents a reblogged status.
+//
+// swagger:model statusReblogged
+type StatusReblogged struct {
+	*Status
+}
+
 // WebStatus is like *model.Status, but contains
 // additional fields used only for HTML templating.
 //
@@ -172,6 +179,15 @@ type WebStatus struct {
 	// Only set if status has been edited.
 	// Last entry is always creation time.
 	EditTimeline []string `json:"-"`
+
+	// True if this is a boost.
+	Reblog *WebStatusReblogged `json:"-"`
+}
+
+// WebStatusReblogged represents
+// a reblogged status.
+type WebStatusReblogged struct {
+	*WebStatus
 }
 
 /*
@@ -202,13 +218,6 @@ func (s *Status) GetBoostOfAccountID() string {
 		return s.Reblog.Account.ID
 	}
 	return ""
-}
-
-// StatusReblogged represents a reblogged status.
-//
-// swagger:model statusReblogged
-type StatusReblogged struct {
-	*Status
 }
 
 // StatusCreateRequest models status creation parameters.

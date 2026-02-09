@@ -113,6 +113,7 @@ function ProfileForm({ data: profile }: ProfileFormProps) {
 		hideCollections: useBoolInput("hide_collections", { source: profile }),
 		webVisibility: useTextInput("web_visibility", { source: profile, valueSelector: (p: Account) => p.source?.web_visibility }),
 		webLayout: useTextInput("web_layout", { source: profile, valueSelector: (p: Account) => p.source?.web_layout }),
+		webIncludeBoosts: useBoolInput("web_include_boosts", { source: profile, valueSelector: (p: Account) => p.source?.web_include_boosts }),
 		fields: useFieldArrayInput("fields_attributes", {
 			defaultValue: profile?.source?.fields,
 			length: instanceConfig.maxPinnedFields
@@ -306,6 +307,10 @@ function ProfileForm({ data: profile }: ProfileFormProps) {
 						<option value="none">Show no posts</option>
 					</>
 				}
+			/>
+			<Checkbox
+				field={form.webIncludeBoosts}
+				label="Include boosts on the web view of your profile."
 			/>
 			<Checkbox
 				field={form.locked}

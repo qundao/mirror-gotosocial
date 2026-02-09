@@ -166,6 +166,11 @@ import (
 //			"gallery": gallery layout with media only.
 //		type: string
 //	-
+//		name: web_include_boosts
+//		in: formData
+//		description: Include boosts created by the account on the web view of the account.
+//		type: boolean
+//	-
 //		name: fields_attributes[0][name]
 //		in: formData
 //		description: Name of 1st profile field to be added to this account's profile.
@@ -376,7 +381,8 @@ func parseUpdateAccountForm(c *gin.Context) (*apimodel.UpdateCredentialsRequest,
 			form.EnableRSS == nil &&
 			form.HideCollections == nil &&
 			form.WebVisibility == nil &&
-			form.WebLayout == nil) {
+			form.WebLayout == nil &&
+			form.WebIncludeBoosts == nil) {
 		return nil, errors.New("empty form submitted")
 	}
 

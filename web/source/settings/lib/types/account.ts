@@ -81,6 +81,7 @@ export interface AccountSource {
 	status_content_type: string;
 	web_visibility: string;
 	web_layout: string;
+	web_include_boosts: boolean;
 }
 
 export interface SearchAccountParams {

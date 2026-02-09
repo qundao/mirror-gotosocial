@@ -135,6 +135,14 @@ Furthermore, while GoToSocial does [transmit a flag to other instances](../feder
 !!! tip
     Alongside (domain-)blocking, this is a good "emergency" setting to use if you're facing harassment from people trawling through your public posts. It won't hide your posts from people who can see them in their clients, via ActivityPub, but it will at least prevent them from being able to click through your posts in their browser with no authentication, and easily share them with others with a URL.
 
+#### Include Boosts on the Web View of Your Profile
+
+This checkbox allows you to decide whether or not you want to show boosts that you've created, on the web view of your profile.
+
+When unchecked, only top-level, non-boosted posts created by you will be shown on the web view of your profile (depending on what you've set for [visibility level of posts to show on your profile](#visibility-level-of-posts-to-show-on-your-profile)).
+
+When checked, visitors to your profile on the web will also be able to see posts that you've boosted, including boosts of your own posts. To show up on your profile in this way, boosted posts must be public, or the post authors must have signaled to your instance that it's OK to show them on the web even if they're unlisted.
+
 #### Manually Approve Follow Requests (aka Lock Your Account)
 
 This checkbox allows you to decide whether or not you want to manually review follow requests to your account.

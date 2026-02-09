@@ -339,8 +339,8 @@ func loadStatusTimelinePage(
 	// Select the following:
 	// - status ID
 	q := db.NewSelect().
-		Table("statuses").
-		Column("id")
+		TableExpr("? AS ?", bun.Ident("statuses"), bun.Ident("status")).
+		Column("status.id")
 
 	// Append caller
 	// query details.
@@ -351,19 +351,19 @@ func loadStatusTimelinePage(
 
 	if maxID != "" {
 		// Set a maximum ID boundary if was given.
-		q = q.Where("? < ?", bun.Ident("id"), maxID)
+		q = q.Where("? < ?", bun.Ident("status.id"), maxID)
 	}
 
 	if minID != "" {
 		// Set a minimum ID boundary if was given.
-		q = q.Where("? > ?", bun.Ident("id"), minID)
+		q = q.Where("? > ?", bun.Ident("status.id"), minID)
 	}
 
 	// Set query ordering.
 	if order.Ascending() {
-		q = q.OrderExpr("? ASC", bun.Ident("id"))
+		q = q.OrderExpr("? ASC", bun.Ident("status.id"))
 	} else /* i.e. descending */ {
-		q = q.OrderExpr("? DESC", bun.Ident("id"))
+		q = q.OrderExpr("? DESC", bun.Ident("status.id"))
 	}
 
 	// A limit should always

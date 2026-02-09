@@ -19,24 +19,30 @@ package web
 
 import (
 	"context"
+	"maps"
 	"net/http"
+	"net/url"
 
 	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
+	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/paging"
+	"code.superseriousbusiness.org/gotosocial/internal/processing/account"
 	"github.com/gin-gonic/gin"
 )
 
 type profile struct {
-	instance       *apimodel.InstanceV1
-	account        *apimodel.WebAccount
-	rssFeed        string
-	robotsMeta     string
-	pinnedStatuses []*apimodel.WebStatus
-	statusResp     *apimodel.PageableResponse
-	paging         bool
+	instance          *apimodel.InstanceV1
+	account           *apimodel.WebAccount
+	rssFeed           string
+	robotsMeta        string
+	pinnedStatuses    []*apimodel.WebStatus
+	statusResp        *apimodel.PageableResponse
+	paging            bool
+	includeBoostsLink string
+	excludeBoostsLink string
 }
 
 // prepareProfile does content type checks, fetches the
@@ -157,27 +163,86 @@ func (m *Module) prepareProfile(c *gin.Context) *profile {
 		limit = 20
 	}
 
+	// Parse the "include_boosts" query parameter, if provided.
+	// This might not actually result in boosts being included
+	// in the response, depending on what target account allows.
+	preferIncludeBoosts, errWithCode := apiutil.ParseWebIncludeBoosts(c.Query(apiutil.WebIncludeBoostsKey), nil)
+	if errWithCode != nil {
+		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
+		return nil
+	}
+
 	// Get statuses from maxStatusID onwards (or from top if empty string).
+	// The return boolean will indicate whether boosts were actually included.
 	statusResp, errWithCode := m.processor.Account().WebStatusesGet(
 		ctx,
 		account.ID,
 		&paging.Page{Max: paging.MaxID(maxStatusID), Limit: limit},
 		mediaOnly,
+		preferIncludeBoosts,
 	)
 	if errWithCode != nil {
 		apiutil.WebErrorHandler(c, errWithCode, instanceGet)
 		return nil
 	}
 
+	// Link to this page but with boosts explicitly excluded or with
+	// the include_boosts param removed so default (true) is used.
+	includeBoostsLink, excludeBoostsLink := includeExcludeBoostsLinks(c, statusResp)
+
 	return &profile{
-		instance:       instance,
-		account:        account,
-		rssFeed:        rssFeed,
-		robotsMeta:     robotsMeta,
-		pinnedStatuses: pinnedStatuses,
-		statusResp:     statusResp,
-		paging:         doPaging,
+		instance:          instance,
+		account:           account,
+		rssFeed:           rssFeed,
+		robotsMeta:        robotsMeta,
+		pinnedStatuses:    pinnedStatuses,
+		statusResp:        statusResp.PageableResponse,
+		paging:            doPaging,
+		includeBoostsLink: includeBoostsLink,
+		excludeBoostsLink: excludeBoostsLink,
 	}
+}
+
+func includeExcludeBoostsLinks(
+	c *gin.Context,
+	statusResp *account.WebStatusesGetResp,
+) (
+	includeBoostsLink string,
+	excludeBoostsLink string,
+) {
+	// Only populate either of these links
+	// if the account actually offers a
+	// choice between boosts / no boosts.
+	if !statusResp.AllowsIncludingBoosts {
+		return
+	}
+
+	// Copy request URL
+	// as basis of link.
+	reqURL := c.Request.URL
+	uri := &url.URL{
+		Scheme: config.GetProtocol(),
+		Host:   config.GetHost(),
+		Path:   reqURL.Path,
+	}
+
+	if statusResp.IncludedBoosts {
+		// Boosts were included, provide
+		// a link that excludes them.
+		const excludeBoosts = apiutil.WebIncludeBoostsKey + "=false"
+		uri.RawQuery = reqURL.RawQuery + "&" + excludeBoosts
+		excludeBoostsLink = uri.String()
+	} else {
+		// Boosts were not included, but they can be,
+		// so provide a link to include them by just
+		// removing include_boosts from the query.
+		newQ := maps.Clone(reqURL.Query())
+		newQ.Del(apiutil.WebIncludeBoostsKey)
+		uri.RawQuery = newQ.Encode()
+		includeBoostsLink = uri.String()
+	}
+
+	return
 }
 
 // profileGETHandler selects the appropriate rendering
@@ -257,13 +322,15 @@ func (m *Module) profileMicroblog(c *gin.Context, p *profile) {
 			},
 		},
 		Extra: map[string]any{
-			"account":          p.account,
-			"rssFeed":          p.rssFeed,
-			"robotsMeta":       p.robotsMeta,
-			"statuses":         p.statusResp.Items,
-			"statuses_next":    p.statusResp.NextLink,
-			"pinned_statuses":  p.pinnedStatuses,
-			"show_back_to_top": p.paging,
+			"account":           p.account,
+			"rssFeed":           p.rssFeed,
+			"robotsMeta":        p.robotsMeta,
+			"statuses":          p.statusResp.Items,
+			"statuses_next":     p.statusResp.NextLink,
+			"pinned_statuses":   p.pinnedStatuses,
+			"show_back_to_top":  p.paging,
+			"includeBoostsLink": p.includeBoostsLink,
+			"excludeBoostsLink": p.excludeBoostsLink,
 		},
 	}
 

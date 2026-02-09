@@ -254,6 +254,8 @@ type UpdateCredentialsRequest struct {
 	// "microblog": default, classic microblog layout.
 	// "gallery": gallery layout with media only.
 	WebLayout *string `form:"web_layout" json:"web_layout"`
+	// Include boosts created by the account on the web view of the account.
+	WebIncludeBoosts *bool `form:"web_include_boosts" json:"web_include_boosts"`
 }
 
 // UpdateSource is to be used specifically in an UpdateCredentialsRequest.

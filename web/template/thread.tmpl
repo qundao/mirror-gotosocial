@@ -62,7 +62,7 @@
 {{- with . }}
 </section>
 <section class="thread thread-replies" aria-labelledby="replies" open>
-    <div class="col-header replies{{- if not .context.ThreadRepliesShown }} hidden-only{{- end -}}">
+    <div class="col-header wrapping replies{{- if not .context.ThreadRepliesShown }} hidden-only{{- end -}}">
         <h2 id="replies">{{- template "repliesSummary" . -}}</h2>
         <a href="#thread-summary">back to top</a>
     </div>
@@ -72,7 +72,7 @@
 {{- with . }}
 <main class="thread-wrapper" data-nosnippet>
     <section class="thread thread-main" aria-labelledby="thread-summary">
-        <div class="col-header">
+        <div class="col-header wrapping">
             <h2 id="thread-summary">{{- template "threadSummary" . -}}</h2>
             {{- /* Include this div so that javascript can be used to toggle show/hide for all entries in a thread */}}
             <div aria-hidden="true" class="hidden" id="thread-show-hide-all-toggle-wrapper"></div>

@@ -49,7 +49,19 @@ func (suite *AccountTestSuite) TestGetAccountStatuses() {
 }
 
 func (suite *AccountTestSuite) TestGetAccountWebStatusesMediaOnly() {
-	statuses, err := suite.db.GetAccountWebStatuses(suite.T().Context(), suite.testAccounts["local_account_3"], &paging.Page{Limit: 20}, true)
+	statuses, err := suite.db.GetAccountWebStatuses(suite.T().Context(), suite.testAccounts["local_account_3"], &paging.Page{Limit: 20}, true, true)
+	suite.NoError(err)
+	suite.Len(statuses, 2)
+}
+
+func (suite *AccountTestSuite) TestGetAccountWebStatusesIncludeBoosts() {
+	// Include boosts.
+	statuses, err := suite.db.GetAccountWebStatuses(suite.T().Context(), suite.testAccounts["admin_account"], &paging.Page{Limit: 20}, false, true)
+	suite.NoError(err)
+	suite.Len(statuses, 3)
+
+	// Don't include boosts.
+	statuses, err = suite.db.GetAccountWebStatuses(suite.T().Context(), suite.testAccounts["admin_account"], &paging.Page{Limit: 20}, false, false)
 	suite.NoError(err)
 	suite.Len(statuses, 2)
 }

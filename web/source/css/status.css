@@ -415,4 +415,10 @@
 			background: $status-focus-info-bg;
 		}
 	}
+
+	&.reblog {
+		margin: 0 0.75rem 0.75rem 0.75rem;
+		border-top-left-radius: $br !important; 
+		border-top-right-radius: $br !important;
+	}
 }

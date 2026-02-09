@@ -158,33 +158,78 @@ func (p *Processor) StatusesGet(
 	})
 }
 
+type WebStatusesGetResp struct {
+	*apimodel.PageableResponse
+	AllowsIncludingBoosts bool
+	IncludedBoosts        bool
+	ExcludedBoosts        bool
+}
+
 // WebStatusesGet fetches a number of statuses (in descending order)
 // from the given account. It selects only statuses which are suitable
 // for showing on the public web profile of an account.
+//
+// The returned boolean indicates whether boosts were included in the query.
 func (p *Processor) WebStatusesGet(
 	ctx context.Context,
 	targetAccountID string,
 	page *paging.Page,
 	mediaOnly bool,
-) (*apimodel.PageableResponse, gtserror.WithCode) {
+	includeBoosts *bool,
+) (*WebStatusesGetResp, gtserror.WithCode) {
 	account, err := p.state.DB.GetAccountByID(ctx, targetAccountID)
-	if err != nil {
-		if errors.Is(err, db.ErrNoEntries) {
-			err := fmt.Errorf("account %s not found in the db, not getting web statuses for it", targetAccountID)
-			return nil, gtserror.NewErrorNotFound(err)
-		}
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		err := gtserror.Newf("db error getting account: %w", err)
 		return nil, gtserror.NewErrorInternalError(err)
 	}
 
-	if account.Domain != "" {
-		err := fmt.Errorf("account %s was not a local account, not getting web statuses for it", targetAccountID)
+	if account == nil {
+		err := gtserror.Newf("account %s not found", targetAccountID)
 		return nil, gtserror.NewErrorNotFound(err)
+	}
+
+	if account.Domain != "" {
+		err := gtserror.Newf("account %s not local", targetAccountID)
+		return nil, gtserror.NewErrorNotFound(err)
+	}
+
+	// Consider account's preference for including boosts,
+	// as well as provided includeBoosts param, to determine
+	// if we should include boosts when fetching statuses.
+	var (
+		allowsIncludingBoosts = *account.Settings.WebIncludeBoosts
+		includingBoosts       bool
+		excludingBoosts       bool
+	)
+	switch {
+	case !allowsIncludingBoosts:
+		// Never include boosts as
+		// this account doesn't allow it
+		// (leave includingBoosts false).
+	case includeBoosts != nil:
+		// Account allows including
+		// boosts, but includeBoosts
+		// param was explicitly provided,
+		// so use this instead.
+		includingBoosts = *includeBoosts
+
+		// If includingBoosts was (*bool)(false),
+		// boosts are being explicitly excluded.
+		if !includingBoosts {
+			excludingBoosts = true
+		}
+	default:
+		// Account allows including boosts,
+		// caller hasn't expressed a preference
+		// for with or without, so include.
+		includingBoosts = true
 	}
 
 	statuses, err := p.state.DB.GetAccountWebStatuses(ctx,
 		account,
 		page,
 		mediaOnly,
+		includingBoosts,
 	)
 	if err != nil && !errors.Is(err, db.ErrNoEntries) {
 		err := gtserror.Newf("db error getting statuses: %w", err)
@@ -193,11 +238,16 @@ func (p *Processor) WebStatusesGet(
 
 	count := len(statuses)
 	if count == 0 {
-		return util.EmptyPageableResponse(), nil
+		return &WebStatusesGetResp{
+			PageableResponse:      util.EmptyPageableResponse(),
+			AllowsIncludingBoosts: allowsIncludingBoosts,
+			IncludedBoosts:        includingBoosts,
+			ExcludedBoosts:        excludingBoosts,
+		}, nil
 	}
 
 	var (
-		items = make([]interface{}, 0, count)
+		items = make([]any, 0, count)
 
 		// Set next value before API converting,
 		// so caller can still page properly.
@@ -214,11 +264,33 @@ func (p *Processor) WebStatusesGet(
 		items = append(items, item)
 	}
 
-	return util.PackagePageableResponse(util.PageableResponseParams{
-		Items:          items,
-		Path:           "/@" + account.Username,
-		NextMaxIDValue: nextMaxIDValue,
-	})
+	// If explicitly excluding boosts,
+	// this should be reflected in the
+	// next page query params.
+	var extraQueryParams []string
+	if excludingBoosts {
+		extraQueryParams = []string{
+			"include_boosts=false",
+		}
+	}
+
+	resp, errWithCode := util.PackagePageableResponse(
+		util.PageableResponseParams{
+			Items:            items,
+			Path:             "/@" + account.Username,
+			NextMaxIDValue:   nextMaxIDValue,
+			ExtraQueryParams: extraQueryParams,
+		},
+	)
+
+	// Indicate to caller that boosts were
+	// included, so they can provide paging options.
+	return &WebStatusesGetResp{
+		PageableResponse:      resp,
+		AllowsIncludingBoosts: allowsIncludingBoosts,
+		IncludedBoosts:        includingBoosts,
+		ExcludedBoosts:        excludingBoosts,
+	}, errWithCode
 }
 
 // WebStatusesGetPinned returns web versions of pinned statuses.

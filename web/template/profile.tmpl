@@ -46,8 +46,14 @@
             </section>
             {{- end }}
             <section class="recent statuses h-feed" aria-labelledby="recent">
-                <div class="col-header">
+                <div class="col-header wrapping">
                     <h3 class="p-name" id="recent">Recent posts</h3>
+                    {{- if .excludeBoostsLink }}
+                    <a href="{{- .excludeBoostsLink -}}#recent">exclude boosts</a>
+                    {{- else if .includeBoostsLink }}
+                    <a href="{{- .includeBoostsLink -}}#recent">include boosts</a>
+                    {{- end }}
+                    <div class="link-rss-separator" aria-hidden="true"></div>
                     {{- if .rssFeed }}
                     <a href="{{- .rssFeed -}}" class="rss-icon" aria-label="RSS feed">
                         <i class="fa fa-rss-square" aria-hidden="true"></i>
@@ -69,7 +75,25 @@
                         class="status expanded h-entry"
                         {{- includeAttr "status_attributes.tmpl" . | indentAttr 6  }}
                     >
+                        {{- if isNil .Reblog }}
                         {{- include "status.tmpl" . | indent 6 }}
+                        {{- else }}
+                        <header class="status-header">
+                            {{- include "status_header.tmpl" . | indent 7 }}
+                        </header>
+                        <div class="status-body text-cutoff">
+                            <span class="text-cutoff">
+                                <i class="fa fa-retweet" aria-hidden="true"></i>
+                                <i class="text-cutoff">Boost of <span class="username text-cutoff">@{{- .Reblog.Account.Acct -}}</span></i>
+                            </span>
+                        </div>
+                        <article
+                            class="status reblog h-entry"
+                            {{- includeAttr "status_attributes.tmpl" .Reblog | indentAttr 7  }}
+                        >
+                            {{- include "status.tmpl" .Reblog | indent 7 }}
+                        </article>
+                        {{- end }}
                     </article>
                     {{- end }}
                     {{- end }}

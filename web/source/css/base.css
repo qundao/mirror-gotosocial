@@ -404,6 +404,17 @@ pre, pre[class*="language-"] {
 	border-top-right-radius: $br;
 	padding: 0.75rem;
 
+	&.wrapping {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		column-gap: 1rem;
+		row-gap: 0.5rem;
+		>:first-child {
+			margin-right: auto;
+		}
+	}
+
 	a {
 		justify-self: end;
 	}
@@ -413,6 +424,8 @@ pre, pre[class*="language-"] {
 		line-height: 1.3rem;
 		margin: 0;
 	}
+
+
 }
 
 .hidden {
