@@ -47,8 +47,13 @@
         </section>
         {{- end }}
         <section class="recent h-feed" aria-labelledby="recent">
-            <div class="col-header">
+            <div class="col-header wrapping">
                 <h3 class="p-name" id="recent">Recent media</h3>
+                {{- if .excludeBoostsLink }}
+                <a href="{{- .excludeBoostsLink -}}#recent">exclude boosts</a>
+                {{- else if .includeBoostsLink }}
+                <a href="{{- .includeBoostsLink -}}#recent">include boosts</a>
+                {{- end }}
                 {{- if .rssFeed }}
                 <a href="{{- .rssFeed -}}" class="rss-icon" aria-label="RSS feed">
                     <i class="fa fa-rss-square" aria-hidden="true"></i>
