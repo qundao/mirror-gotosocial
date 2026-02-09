@@ -19,7 +19,6 @@ package migrations
 
 import (
 	"context"
-	"reflect"
 
 	"code.superseriousbusiness.org/gopkg/log"
 	gtsmodel "code.superseriousbusiness.org/gotosocial/internal/db/bundb/migrations/20260207114104_show_boosts_on_web/newmodel"
@@ -30,20 +29,8 @@ func init() {
 	up := func(ctx context.Context, db *bun.DB) error {
 		return db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
 
-			// Generate new column definition from bun.
-			accountSettingsType := reflect.TypeOf((*gtsmodel.AccountSettings)(nil))
-			colDef, err := getBunColumnDef(tx, accountSettingsType, "WebIncludeBoosts")
-			if err != nil {
-				return err
-			}
-
-			// Add column to AccountSettings table.
-			// Its default of false is safe.
-			if _, err = tx.NewAddColumn().
-				Model((*gtsmodel.AccountSettings)(nil)).
-				ColumnExpr(colDef).
-				Exec(ctx); // nocollapse
-			err != nil {
+			// Add column to AccountSettings table. Its default of false is safe.
+			if err := addColumn(ctx, tx, (*gtsmodel.AccountSettings)(nil), "WebIncludeBoosts"); err != nil {
 				return err
 			}
 
