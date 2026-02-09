@@ -57,12 +57,12 @@ func (t *timelineDB) GetHomeTimeline(ctx context.Context, accountID string, page
 			// accounts with IDs in the slice.
 			q = q.Where(
 				"? IN (?)",
-				bun.Ident("account_id"),
+				bun.Ident("status.account_id"),
 				bun.In(accountIDs),
 			)
 
 			// Only include statuses that aren't pending approval.
-			q = q.Where("NOT ? = ?", bun.Ident("pending_approval"), true)
+			q = q.Where("NOT ? = ?", bun.Ident("status.pending_approval"), true)
 
 			return q, nil
 		},
@@ -78,13 +78,13 @@ func (t *timelineDB) GetPublicTimeline(ctx context.Context, page *paging.Page) (
 
 		func(q *bun.SelectQuery) (*bun.SelectQuery, error) {
 			// Public only.
-			q = q.Where("? = ?", bun.Ident("visibility"), gtsmodel.VisibilityPublic)
+			q = q.Where("? = ?", bun.Ident("status.visibility"), gtsmodel.VisibilityPublic)
 
 			// Ignore boosts.
-			q = q.Where("? IS NULL", bun.Ident("boost_of_id"))
+			q = q.Where("? IS NULL", bun.Ident("status.boost_of_id"))
 
 			// Only include statuses that aren't pending approval.
-			q = q.Where("? = ?", bun.Ident("pending_approval"), false)
+			q = q.Where("? = ?", bun.Ident("status.pending_approval"), false)
 
 			return q, nil
 		},
@@ -100,16 +100,16 @@ func (t *timelineDB) GetLocalTimeline(ctx context.Context, page *paging.Page) ([
 
 		func(q *bun.SelectQuery) (*bun.SelectQuery, error) {
 			// Local only.
-			q = q.Where("? = ?", bun.Ident("local"), true)
+			q = q.Where("? = ?", bun.Ident("status.local"), true)
 
 			// Public only.
-			q = q.Where("? = ?", bun.Ident("visibility"), gtsmodel.VisibilityPublic)
+			q = q.Where("? = ?", bun.Ident("status.visibility"), gtsmodel.VisibilityPublic)
 
 			// Only include statuses that aren't pending approval.
-			q = q.Where("? = ?", bun.Ident("pending_approval"), false)
+			q = q.Where("? = ?", bun.Ident("status.pending_approval"), false)
 
 			// Ignore boosts.
-			q = q.Where("? IS NULL", bun.Ident("boost_of_id"))
+			q = q.Where("? IS NULL", bun.Ident("status.boost_of_id"))
 
 			return q, nil
 		},
@@ -214,9 +214,9 @@ func (t *timelineDB) GetListTimeline(ctx context.Context, listID string, page *p
 			q = q.
 				With("_data", t.db.NewValues(&values)).
 				Table("_data").
-				Where("? = ?", bun.Ident("statuses.account_id"), bun.Ident("_data.account_id")).
+				Where("? = ?", bun.Ident("status.account_id"), bun.Ident("_data.account_id")).
 				// Only include statuses that aren't pending approval.
-				Where("NOT ? = ?", bun.Ident("pending_approval"), true)
+				Where("NOT ? = ?", bun.Ident("status.pending_approval"), true)
 
 			return q, nil
 		},
@@ -238,14 +238,14 @@ func (t *timelineDB) GetTagTimeline(ctx context.Context, tagID string, page *pag
 			q = q.Join(
 				"INNER JOIN ? ON ? = ?",
 				bun.Ident("status_to_tags"),
-				bun.Ident("statuses.id"), bun.Ident("status_to_tags.status_id"),
+				bun.Ident("status.id"), bun.Ident("status_to_tags.status_id"),
 			)
 
 			// This tag only.
 			q = q.Where("? = ?", bun.Ident("status_to_tags.tag_id"), tagID)
 
 			// Public only.
-			q = q.Where("? = ?", bun.Ident("visibility"), gtsmodel.VisibilityPublic)
+			q = q.Where("? = ?", bun.Ident("status.visibility"), gtsmodel.VisibilityPublic)
 
 			return q, nil
 		},

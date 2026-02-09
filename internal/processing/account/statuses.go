@@ -24,6 +24,7 @@ import (
 
 	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
+	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
@@ -269,8 +270,9 @@ func (p *Processor) WebStatusesGet(
 	// next page query params.
 	var extraQueryParams []string
 	if excludingBoosts {
+		const excludeBoosts = apiutil.WebIncludeBoostsKey + "=false"
 		extraQueryParams = []string{
-			"include_boosts=false",
+			excludeBoosts,
 		}
 	}
 
