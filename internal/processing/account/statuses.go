@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 
 	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
@@ -248,11 +249,12 @@ func (p *Processor) WebStatusesGet(
 	}
 
 	var (
+		// Preallocate expected frontend items.
 		items = make([]any, 0, count)
 
-		// Set next value before API converting,
-		// so caller can still page properly.
-		nextMaxIDValue = statuses[count-1].ID
+		// Set paging low / high IDs.
+		lo = statuses[count-1].ID
+		hi = statuses[0].ID
 	)
 
 	for _, s := range statuses {
@@ -268,31 +270,30 @@ func (p *Processor) WebStatusesGet(
 	// If explicitly excluding boosts,
 	// this should be reflected in the
 	// next page query params.
-	var extraQueryParams []string
+	var query url.Values
 	if excludingBoosts {
-		const excludeBoosts = apiutil.WebIncludeBoostsKey + "=false"
-		extraQueryParams = []string{
-			excludeBoosts,
-		}
+		query = make(map[string][]string, 1)
+		query.Set(apiutil.WebIncludeBoostsKey, "false")
 	}
 
-	resp, errWithCode := util.PackagePageableResponse(
-		util.PageableResponseParams{
-			Items:            items,
-			Path:             "/@" + account.Username,
-			NextMaxIDValue:   nextMaxIDValue,
-			ExtraQueryParams: extraQueryParams,
-		},
-	)
-
-	// Indicate to caller that boosts were
-	// included, so they can provide paging options.
 	return &WebStatusesGetResp{
-		PageableResponse:      resp,
+		// Package the response.
+		PageableResponse: paging.PackageResponse(
+			paging.ResponseParams{
+				Items: items,
+				Path:  "/@" + account.Username,
+				Next:  page.Next(lo, hi),
+				Prev:  page.Prev(lo, hi),
+				Query: query,
+			},
+		),
+		// Indicate to caller whether boosts
+		// were included, etc, so they can
+		// provide paging options.
 		AllowsIncludingBoosts: allowsIncludingBoosts,
 		IncludedBoosts:        includingBoosts,
 		ExcludedBoosts:        excludingBoosts,
-	}, errWithCode
+	}, nil
 }
 
 // WebStatusesGetPinned returns web versions of pinned statuses.
