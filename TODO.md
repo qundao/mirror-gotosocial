@@ -14,6 +14,7 @@ things noted down by the maintainers that could do with being done!
 ## miscellaneous chores
 - update to Go 1.25 (we're now being held back from dependency updates)
 - finish code commenting where missing (search for '// (\w+\b)?...')
+- move away from using Gin, they're all-in on "AI", blegh
 
 ## performance
 - kim: update ffmpreg to use ncruces/wasm2go (?)
