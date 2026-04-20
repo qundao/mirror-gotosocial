@@ -3,14 +3,14 @@ module code.superseriousbusiness.org/gotosocial
 go 1.25.0
 
 // Replace modernc/sqlite with our version that fixes the concurrency INTERRUPT issue
-replace modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.48.2-concurrency-workaround
+replace modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.49.1-concurrency-workaround
 
 // Replace gin with our own fork of v1.11.0 with yet-to-be-released array binding fix
 replace github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.0-array-binding-fix-2
 
 require (
 	code.superseriousbusiness.org/activity v1.19.0
-	code.superseriousbusiness.org/exif-terminator v0.11.1
+	code.superseriousbusiness.org/exif-terminator v0.11.2
 	code.superseriousbusiness.org/gopkg v0.0.0-20260314203815-181df26aa86e
 	code.superseriousbusiness.org/httpsig v1.5.0
 	code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384
@@ -49,7 +49,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/feeds v1.2.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/jackc/pgx/v5 v5.9.1
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/k3a/html2text v1.4.0
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/miekg/dns v1.1.72
@@ -93,7 +93,7 @@ require (
 	golang.org/x/text v0.36.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.48.2
+	modernc.org/sqlite v1.49.1
 	mvdan.cc/xurls/v2 v2.6.0
 )
 
@@ -252,7 +252,7 @@ require (
 	google.golang.org/grpc v1.80.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	modernc.org/libc v1.70.0 // indirect
+	modernc.org/libc v1.72.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )

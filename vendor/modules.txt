@@ -204,7 +204,7 @@ code.superseriousbusiness.org/activity/streams/values/rfc2045
 code.superseriousbusiness.org/activity/streams/values/rfc5988
 code.superseriousbusiness.org/activity/streams/values/string
 code.superseriousbusiness.org/activity/streams/vocab
-# code.superseriousbusiness.org/exif-terminator v0.11.1
+# code.superseriousbusiness.org/exif-terminator v0.11.2
 ## explicit; go 1.24.0
 code.superseriousbusiness.org/exif-terminator
 # code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0
@@ -682,7 +682,7 @@ github.com/jackc/pgpassfile
 # github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761
 ## explicit; go 1.14
 github.com/jackc/pgservicefile
-# github.com/jackc/pgx/v5 v5.9.1
+# github.com/jackc/pgx/v5 v5.9.2
 ## explicit; go 1.25.0
 github.com/jackc/pgx/v5
 github.com/jackc/pgx/v5/internal/iobufpool
@@ -1501,8 +1501,8 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# modernc.org/libc v1.70.0
-## explicit; go 1.24.0
+# modernc.org/libc v1.72.0
+## explicit; go 1.25.0
 modernc.org/libc
 modernc.org/libc/errno
 modernc.org/libc/fcntl
@@ -1535,7 +1535,7 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.48.2 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.48.2-concurrency-workaround
+# modernc.org/sqlite v1.49.1 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.49.1-concurrency-workaround
 ## explicit; go 1.25.0
 modernc.org/sqlite
 modernc.org/sqlite/lib
@@ -1543,5 +1543,5 @@ modernc.org/sqlite/vtab
 # mvdan.cc/xurls/v2 v2.6.0
 ## explicit; go 1.22.0
 mvdan.cc/xurls/v2
-# modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.48.2-concurrency-workaround
+# modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.49.1-concurrency-workaround
 # github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.0-array-binding-fix-2

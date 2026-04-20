@@ -29,6 +29,10 @@ import (
 	pngstructure "code.superseriousbusiness.org/go-png-image-structure/v2"
 )
 
+// ErrUnsupported is returned when a media-type
+// passed to Terminate{,Into}() is not supported.
+var ErrUnsupported = errors.New("unsupported media type")
+
 // Terminate will attempt to strip EXIF from image of 'mediaType' contained
 // in reader, returning a reader that streams the resulting cleaned image.
 //
@@ -168,7 +172,7 @@ func terminatingScanner(out io.Writer, in io.Reader, mediaType string) (*bufio.S
 		}).split)
 
 	default:
-		return nil, fmt.Errorf("mediaType %s cannot be processed", mediaType)
+		return nil, ErrUnsupported
 	}
 
 	return scanner, nil

@@ -34,7 +34,6 @@ const (
 var (
 	errNoRiffHeader = errors.New("no RIFF header")
 	errNoWebpHeader = errors.New("not a WEBP file")
-	errInvalidChunk = errors.New("invalid chunk")
 )
 
 type webpVisitor struct {
