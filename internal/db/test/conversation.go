@@ -26,7 +26,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
-	"github.com/oklog/ulid"
+	"github.com/oklog/ulid/v2"
 )
 
 type testSuite interface {

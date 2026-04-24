@@ -25,7 +25,7 @@ import (
 	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"codeberg.org/gruf/go-kv/v2"
-	"github.com/oklog/ulid"
+	"github.com/oklog/ulid/v2"
 )
 
 const (
