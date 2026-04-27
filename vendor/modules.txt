@@ -749,7 +749,7 @@ github.com/minio/crc64nvme
 # github.com/minio/md5-simd v1.1.2
 ## explicit; go 1.14
 github.com/minio/md5-simd
-# github.com/minio/minio-go/v7 v7.0.100
+# github.com/minio/minio-go/v7 v7.1.0
 ## explicit; go 1.25
 github.com/minio/minio-go/v7
 github.com/minio/minio-go/v7/pkg/cors
@@ -939,11 +939,11 @@ github.com/stretchr/testify/suite
 # github.com/subosito/gotenv v1.6.0
 ## explicit; go 1.18
 github.com/subosito/gotenv
-# github.com/tdewolff/minify/v2 v2.24.12
-## explicit; go 1.24.0
+# github.com/tdewolff/minify/v2 v2.24.13
+## explicit; go 1.25.0
 github.com/tdewolff/minify/v2
 github.com/tdewolff/minify/v2/html
-# github.com/tdewolff/parse/v2 v2.8.11
+# github.com/tdewolff/parse/v2 v2.8.12
 ## explicit; go 1.11
 github.com/tdewolff/parse/v2
 github.com/tdewolff/parse/v2/buffer
@@ -1078,6 +1078,9 @@ github.com/yuin/goldmark/renderer
 github.com/yuin/goldmark/renderer/html
 github.com/yuin/goldmark/text
 github.com/yuin/goldmark/util
+# github.com/zeebo/xxh3 v1.1.0
+## explicit; go 1.22
+github.com/zeebo/xxh3
 # go.opentelemetry.io/auto/sdk v1.2.1
 ## explicit; go 1.24.0
 go.opentelemetry.io/auto/sdk
@@ -1532,7 +1535,7 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.49.1 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.49.1-concurrency-workaround
+# modernc.org/sqlite v1.50.0 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.50.0-concurrency-workaround
 ## explicit; go 1.25.0
 modernc.org/sqlite
 modernc.org/sqlite/lib
@@ -1540,5 +1543,5 @@ modernc.org/sqlite/vtab
 # mvdan.cc/xurls/v2 v2.6.0
 ## explicit; go 1.22.0
 mvdan.cc/xurls/v2
-# modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.49.1-concurrency-workaround
+# modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.50.0-concurrency-workaround
 # github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.0-array-binding-fix-2

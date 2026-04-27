@@ -151,9 +151,6 @@ func (s *stmt) exec(ctx context.Context, args []driver.NamedValue) (r driver.Res
 				// semantics. Required for DML RETURNING correctness;
 				// also drains SELECT results if passed to Exec.
 				for rc&0xff == sqlite3.SQLITE_ROW {
-					if atomic.LoadInt32(&done) != 0 {
-						return ctx.Err()
-					}
 					rc, err = s.c.step(s.pstmt)
 					if err != nil {
 						return err
@@ -226,9 +223,6 @@ func (s *stmt) exec(ctx context.Context, args []driver.NamedValue) (r driver.Res
 				// semantics. Required for DML RETURNING correctness;
 				// also drains SELECT results if passed to Exec.
 				for rc&0xff == sqlite3.SQLITE_ROW {
-					if atomic.LoadInt32(&done) != 0 {
-						return ctx.Err()
-					}
 					rc, err = s.c.step(pstmt)
 					if err != nil {
 						return err

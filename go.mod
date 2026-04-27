@@ -3,7 +3,7 @@ module code.superseriousbusiness.org/gotosocial
 go 1.25.0
 
 // Replace modernc/sqlite with our version that fixes the concurrency INTERRUPT issue
-replace modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.49.1-concurrency-workaround
+replace modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.50.0-concurrency-workaround
 
 // Replace gin with our own fork of v1.11.0 with yet-to-be-released array binding fix
 replace github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.0-array-binding-fix-2
@@ -53,7 +53,7 @@ require (
 	github.com/k3a/html2text v1.4.0
 	github.com/microcosm-cc/bluemonday v1.0.27
 	github.com/miekg/dns v1.1.72
-	github.com/minio/minio-go/v7 v7.0.100
+	github.com/minio/minio-go/v7 v7.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/ncruces/go-sqlite3 v0.34.0
 	github.com/oklog/ulid/v2 v2.1.1
@@ -65,7 +65,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	github.com/tdewolff/minify/v2 v2.24.12
+	github.com/tdewolff/minify/v2 v2.24.13
 	github.com/temoto/robotstxt v1.1.2
 	github.com/tetratelabs/wazero v1.11.0
 	github.com/tomnomnom/linkheader v0.0.0-20250811210735-e5fe3b51442e
@@ -93,7 +93,7 @@ require (
 	golang.org/x/text v0.36.0
 	gopkg.in/mcuadros/go-syslog.v2 v2.3.0
 	gopkg.in/yaml.v3 v3.0.1
-	modernc.org/sqlite v1.49.1
+	modernc.org/sqlite v1.50.0
 	mvdan.cc/xurls/v2 v2.6.0
 )
 
@@ -216,7 +216,7 @@ require (
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/tdewolff/parse/v2 v2.8.11 // indirect
+	github.com/tdewolff/parse/v2 v2.8.12 // indirect
 	github.com/tinylib/msgp v1.6.1 // indirect
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/toqueteos/webbrowser v1.2.1 // indirect
@@ -225,6 +225,7 @@ require (
 	github.com/uptrace/opentelemetry-go-extra/otelsql v0.3.2 // indirect
 	github.com/vmihailenco/msgpack/v5 v5.4.1 // indirect
 	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/bridges/prometheus v0.68.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.19.0 // indirect
