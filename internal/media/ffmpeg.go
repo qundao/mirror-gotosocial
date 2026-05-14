@@ -57,7 +57,9 @@ func ffmpegClearMetadata(ctx context.Context, outpath, inpath string) error {
 		// ALL audio / video
 		// / subtitle streams,
 		// not just the first.
-		"-map", "0",
+		"-map", "0:v?",
+		"-map", "0:a?",
+		"-map", "0:s?",
 
 		// Overwrite.
 		"-y",
