@@ -38,16 +38,23 @@ User-agent: aiHitBot
 User-agent: amazon-kendra
 User-agent: Amazonbot
 User-agent: AmazonBuyForMe
+User-agent: Amzn-SearchBot
+User-agent: Amzn-User
 User-agent: Andibot
 User-agent: Anomura
 User-agent: anthropic-ai
+User-agent: ApifyBot
+User-agent: ApifyWebsiteContentCrawler
 User-agent: Applebot
 User-agent: Applebot-Extended
+User-agent: Aranet-SearchBot
 User-agent: atlassian-bot
 User-agent: Awario
+User-agent: AzureAI-SearchBot
 User-agent: bedrockbot
 User-agent: bigsur.ai
 User-agent: Bravebot
+User-agent: Brightbot
 User-agent: Brightbot 1.0
 User-agent: BuddyBot
 User-agent: Bytespider
@@ -56,12 +63,14 @@ User-agent: Channel3Bot
 User-agent: ChatGLM-Spider
 User-agent: ChatGPT Agent
 User-agent: ChatGPT-User
+User-agent: Claude-Code
 User-agent: Claude-SearchBot
 User-agent: Claude-User
 User-agent: Claude-Web
 User-agent: ClaudeBot
 User-agent: Cloudflare-AutoRAG
 User-agent: CloudVertexBot
+User-agent: Code
 User-agent: cohere-ai
 User-agent: cohere-training-data-crawler
 User-agent: Cotoyogi
@@ -74,21 +83,25 @@ User-agent: Diffbot
 User-agent: DuckAssistBot
 User-agent: Echobot Bot
 User-agent: EchoboxBot
+User-agent: ExaBot
 User-agent: FacebookBot
 User-agent: facebookexternalhit
 User-agent: Factset_spyderbot
 User-agent: FirecrawlAgent
 User-agent: FriendlyCrawler
 User-agent: Gemini-Deep-Research
+User-agent: Google-Agent
 User-agent: Google-CloudVertexBot
 User-agent: Google-Extended
 User-agent: Google-Firebase
+User-agent: Google-Gemini-CLI
 User-agent: Google-NotebookLM
 User-agent: GoogleAgent-Mariner
 User-agent: GoogleOther
 User-agent: GoogleOther-Image
 User-agent: GoogleOther-Video
 User-agent: GPTBot
+User-agent: HenkBot
 User-agent: iAskBot
 User-agent: iaskspider
 User-agent: iaskspider/2.0
@@ -98,6 +111,7 @@ User-agent: ImagesiftBot
 User-agent: imageSpider
 User-agent: img2dataset
 User-agent: ISSCyberRiskCrawler
+User-agent: kagi-fetcher
 User-agent: Kangaroo Bot
 User-agent: KlaviyoAIBot
 User-agent: KunatoCrawler
@@ -116,13 +130,16 @@ User-agent: meta-webindexer
 User-agent: MistralAI-User
 User-agent: MistralAI-User/1.0
 User-agent: MyCentralAIScraperBot
+User-agent: NagetBot
 User-agent: netEstate Imprint Crawler
+User-agent: newsai
 User-agent: NotebookLM
 User-agent: NovaAct
 User-agent: OAI-SearchBot
 User-agent: omgili
 User-agent: omgilibot
 User-agent: OpenAI
+User-agent: opencode
 User-agent: Operator
 User-agent: PanguBot
 User-agent: Panscient
@@ -143,10 +160,13 @@ User-agent: SemrushBot-SWA
 User-agent: ShapBot
 User-agent: Sidetrade indexer bot
 User-agent: Spider
+User-agent: TavilyBot
+User-agent: Terra Cotta
 User-agent: TerraCotta
 User-agent: Thinkbot
 User-agent: TikTokSpider
 User-agent: Timpibot
+User-agent: Trae
 User-agent: TwinAgent
 User-agent: VelenPublicWebCrawler
 User-agent: WARDBot
@@ -167,6 +187,7 @@ User-agent: AwarioSmartBot
 User-agent: DataForSeoBot
 User-agent: magpie-crawler
 User-agent: Meltwater
+User-agent: meta-externalads
 User-agent: peer39_crawler
 User-agent: peer39_crawler/1.0
 User-agent: PiplBot
@@ -219,7 +240,7 @@ Disallow: /nodeinfo/
 `
 
 	// MD5 hash of basic robots.txt.
-	RobotsTxtETag = `40616dc8ff4c38fc25fd3daae53357ee`
+	RobotsTxtETag = `6e63a927426087fd0d28b364192d1141`
 	// MD5 hash of robots.txt with NodeInfo disallowed.
-	RobotsTxtDisallowNodeInfoETag = `c2c1e5cceb09d0801708dadd3fa42a49`
+	RobotsTxtDisallowNodeInfoETag = `068f87e320773d6f5756fe348b19640a`
 )
