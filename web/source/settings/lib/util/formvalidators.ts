@@ -40,6 +40,12 @@ export function formDomainValidator(domain: string): string {
 		return "invalid domain";
 	}
 
+	// Don't allow typical "wildcard" character as
+	// this is not how GtS does domain blocks etc.
+	if (domain.includes("*")) {
+		return "domain must not include '*'";
+	}
+
 	const valid = isValidDomain(domain, {
 		subdomain: true,
 		wildcard: false,

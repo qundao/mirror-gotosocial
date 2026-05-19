@@ -288,7 +288,7 @@ const UpdateableEntry = memo(
 	}
 );
 
-function domainValidationError(isValid) {
+function domainValidationError(isValid: boolean) {
 	return isValid ? "" : "Invalid domain";
 }
 

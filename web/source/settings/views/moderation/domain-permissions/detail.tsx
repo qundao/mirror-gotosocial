@@ -199,6 +199,9 @@ function CreateOrUpdateDomainPerm({
 			source: perm,
 			defaultValue: defaultDomain,
 			validator: formDomainValidator,
+			// Run validator on initialization in case user typed
+			// something like *.example.org into the search bar.
+			initValidation: formDomainValidator(defaultDomain),
 		}),
 		obfuscate: useBoolInput("obfuscate", { source: perm }),
 		privateComment: useTextInput("private_comment", { source: perm }),
@@ -317,10 +320,11 @@ function CreateOrUpdateDomainPerm({
 					label={isExistingPerm ? "Update " + permType.toString() : permTypeUpper}
 					result={submitResult}
 					disabled={
-						isExistingPerm &&
+						!form.domain.valid ||
+						(isExistingPerm &&
 						!form.obfuscate.hasChanged() &&
 						!form.privateComment.hasChanged() &&
-						!form.publicComment.hasChanged()
+						!form.publicComment.hasChanged())
 					}
 				/>
 

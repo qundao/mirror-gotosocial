@@ -122,6 +122,14 @@ func (m *Module) createDomainPermissions(
 	}
 
 	if !importing {
+		// Punify domain already to ensure it's valid
+		// so we can pass bad request if it's not.
+		form.Domain, err = util.PunifySafely(form.Domain)
+		if err != nil {
+			apiutil.ErrorHandler(c, gtserror.NewErrorBadRequest(err, err.Error()), m.processor.InstanceGetV1)
+			return
+		}
+
 		// Single domain permission creation.
 		perm, _, errWithCode := single(
 			c.Request.Context(),
