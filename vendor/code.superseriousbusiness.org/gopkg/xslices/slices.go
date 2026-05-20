@@ -206,6 +206,33 @@ func Collate[T any, K comparable](in []T, get func(T) K) []K {
 	return ks
 }
 
+// CollateBy is functionally similar to Collate(), but supports the
+// collated type being a different type to the key type it is deduplicated by.
+func CollateBy[T, V any, K comparable](in []T, get func(T) (K, V)) []V {
+	if get == nil {
+		panic("nil func")
+	}
+
+	vs := make([]V, 0, len(in))
+	km := make(map[K]struct{}, len(in))
+
+	// Iterate input slice.
+	for _, i := range in {
+		k, v := get(i)
+
+		// Check if already exists.
+		if _, ok := km[k]; ok {
+			continue
+		}
+
+		// Append unique k.
+		km[k] = struct{}{}
+		vs = append(vs, v)
+	}
+
+	return vs
+}
+
 // OrderBy orders a slice of given type by the provided alternative slice of comparable type.
 func OrderBy[T any, K comparable](in []T, keys []K, key func(T) K) {
 	if key == nil {
