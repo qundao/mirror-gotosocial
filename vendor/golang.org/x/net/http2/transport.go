@@ -525,68 +525,7 @@ func (sew stickyErrWriter) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
-// noCachedConnError is the concrete type of ErrNoCachedConn, which
-// needs to be detected by net/http regardless of whether it's its
-// bundled version (in h2_bundle.go with a rewritten type name) or
-// from a user's x/net/http2. As such, as it has a unique method name
-// (IsHTTP2NoCachedConnError) that net/http sniffs for via func
-// isNoCachedConnError.
-type noCachedConnError struct{}
-
-func (noCachedConnError) IsHTTP2NoCachedConnError() {}
-func (noCachedConnError) Error() string             { return "http2: no cached connection was available" }
-
-// isNoCachedConnError reports whether err is of type noCachedConnError
-// or its equivalent renamed type in net/http2's h2_bundle.go. Both types
-// may coexist in the same running program.
-func isNoCachedConnError(err error) bool {
-	_, ok := err.(interface{ IsHTTP2NoCachedConnError() })
-	return ok
-}
-
-var ErrNoCachedConn error = noCachedConnError{}
-
-// RoundTripOpt are options for the Transport.RoundTripOpt method.
-type RoundTripOpt struct {
-	// OnlyCachedConn controls whether RoundTripOpt may
-	// create a new TCP connection. If set true and
-	// no cached connection is available, RoundTripOpt
-	// will return ErrNoCachedConn.
-	OnlyCachedConn bool
-
-	allowHTTP bool // allow http:// URLs
-}
-
-func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
-	return t.RoundTripOpt(req, RoundTripOpt{})
-}
-
-// authorityAddr returns a given authority (a host/IP, or host:port / ip:port)
-// and returns a host:port. The port 443 is added if needed.
-func authorityAddr(scheme string, authority string) (addr string) {
-	host, port, err := net.SplitHostPort(authority)
-	if err != nil { // authority didn't have a port
-		host = authority
-		port = ""
-	}
-	if port == "" { // authority's port was empty
-		port = "443"
-		if scheme == "http" {
-			port = "80"
-		}
-	}
-	if a, err := idna.ToASCII(host); err == nil {
-		host = a
-	}
-	// IPv6 address literal, without a port:
-	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
-		return host + ":" + port
-	}
-	return net.JoinHostPort(host, port)
-}
-
-// RoundTripOpt is like RoundTrip, but takes options.
-func (t *Transport) RoundTripOpt(req *http.Request, opt RoundTripOpt) (*http.Response, error) {
+func (t *Transport) roundTripOpt(req *http.Request, opt RoundTripOpt) (*http.Response, error) {
 	switch req.URL.Scheme {
 	case "https":
 		// Always okay.
@@ -2123,19 +2062,6 @@ func (cc *ClientConn) readLoop() {
 		cc.fr.WriteGoAway(0, ErrCode(ce), nil)
 		cc.wmu.Unlock()
 	}
-}
-
-// GoAwayError is returned by the Transport when the server closes the
-// TCP connection after sending a GOAWAY frame.
-type GoAwayError struct {
-	LastStreamID uint32
-	ErrCode      ErrCode
-	DebugData    string
-}
-
-func (e GoAwayError) Error() string {
-	return fmt.Sprintf("http2: server sent GOAWAY and closed the connection; LastStreamID=%v, ErrCode=%v, debug=%q",
-		e.LastStreamID, e.ErrCode, e.DebugData)
 }
 
 func isEOFOrNetReadError(err error) bool {

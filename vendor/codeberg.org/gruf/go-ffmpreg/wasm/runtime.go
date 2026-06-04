@@ -17,6 +17,7 @@ const CoreFeatures = api.CoreFeatureSIMD |
 	api.CoreFeatureMutableGlobal |
 	api.CoreFeatureReferenceTypes |
 	api.CoreFeatureSignExtensionOps |
+	experimental.CoreFeaturesExtendedConst |
 	experimental.CoreFeaturesTailCall
 
 // NewRuntime returns a new WebAssembly wazero.Runtime compatible with go-ffmpreg.

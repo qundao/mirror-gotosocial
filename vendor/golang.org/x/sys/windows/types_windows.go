@@ -3014,8 +3014,10 @@ const (
 )
 
 const (
-	// FileInformationClass for NtSetInformationFile
+	// FileInformationClass for NtSetInformationFile/NtQueryInformationFile, see
+	// https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/wdm/ne-wdm-_file_information_class
 	FileBasicInformation                         = 4
+	FileEaInformation                            = 7
 	FileRenameInformation                        = 10
 	FileDispositionInformation                   = 13
 	FilePositionInformation                      = 14
