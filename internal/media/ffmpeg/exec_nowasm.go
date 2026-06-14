@@ -43,11 +43,13 @@ func runCmd(ctx context.Context, name string, args wasm.Args) (uint32, error) {
 
 	// Instead of setting a context on the cmd,
 	// which definitely starts a new goroutine,
-	// set a context cancel hook which only runs
-	// the below function in a goroutine *only*
-	// if the context is cancelled, else never.
+	// set a context cancel hook which runs the
+	// below function in a goroutine *only* if
+	// the context is cancelled, else never.
 	defer context.AfterFunc(ctx, func() {
-		_ = cmd.Process.Kill()
+		if cmd.Process != nil {
+			_ = cmd.Process.Kill()
+		}
 	})()
 
 	// Set provided std files.
