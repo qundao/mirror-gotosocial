@@ -332,17 +332,17 @@ Notes on 64-bit CPU feature requirements:
 
 - ARM64 requires no specific features, ARMv8 CPUs (and later) have all required features.
 
-If any of the above features are missing, performance of media processing (and possibly, SQLite) will suffer. In these situations, you may have some success building a binary yourself with the totally **unsupported, experimental** [nowasm](https://docs.gotosocial.org/en/latest/advanced/builds/nowasm/) tag.
+If any of the above features are missing, performance of media processing will suffer. In these situations, you may have some success building a binary yourself with the totally **unsupported, experimental** [nowasm](https://docs.gotosocial.org/en/latest/advanced/builds/nowasm/) tag.
 
 #### BSDs
 
-Mostly works, just [a few things to keep in mind](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) with WASM SQLite; check release notes carefully when installing on NetBSD or FreeBSD. If running with Postgres you should have no issues.
+Mostly works, just [a few things to keep in mind](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) with SQLite; check release notes carefully when installing on NetBSD or FreeBSD. If running with Postgres you should have no issues, or alternatively you can build with the `moderncsqlite3` build-tag to build with https://gitlab.com/cznic/sqlite instead.
 
 #### 32-bit
 
 GtS doesn't work well on 32-bit systems like i386, or Armv6/v7, mainly due to performance of media decoding.
 
-We don't recommend running GtS on 32-bit, but you may have some success either turning off remote media processing altogether, or building a binary yourself with the totally **unsupported, experimental** [nowasm](https://docs.gotosocial.org/en/latest/advanced/builds/nowasm/) tag.
+We don't recommend running GtS on 32-bit, but you may have some success either turning off remote media processing altogether, or building a binary yourself with the totally **unsupported, experimental** [nowasm](https://docs.gotosocial.org/en/latest/advanced/builds/nowasm/) tag. There are still [a few things to keep in mind](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) with SQLite on non-Linux platforms, or alternatively you can build with the `moderncsqlite3` build-tag to build with https://gitlab.com/cznic/sqlite instead.
 
 For more guidance, check release notes when trying to install on 32-bit.
 
@@ -350,7 +350,7 @@ For more guidance, check release notes when trying to install on 32-bit.
 
 Marked as unsupported due to performance issues (no WASM compiler, high memory usage when idle, crashes while processing media).
 
-While we don't support running GtS on OpenBSD, you may have some success building a binary yourself with the totally **unsupported, experimental** [nowasm](https://docs.gotosocial.org/en/latest/advanced/builds/nowasm/) tag.
+While we don't support running GtS on OpenBSD, you may have some success building a binary yourself with the totally **unsupported, experimental** [nowasm](https://docs.gotosocial.org/en/latest/advanced/builds/nowasm/) tag. There are still [a few things to keep in mind](https://github.com/ncruces/go-sqlite3/wiki/Support-matrix) with SQLite, or alternatively you can build with the `moderncsqlite3` build-tag to build with https://gitlab.com/cznic/sqlite instead.
 
 ### Stable Releases
 
