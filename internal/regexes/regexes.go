@@ -50,7 +50,7 @@ const (
 	emojiValidator           = `^` + emojiShortcode + `$`                                // Validate a single emoji shortcode.
 	doubleSpaceFinder        = `(?:\b)?(?:\s|^) (?:\b)?`                                 // Extract all double whitespaces from a text.
 	usernameStrict           = `^[a-z0-9_]{1,64}$`                                       // Pattern for usernames on THIS instance. maximumUsernameLength = 64
-	usernameRelaxed          = `[a-z0-9_\.]{1,}`                                         // Relaxed version of username that can match instance accounts too.
+	usernameRelaxed          = `[a-z0-9_\-\.]{1,}`                                       // Relaxed version of username that can match instance accounts too.
 	misskeyReportNotesFinder = `(?m)(?:^Note: ((?:http|https):\/\/.*)$)`                 // Extract reported Note URIs from the text of a Misskey report/flag.
 	ulid                     = `[0123456789ABCDEFGHJKMNPQRSTVWXYZ]{26}`                  // Pattern for ULID.
 	ulidValidate             = `^` + ulid + `$`                                          // Validate one ULID.
