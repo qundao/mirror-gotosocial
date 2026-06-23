@@ -76,6 +76,7 @@ var pingMsg = []byte("ping!")
 //			- user:notification
 //			- public
 //			- public:local
+//			- public:remote
 //			- hashtag
 //			- hashtag:local
 //			- list
@@ -89,6 +90,7 @@ var pingMsg = []byte("ping!")
 //			`user:notification`: receive notifications for the account.
 //			`public`: receive updates for the public timeline.
 //			`public:local`: receive updates for the local timeline.
+//			`public:remote`: receive updates for the public remote-only timeline
 //			`hashtag`: receive updates for a given hashtag.
 //			`hashtag:local`: receive local updates for a given hashtag.
 //			`list`: receive updates for a certain list of accounts.
@@ -128,6 +130,7 @@ var pingMsg = []byte("ping!")
 //							- user:notification
 //							- public
 //							- public:local
+//							- public:remote
 //							- hashtag
 //							- hashtag:local
 //							- list
@@ -218,6 +221,12 @@ func (m *Module) StreamGETHandler(c *gin.Context) {
 	// Get the initial requested stream type, if there is one.
 	streamType := c.Query(StreamQueryKey)
 
+	// Rewrite "allow_local_only" type as we always
+	// allow local-only posts in the public timeline.
+	if streamType == "public:allow_local_only" {
+		streamType = "public"
+	}
+
 	// By appending other query params to the streamType, we
 	// can allow streaming for specific list IDs or hashtags.
 	// The streamType in this case will end up looking like
@@ -292,7 +301,7 @@ func (m *Module) handleWSConn(l *log.Entry, wsConn *websocket.Conn, stream *stre
 		defer cncl()
 
 		// Read messages from websocket to server.
-		m.readFromWSConn(ctx, wsConn, stream, l)
+		m.readFromWSConn(wsConn, stream, l)
 	}()
 
 	go func() {
@@ -325,7 +334,6 @@ func (m *Module) handleWSConn(l *log.Entry, wsConn *websocket.Conn, stream *stre
 // This is a blocking function; will return only on read error or
 // if the given context is canceled.
 func (m *Module) readFromWSConn(
-	ctx context.Context,
 	wsConn *websocket.Conn,
 	stream *streampkg.Stream,
 	l *log.Entry,
@@ -358,6 +366,12 @@ func (m *Module) readFromWSConn(
 		// Messages *from* the WS connection are infrequent
 		// and usually interesting, so log this at info.
 		l.Infof("received websocket message: %+v", msg)
+
+		// Rewrite "allow_local_only" type as we always
+		// allow local-only posts in the public timeline.
+		if msg.Stream == "public:allow_local_only" {
+			msg.Stream = "public"
+		}
 
 		// Ignore if the updateStreamType is unknown (or missing),
 		// so a bad client can't cause extra memory allocations

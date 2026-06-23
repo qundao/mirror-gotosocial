@@ -77,6 +77,12 @@ func (s *Surfacer) TimelineAndNotifyStatus(ctx context.Context, status *gtsmodel
 
 			// Stream the status model as public timeline update event.
 			s.stream.Update(ctx, account, apiStatus, stream.TimelinePublic)
+
+			// If this is a remote status, stream it to
+			// the public remote-only timeline as well.
+			if status.Account.IsRemote() {
+				s.stream.Update(ctx, account, apiStatus, stream.TimelinePublicRemote)
+			}
 		},
 	)
 

@@ -59,9 +59,15 @@ const (
 	TimelineLocal = "public:local"
 
 	// TimelinePublic:
-	// All public posts known to the server.
+	// All public posts known to the server,
+	// including local ones too.
 	// Analogous to the federated timeline.
 	TimelinePublic = "public"
+
+	// TimelinePublicRemote:
+	// All *remote* public posts known to
+	// the server, excluding local posts.
+	TimelinePublicRemote = "public:remote"
 
 	// TimelineHome:
 	// Events related to the current user, such
@@ -87,6 +93,7 @@ const (
 var AllStatusTimelines = []string{
 	TimelineLocal,
 	TimelinePublic,
+	TimelinePublicRemote,
 	TimelineHome,
 	TimelineDirect,
 	TimelineList,

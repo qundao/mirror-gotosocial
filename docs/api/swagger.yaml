@@ -14564,6 +14564,7 @@ paths:
                     `user:notification`: receive notifications for the account.
                     `public`: receive updates for the public timeline.
                     `public:local`: receive updates for the local timeline.
+                    `public:remote`: receive updates for the public remote-only timeline
                     `hashtag`: receive updates for a given hashtag.
                     `hashtag:local`: receive local updates for a given hashtag.
                     `list`: receive updates for a certain list of accounts.
@@ -14573,6 +14574,7 @@ paths:
                     - user:notification
                     - public
                     - public:local
+                    - public:remote
                     - hashtag
                     - hashtag:local
                     - list
@@ -14634,6 +14636,7 @@ paths:
                                         - user:notification
                                         - public
                                         - public:local
+                                        - public:remote
                                         - hashtag
                                         - hashtag:local
                                         - list
