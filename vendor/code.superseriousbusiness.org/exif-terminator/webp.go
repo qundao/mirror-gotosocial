@@ -41,7 +41,7 @@ type webpVisitor struct {
 	doneHeader bool
 }
 
-func (v *webpVisitor) split(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func (v *webpVisitor) Split(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	// parse/write the header first
 	if !v.doneHeader {
 

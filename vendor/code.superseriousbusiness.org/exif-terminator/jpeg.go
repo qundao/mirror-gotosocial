@@ -68,8 +68,13 @@ var markerLen = map[byte]int{
 }
 
 type jpegVisitor struct {
-	js     *jpegstructure.JpegSplitter
-	writer io.Writer
+	split *jpegstructure.JpegSplitter
+	write io.Writer
+
+	// exif termination
+	// errors, handled
+	// externally.
+	errs []error
 }
 
 // HandleSegment satisfies the visitor interface{} of the jpegstructure library.
@@ -77,13 +82,13 @@ type jpegVisitor struct {
 // We don't really care about many of the parameters, since all we're interested
 // in here is the very last segment that was scanned.
 func (v *jpegVisitor) HandleSegment(segmentMarker byte, _ string, _ int, _ bool) error {
-	segments := v.js.Segments().Segments()
+	segments := v.split.Segments().Segments()
 	mostRecentSegment := segments[len(segments)-1]
 	return v.writeSegment(mostRecentSegment)
 }
 
 func (v *jpegVisitor) writeSegment(s *jpegstructure.Segment) error {
-	w := v.writer
+	w := v.write
 
 	defer func() {
 		// whatever happens, when we finished then evict data from the segment;
@@ -94,7 +99,7 @@ func (v *jpegVisitor) writeSegment(s *jpegstructure.Segment) error {
 	if s.IsExif() {
 		// Segment contains exif data, terminate!
 		if err := terminateEXIF(s); err != nil {
-			return err
+			v.errs = append(v.errs, err)
 		}
 	}
 

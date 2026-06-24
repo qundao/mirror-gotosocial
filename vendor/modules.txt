@@ -204,7 +204,7 @@ code.superseriousbusiness.org/activity/streams/values/rfc2045
 code.superseriousbusiness.org/activity/streams/values/rfc5988
 code.superseriousbusiness.org/activity/streams/values/string
 code.superseriousbusiness.org/activity/streams/vocab
-# code.superseriousbusiness.org/exif-terminator v0.11.2
+# code.superseriousbusiness.org/exif-terminator v0.11.4
 ## explicit; go 1.24.0
 code.superseriousbusiness.org/exif-terminator
 # code.superseriousbusiness.org/go-jpeg-image-structure/v2 v2.3.0
@@ -407,7 +407,7 @@ github.com/cloudwego/base64x/internal/native
 github.com/cloudwego/base64x/internal/native/avx2
 github.com/cloudwego/base64x/internal/native/sse
 github.com/cloudwego/base64x/internal/rt
-# github.com/coreos/go-oidc/v3 v3.18.0
+# github.com/coreos/go-oidc/v3 v3.19.0
 ## explicit; go 1.25.0
 github.com/coreos/go-oidc/v3/oidc
 # github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
@@ -1302,7 +1302,7 @@ golang.org/x/crypto/scrypt
 golang.org/x/crypto/sha3
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/image v0.42.0
+# golang.org/x/image v0.43.0
 ## explicit; go 1.25.0
 golang.org/x/image/riff
 golang.org/x/image/vp8
@@ -1524,7 +1524,7 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# modernc.org/libc v1.72.3
+# modernc.org/libc v1.73.4
 ## explicit; go 1.25.0
 modernc.org/libc
 modernc.org/libc/errno
@@ -1558,7 +1558,7 @@ modernc.org/mathutil
 # modernc.org/memory v1.11.0
 ## explicit; go 1.23.0
 modernc.org/memory
-# modernc.org/sqlite v1.52.0 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.52.0-concurrency-workaround
+# modernc.org/sqlite v1.53.0 => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.53.0-concurrency-workaround
 ## explicit; go 1.25.0
 modernc.org/sqlite
 modernc.org/sqlite/lib
@@ -1566,5 +1566,5 @@ modernc.org/sqlite/vtab
 # mvdan.cc/xurls/v2 v2.6.0
 ## explicit; go 1.22.0
 mvdan.cc/xurls/v2
-# modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.52.0-concurrency-workaround
+# modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.53.0-concurrency-workaround
 # github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.0-array-binding-fix-2

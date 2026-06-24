@@ -33,6 +33,11 @@ import (
 // passed to Terminate{,Into}() is not supported.
 var ErrUnsupported = errors.New("unsupported media type")
 
+// ErrOnExifTermination is returned as a "prefix" error, wrapping error(s)
+// that occurred during exif termination. These are deferred and returned
+// at the end, so exif data ahead of encountered error may still be cleared.
+var ErrOnExifTermination = errors.New("error(s) during exif termination")
+
 // Terminate will attempt to strip EXIF from image of 'mediaType' contained
 // in reader, returning a reader that streams the resulting cleaned image.
 //
@@ -44,8 +49,8 @@ func Terminate(in io.Reader, mediaType string) (io.Reader, error) {
 	// directly to the reader.
 	pr, pw := io.Pipe()
 
-	// Setup scanner to terminate exif into pipe writer.
-	scanner, err := terminatingScanner(pw, in, mediaType)
+	// Setup scanner to terminate exif data into our pipe writer.
+	scanner, deferred, err := terminatingScanner(pw, in, mediaType)
 	if err != nil {
 		_ = pw.Close()
 		return nil, err
@@ -79,6 +84,14 @@ func Terminate(in io.Reader, mediaType string) (io.Reader, error) {
 
 		// Set error on return.
 		err = scanner.Err()
+		if err != nil {
+			return
+		}
+
+		// Else check deferred exif termination errs.
+		if deferred != nil && len(*deferred) > 0 {
+			err = fmt.Errorf("%w: %v", ErrOnExifTermination, errors.Join(*deferred...))
+		}
 	}()
 
 	return pr, nil
@@ -87,8 +100,8 @@ func Terminate(in io.Reader, mediaType string) (io.Reader, error) {
 // TerminateInto will attempt to strip EXIF from image of 'mediaType' contained in reader, writing to output.
 func TerminateInto(out io.Writer, in io.Reader, mediaType string) error {
 
-	// Setup scanner to terminate exif from 'in' to 'out'.
-	scanner, err := terminatingScanner(out, in, mediaType)
+	// Setup scanner to terminate exif data from 'in' to 'out'.
+	scanner, deferred, err := terminatingScanner(out, in, mediaType)
 	if err != nil {
 		return err
 	}
@@ -110,12 +123,21 @@ func TerminateInto(out io.Writer, in io.Reader, mediaType string) error {
 	for scanner.Scan() {
 	}
 
-	// Return scan errors.
-	return scanner.Err()
+	// Check and return any scan errors.
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	// Else check deferred exif termination errs.
+	if deferred != nil && len(*deferred) > 0 {
+		return fmt.Errorf("%w: %v", ErrOnExifTermination, errors.Join(*deferred...))
+	}
+
+	return nil
 }
 
-func terminatingScanner(out io.Writer, in io.Reader, mediaType string) (*bufio.Scanner, error) {
-	scanner := bufio.NewScanner(in)
+func terminatingScanner(out io.Writer, in io.Reader, mediaType string) (scanner *bufio.Scanner, deferred *[]error, err error) {
+	scanner = bufio.NewScanner(in)
 
 	// 40mb buffer size should be enough
 	// to scan through most file chunks
@@ -125,7 +147,8 @@ func terminatingScanner(out io.Writer, in io.Reader, mediaType string) (*bufio.S
 
 	switch mediaType {
 	case "image/jpeg", "jpeg", "jpg":
-		v := &jpegVisitor{writer: out}
+		v := &jpegVisitor{write: out}
+		deferred = &v.errs
 
 		// Provide the visitor to the splitter so
 		// that it triggers on every section scan.
@@ -135,7 +158,7 @@ func terminatingScanner(out io.Writer, in io.Reader, mediaType string) (*bufio.S
 		// list of segments: for this it needs to
 		// know what jpeg splitter it's attached to,
 		// so give it a pointer to the splitter.
-		v.js = js
+		v.split = js
 
 		// Jpeg visitor's 'split' function
 		// satisfies bufio.SplitFunc{}.
@@ -146,16 +169,16 @@ func terminatingScanner(out io.Writer, in io.Reader, mediaType string) (*bufio.S
 		// satisfies bufio.SplitFunc{}.
 		scanner.Split((&webpVisitor{
 			writer: out,
-		}).split)
+		}).Split)
 
 	case "image/png", "png":
 		// For pngs we need to skip the header bytes, so read
 		// them in and check we're really dealing with a png.
 		header := make([]byte, len(pngstructure.PngSignature))
 		if _, headerError := in.Read(header); headerError != nil {
-			return nil, headerError
+			return nil, nil, headerError
 		} else if !bytes.Equal(header, pngstructure.PngSignature[:]) {
-			return nil, errors.New("could not decode png: invalid header")
+			return nil, nil, errors.New("could not decode png: invalid header")
 		}
 
 		// Don't bother checking CRC;
@@ -163,17 +186,19 @@ func terminatingScanner(out io.Writer, in io.Reader, mediaType string) (*bufio.S
 		ps := pngstructure.NewPngSplitter()
 		ps.DoCheckCrc(false)
 
-		// Png visitor's 'split' function
+		// Png visitor's 'Split' function
 		// satisfies bufio.SplitFunc{}.
-		scanner.Split((&pngVisitor{
-			ps:               ps,
-			writer:           out,
-			lastWrittenChunk: -1,
-		}).split)
+		v := &pngVisitor{
+			split: ps,
+			write: out,
+			last:  -1,
+		}
+		deferred = &v.errs
+		scanner.Split(v.Split)
 
 	default:
-		return nil, ErrUnsupported
+		return nil, nil, ErrUnsupported
 	}
 
-	return scanner, nil
+	return
 }

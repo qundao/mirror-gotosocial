@@ -25,29 +25,34 @@ import (
 )
 
 type pngVisitor struct {
-	ps               *pngstructure.PngSplitter
-	writer           io.Writer
-	lastWrittenChunk int
+	split *pngstructure.PngSplitter
+	write io.Writer
+	last  int
+
+	// exif termination
+	// errors, handled
+	// externally.
+	errs []error
 }
 
-func (v *pngVisitor) split(data []byte, atEOF bool) (int, []byte, error) {
+func (v *pngVisitor) Split(data []byte, atEOF bool) (int, []byte, error) {
 	// execute the ps split function to read in data.
-	advance, token, err := v.ps.Split(data, atEOF)
+	advance, token, err := v.split.Split(data, atEOF)
 	if err != nil {
 		return advance, token, err
 	}
 
 	// if we haven't written anything at all yet, then
 	// write the png header back into the writer first.
-	if v.lastWrittenChunk == -1 {
-		if _, err := v.writer.Write(pngstructure.PngSignature[:]); err != nil {
+	if v.last == -1 {
+		if _, err := v.write.Write(pngstructure.PngSignature[:]); err != nil {
 			return advance, token, err
 		}
 	}
 
 	// Check if the splitter now has
 	// any new chunks in it for us.
-	chunkSlice, err := v.ps.Chunks()
+	chunkSlice, err := v.split.Chunks()
 	if err != nil {
 		return advance, token, err
 	}
@@ -56,13 +61,13 @@ func (v *pngVisitor) split(data []byte, atEOF bool) (int, []byte, error) {
 	chunks := chunkSlice.Chunks()
 
 	// Iterate, terminate and write chunks, from last written.
-	for i := v.lastWrittenChunk + 1; i < len(chunks); i++ {
+	for i := v.last + 1; i < len(chunks); i++ {
 		chunk := chunks[i]
 
 		if chunk.Type == pngstructure.EXifChunkType {
-			// Finally, some exif data! Terminate it!!
+			// Finally, some exif data! Attempt to terminate!
 			if err := terminateEXIF(chunkSlice); err != nil {
-				return advance, token, err
+				v.errs = append(v.errs, err)
 			}
 
 			// Update chunk crc.
@@ -70,12 +75,14 @@ func (v *pngVisitor) split(data []byte, atEOF bool) (int, []byte, error) {
 		}
 
 		// Write this particular chunk to underlying writer.
-		if _, err := chunk.WriteTo(v.writer); err != nil {
+		if _, err := chunk.WriteTo(v.write); err != nil {
 			return advance, token, err
 		}
 
-		// Update chunk index.
-		v.lastWrittenChunk = i
+		// Update
+		// chunk
+		// index.
+		v.last = i
 
 		// Zero data; here you
 		// go garbage collector.

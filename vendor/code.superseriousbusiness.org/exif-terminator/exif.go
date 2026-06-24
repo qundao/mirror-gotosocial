@@ -19,7 +19,9 @@
 package terminator
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"strings"
 
 	exif "github.com/dsoprea/go-exif/v3"
@@ -36,21 +38,42 @@ func terminateEXIF(data withEXIF) (err error) {
 
 	// Read EXIF from data chunk.
 	ifd, _, err = data.Exif()
-	if err != nil &&
-		strings.Contains(err.Error(), "no exif data") {
+	switch {
+	case err == nil:
 
-		// The only actionable error is if there's
-		// no removable EXIF data, i.e. return early.
+	// Catch and replace no exif errors with nil return.
+	case strings.Contains(err.Error(), "no exif data"):
 		return nil
+
+	// Weird exif chunk at
+	// end of file, ignore.
+	case errors.Is(err, io.EOF):
+		return nil
+
+	default:
+		return err
 	}
 
+	// Exif builder to (over)write
+	// new exif data into the file.
 	var ifdb *exif.IfdBuilder
 
-	// Get IB chain from EXIF IFD chain (can be nil).
+	// Try to get IB chain from EXIF IFD chain (can be nil).
 	ifdb, err = newIfdBuilderFromExistingChain(ifd)
-	if err != nil {
-		err = nil
-		return
+	switch {
+	case err == nil:
+		// No issue.
+
+	case ifd != nil:
+		// Parsing issue or something.
+		// Fall back to basic ifd builder.
+		ifdb = exif.NewIfdBuilderWithExistingIfd(ifd)
+
+	default:
+		// Parsing issue and no
+		// ifd available to build
+		// from, error out.
+		return err
 	}
 
 	if ifd != nil {
@@ -67,12 +90,10 @@ func terminateEXIF(data withEXIF) (err error) {
 		}
 	}
 
-	// Set new empty IFD chain on EXIF chunk.
-	if err = data.SetExif(ifdb); err != nil {
-		return fmt.Errorf("error setting exif: %w", err)
-	}
-
-	return nil
+	// Set new empty IFD
+	// chain on EXIF chunk.
+	err = data.SetExif(ifdb)
+	return
 }
 
 // newIfdBuilderFromExistingChain wraps exif.NewIfdBuilderFromExistingChain(), recovering uncaught panics.
