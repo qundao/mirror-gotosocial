@@ -95,24 +95,23 @@ func Deduplicate[T comparable](in []T) []T {
 // DeduplicateFunc deduplicates entries in the given
 // slice, using the result of key() to gauge uniqueness.
 func DeduplicateFunc[T any, C comparable](in []T, key func(v T) C) []T {
-	var (
-		inL     = len(in)
-		unique  = make(map[C]struct{}, inL)
-		deduped = make([]T, 0, inL)
-	)
-
 	if key == nil {
 		panic("nil func")
 	}
 
+	unique := make(map[C]struct{}, len(in))
+	deduped := make([]T, 0, len(in))
+
+	// Iterate input slice.
 	for _, v := range in {
 		k := key(v)
 
+		// Check if already exists.
 		if _, ok := unique[k]; ok {
-			// Already have this.
 			continue
 		}
 
+		// Append unique value.
 		unique[k] = struct{}{}
 		deduped = append(deduped, v)
 	}
@@ -180,6 +179,24 @@ func GatherIf[T, V any](out []V, in []T, get func(T) (V, bool)) []V {
 	return out
 }
 
+// Count returns the combined count of
+// calling incr on all elements in input slice.
+func Count[T any](in []T, incr func(T) int) int {
+	if incr == nil {
+		panic("nil func")
+	}
+
+	var i int
+
+	// Count getting incr from
+	// each elem in slice.
+	for _, v := range in {
+		i += incr(v)
+	}
+
+	return i
+}
+
 // Collate will collect the values of type K from input type []T,
 // passing each item to 'get' and deduplicating the end result.
 // This is equivalent to calling Gather() followed by Deduplicate().
@@ -191,16 +208,18 @@ func Collate[T any, K comparable](in []T, get func(T) K) []K {
 	ks := make([]K, 0, len(in))
 	km := make(map[K]struct{}, len(in))
 
-	for i := 0; i < len(in); i++ {
-		// Get next k.
-		k := get(in[i])
+	// Iterate input slice.
+	for _, v := range in {
+		k := get(v)
 
-		if _, ok := km[k]; !ok {
-			// New value, add
-			// to map + slice.
-			ks = append(ks, k)
-			km[k] = struct{}{}
+		// Check if already exists.
+		if _, ok := km[k]; ok {
+			continue
 		}
+
+		// Append unique k.
+		km[k] = struct{}{}
+		ks = append(ks, k)
 	}
 
 	return ks

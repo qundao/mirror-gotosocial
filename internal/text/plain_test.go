@@ -45,7 +45,7 @@ const (
 boobs are groovy
   boobs are groovy`
 	withWhitespaceExpected = "<p>boobs<br>\u00a0test<br>\u00a0\u00a0\u00a0aa \u00a0a a<br>boobs are groovy<br>\u00a0\u00a0boobs are groovy</p>"
-	emmedUp = `/
+	emmedUp                = `/
 \/
 \\/
 *test*

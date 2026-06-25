@@ -27,6 +27,7 @@ func (w *Wrapper) MapRegion(f *os.File, offset int64, size int32, readOnly bool)
 	if err != nil {
 		return nil, err
 	}
+	r.Ptr = r.base + Ptr_t(align)
 	return r, nil
 }
 
@@ -47,7 +48,7 @@ func (w *Wrapper) newRegion(size int32) *MappedRegion {
 	// Save the newly allocated region.
 	buf := w.Bytes(ptr, int64(size))
 	ret := &MappedRegion{
-		Ptr:  ptr,
+		base: ptr,
 		size: size,
 		addr: unsafe.Pointer(&buf[0]),
 	}
@@ -57,6 +58,7 @@ func (w *Wrapper) newRegion(size int32) *MappedRegion {
 
 type MappedRegion struct {
 	addr unsafe.Pointer
+	base Ptr_t
 	Ptr  Ptr_t
 	size int32
 	used bool

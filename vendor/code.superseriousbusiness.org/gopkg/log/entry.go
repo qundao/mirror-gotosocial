@@ -79,6 +79,26 @@ func (e Entry) Debugf(s string, a ...any) {
 	logf(e.ctx, DEBUG, e.kvs, s, a...)
 }
 
+// DebugKV will log the one key-value field to the log at DEBUG level.
+func (e Entry) DebugKV(key string, value any) {
+	if DEBUG < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kv.Field{K: key, V: value})
+	logf(e.ctx, DEBUG, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-1]
+}
+
+// DebugKVs will log key-value fields to the log at DEBUG level.
+func (e Entry) DebugKVs(kvs ...kv.Field) {
+	if DEBUG < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kvs...)
+	logf(e.ctx, DEBUG, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-len(kvs)]
+}
+
 // Info will log formatted args as 'msg' field to the log at INFO level.
 func (e Entry) Info(a ...any) {
 	if INFO < state.level {
@@ -93,6 +113,26 @@ func (e Entry) Infof(s string, a ...any) {
 		return
 	}
 	logf(e.ctx, INFO, e.kvs, s, a...)
+}
+
+// InfoKV will log the one key-value field to the log at INFO level.
+func (e Entry) InfoKV(key string, value any) {
+	if INFO < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kv.Field{K: key, V: value})
+	logf(e.ctx, INFO, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-1]
+}
+
+// InfoKVs will log key-value fields to the log at INFO level.
+func (e Entry) InfoKVs(kvs ...kv.Field) {
+	if INFO < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kvs...)
+	logf(e.ctx, INFO, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-len(kvs)]
 }
 
 // Warn will log formatted args as 'msg' field to the log at WARN level.
@@ -111,6 +151,26 @@ func (e Entry) Warnf(s string, a ...any) {
 	logf(e.ctx, WARN, e.kvs, s, a...)
 }
 
+// WarnKV will log the one key-value field to the log at WARN level.
+func (e Entry) WarnKV(key string, value any) {
+	if WARN < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kv.Field{K: key, V: value})
+	logf(e.ctx, WARN, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-1]
+}
+
+// WarnKVs will log key-value fields to the log at WARN level.
+func (e Entry) WarnKVs(kvs ...kv.Field) {
+	if WARN < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kvs...)
+	logf(e.ctx, WARN, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-len(kvs)]
+}
+
 // Error will log formatted args as 'msg' field to the log at ERROR level.
 func (e Entry) Error(a ...any) {
 	if ERROR < state.level {
@@ -125,6 +185,26 @@ func (e Entry) Errorf(s string, a ...any) {
 		return
 	}
 	logf(e.ctx, ERROR, e.kvs, s, a...)
+}
+
+// ErrorKV will log the one key-value field to the log at ERROR level.
+func (e Entry) ErrorKV(key string, value any) {
+	if ERROR < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kv.Field{K: key, V: value})
+	logf(e.ctx, ERROR, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-1]
+}
+
+// ErrorKVs will log key-value fields to the log at ERROR level.
+func (e Entry) ErrorKVs(kvs ...kv.Field) {
+	if ERROR < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kvs...)
+	logf(e.ctx, ERROR, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-len(kvs)]
 }
 
 // Panic will log formatted args as 'msg' field to the log at PANIC level.
@@ -147,6 +227,30 @@ func (e Entry) Panicf(s string, a ...any) {
 	logf(e.ctx, PANIC, e.kvs, s, a...)
 }
 
+// PanicKV will log the one key-value field to the log at PANIC level.
+// This will then call panic causing the application to crash.
+func (e Entry) PanicKV(key string, value any) {
+	defer panic(kv.Field{K: key, V: value}.String())
+	if PANIC < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kv.Field{K: key, V: value})
+	logf(e.ctx, PANIC, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-1]
+}
+
+// PanicKVs will log key-value fields to the log at PANIC level.
+// This will then call panic causing the application to crash.
+func (e Entry) PanicKVs(kvs ...kv.Field) {
+	defer panic(kv.Fields(kvs).String())
+	if PANIC < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kvs...)
+	logf(e.ctx, PANIC, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-len(kvs)]
+}
+
 // Log will log formatted args as 'msg' field to the log at given level.
 func (e Entry) Log(lvl LEVEL, a ...any) {
 	if lvl < state.level {
@@ -163,6 +267,26 @@ func (e Entry) Logf(lvl LEVEL, s string, a ...any) {
 	logf(e.ctx, lvl, e.kvs, s, a...)
 }
 
+// LogKV will log the one key-value field to the log at given level.
+func (e Entry) LogKV(lvl LEVEL, key string, value any) { //nolint:revive
+	if lvl < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kv.Field{K: key, V: value})
+	logf(e.ctx, lvl, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-1]
+}
+
+// LogKVs will log key-value fields to the log at given level.
+func (e Entry) LogKVs(lvl LEVEL, kvs ...kv.Field) { //nolint:revive
+	if lvl < state.level {
+		return
+	}
+	e.kvs = append(e.kvs, kvs...)
+	logf(e.ctx, lvl, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-len(kvs)]
+}
+
 // Print will log formatted args to the log output.
 func (e Entry) Print(a ...any) {
 	logf(e.ctx, UNSET, e.kvs, "", a...)
@@ -171,4 +295,18 @@ func (e Entry) Print(a ...any) {
 // Printf will log format string to the log output.
 func (e Entry) Printf(s string, a ...any) {
 	logf(e.ctx, UNSET, e.kvs, s, a...)
+}
+
+// PrintKV will log the one key-value field to the log.
+func (e Entry) PrintKV(key string, value any) {
+	e.kvs = append(e.kvs, kv.Field{K: key, V: value})
+	logf(e.ctx, UNSET, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-1]
+}
+
+// PrintKVs will log key-value fields to the log.
+func (e Entry) PrintKVs(kvs ...kv.Field) {
+	e.kvs = append(e.kvs, kvs...)
+	logf(e.ctx, UNSET, e.kvs, "")
+	e.kvs = e.kvs[:len(e.kvs)-len(kvs)]
 }

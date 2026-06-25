@@ -22,7 +22,7 @@ type Module struct {
 }
 
 func New(v0 Xenv) *Module {
-	m := &Module{}
+	m := new(Module)
 	m._env = v0
 	m.t0 = make([]any, 409)
 	m.maxMem = 65536
@@ -128,15 +128,6 @@ type Memory = interface {
 func (m *Module) _go_vfs_find(v0 int32) int32 {
 	return m._env.Xgo_vfs_find(v0)
 }
-func (m *Module) _go_full_pathname(v0, v1, v2, v3 int32) int32 {
-	return m._env.Xgo_full_pathname(v0, v1, v2, v3)
-}
-func (m *Module) _go_access(v0, v1, v2, v3 int32) int32 {
-	return m._env.Xgo_access(v0, v1, v2, v3)
-}
-func (m *Module) _go_delete(v0, v1, v2 int32) int32 {
-	return m._env.Xgo_delete(v0, v1, v2)
-}
 func (m *Module) _go_current_time_64(v0, v1 int32) int32 {
 	return m._env.Xgo_current_time_64(v0, v1)
 }
@@ -145,6 +136,15 @@ func (m *Module) _go_sleep(v0, v1 int32) int32 {
 }
 func (m *Module) _go_randomness(v0, v1, v2 int32) int32 {
 	return m._env.Xgo_randomness(v0, v1, v2)
+}
+func (m *Module) _go_full_pathname(v0, v1, v2, v3 int32) int32 {
+	return m._env.Xgo_full_pathname(v0, v1, v2, v3)
+}
+func (m *Module) _go_access(v0, v1, v2, v3 int32) int32 {
+	return m._env.Xgo_access(v0, v1, v2, v3)
+}
+func (m *Module) _go_delete(v0, v1, v2 int32) int32 {
+	return m._env.Xgo_delete(v0, v1, v2)
 }
 func (m *Module) _go_busy_timeout(v0, v1 int32) int32 {
 	return m._env.Xgo_busy_timeout(v0, v1)
@@ -275,9 +275,6 @@ func (m *Module) _go_vtab_find_function(v0, v1, v2, v3 int32) int32 {
 func (m *Module) _go_vtab_integrity(v0, v1, v2, v3, v4 int32) int32 {
 	return m._env.Xgo_vtab_integrity(v0, v1, v2, v3, v4)
 }
-func (m *Module) _fputc(v0, v1 int32) int32 {
-	return m._env.Xfputc(v0, v1)
-}
 func (m *Module) _fseek(v0, v1, v2 int32) int32 {
 	return m._env.Xfseek(v0, v1, v2)
 }
@@ -334,9 +331,6 @@ func (m *Module) _go_shm_unmap(v0, v1 int32) int32 {
 }
 func (m *Module) _fopen(v0, v1 int32) int32 {
 	return m._env.Xfopen(v0, v1)
-}
-func (m *Module) _puts(v0 int32) int32 {
-	return m._env.Xputs(v0)
 }
 func (m *Module) _fflush(v0 int32) int32 {
 	return m._env.Xfflush(v0)
@@ -1680,16 +1674,6 @@ l133:
 				v3 = v1
 				goto l0
 			}
-			if v8 == 0 {
-				goto l47
-			}
-			v1 = int32(load32((*m.memory)[int64(uint32(v8))+4:]))
-			if v1 == 0 {
-				goto l47
-			}
-			t90 := v0
-			m._sqlite3_str_append(t90, int32(load32((*m.memory)[uint32(v8):])), v1)
-			v2 = int32(load32((*m.memory)[uint32(v0):]))
 			if v2 == 0 {
 				goto l1
 			}
@@ -3764,9 +3748,9 @@ l133:
 l130:
 	v6 = v9
 	v1 = v10 + i32(1)
-	goto l129
+	goto l133
 }
-func (m *Module) _sqlite3_str_append(v0, v1, v2 int32) {
+func (m *Module) Xsqlite3_str_append(v0, v1, v2 int32) {
 	var v3, v4, v5 int32
 	t0 := int32(load32((*m.memory)[int64(uint32(v0))+16:]))
 	v3 = t0
@@ -3920,7 +3904,7 @@ func (m *Module) _sqlite3AppendOneUtf8Character(v0, v1 int32) int32 {
 	(*m.memory)[uint32(v0)] = byte(int32(uint32(v1)>>18)&i32(7) | i32(240))
 	return i32(4)
 }
-func (m *Module) _sqlite3_str_appendchar(v0, v1, v2 int32) {
+func (m *Module) Xsqlite3_str_appendchar(v0, v1, v2 int32) {
 	var v3 int64
 	var v4 int32
 	{
@@ -4040,7 +4024,10 @@ func (m *Module) _sqlite3StrAccumEnlarge(v0 int32, v1 int64) int32 {
 		}
 		return p1
 	}
-	return int32((*m.memory)[int64(uint32(v0))+20])
+l1:
+	m.Xsqlite3_str_reset(v0)
+	m._sqlite3StrAccumSetError(v0, i32(7))
+	return i32(0)
 }
 func (m *Module) _sqlite3DbMallocSize(v0, v1 int32) int32 {
 	var p0 int32
@@ -4083,7 +4070,7 @@ func (m *Module) Xsqlite3_str_appendf(v0, v1, v2 int32) {
 	v3 = t0 - i32(16)
 	m.___stack_pointer = v3
 	store32((*m.memory)[int64(uint32(v3))+12:], uint32(v2))
-	m._sqlite3_str_vappendf(v0, v1, v2)
+	m.Xsqlite3_str_vappendf(v0, v1, v2)
 	m.___stack_pointer = v3 + i32(16)
 }
 func (m *Module) _sqlite3RecordErrorOffsetOfExpr(v0, v1 int32) {
@@ -4464,6 +4451,9 @@ l0:
 l1:
 	return v1
 }
+func (m *Module) Xsqlite3_value_text(v0 int32) int32 {
+	return m._sqlite3ValueText(v0, i32(1))
+}
 func (m *Module) Xsqlite3_str_finish(v0 int32) int32 {
 	var v1 int32
 	{
@@ -4705,10 +4695,10 @@ func (m *Module) Xsqlite3_snprintf(v0, v1, v2, v3 int32) int32 {
 			(*m.memory)[uint32(v1)] = byte(i32(0))
 			goto l0
 		}
+		store16((*m.memory)[int64(uint32(v4))+28:], uint16(i32(0)))
 		store64((*m.memory)[int64(uint32(v4))+20:], uint64(i64(0)))
 		store32((*m.memory)[int64(uint32(v4))+16:], uint32(v0))
 		store32((*m.memory)[int64(uint32(v4))+8:], uint32(i32(0)))
-		store16((*m.memory)[int64(uint32(v4))+28:], uint16(i32(0)))
 		store32((*m.memory)[int64(uint32(v4))+4:], uint32(v3))
 		store32((*m.memory)[int64(uint32(v4))+12:], uint32(v1))
 		m.Xsqlite3_str_vappendf(v4+i32(8), v2, v3)
@@ -4727,10 +4717,10 @@ func (m *Module) Xsqlite3_log(v0, v1, v2 int32) {
 	t1 := int32(load32((*m.memory)[uint32(i32(161164)):]))
 	if t1 != 0 {
 		store32((*m.memory)[int64(uint32(v3))+12:], uint32(v2))
-		store64((*m.memory)[int64(uint32(v3))+740:], uint64(i64(0)))
-		store32((*m.memory)[int64(uint32(v3))+736:], uint32(i32(700)))
-		store32((*m.memory)[int64(uint32(v3))+728:], uint32(i32(0)))
 		store16((*m.memory)[int64(uint32(v3))+748:], uint16(i32(0)))
+		store32((*m.memory)[int64(uint32(v3))+744:], uint32(i32(0)))
+		store64((*m.memory)[int64(uint32(v3))+736:], uint64(i64(700)))
+		store32((*m.memory)[int64(uint32(v3))+728:], uint32(i32(0)))
 		store32((*m.memory)[int64(uint32(v3))+732:], uint32(v3+i32(16)))
 		v4 = v3 + i32(728)
 		m.Xsqlite3_str_vappendf(v4, v1, v2)
@@ -7157,7 +7147,7 @@ l0:
 l1:
 	return v2
 }
-func (m *Module) _sqlite3_strnicmp(v0, v1, v2 int32) int32 {
+func (m *Module) Xsqlite3_strnicmp(v0, v1, v2 int32) int32 {
 	var v3 int32
 	if v0 == 0 {
 		p0 := i32(0)
@@ -10732,9 +10722,9 @@ l2:
 		v20 = (v17<<32 + i64(0x1800000000)) >> 32
 		v18 = v20*int64(uint32(v9)) + i64(32)
 		v12 = i32(0)
-		v4 = v1
+		v5 = v1
 	l11:
-		if v4 != 0 {
+		if v5 != 0 {
 			{
 				t62 := v7 + i32(56)
 				t63 := v5
@@ -10801,7 +10791,7 @@ l2:
 				store16((*m.memory)[int64(uint32(v5))+28:], uint16(t79|i32(64)))
 				v18 = v18 + v20
 				v9 = v9 + i32(1)
-				v12 = v4
+				v12 = v5
 			}
 		l10:
 			t80 := int32(load32((*m.memory)[int64(uint32(v5))+16:]))
@@ -10861,7 +10851,7 @@ l2:
 					if v6 != 0 {
 						goto l14
 					}
-					if uint32(v4) > uint32(v9) {
+					if uint32(v5) > uint32(v9) {
 						goto l14
 					}
 					t95 := int32(load32((*m.memory)[int64(uint32(v4))+8:]))
@@ -10892,7 +10882,7 @@ l2:
 						t111 := m.t0[uint(t110)].(func(int32, int32, int32, int64) int32)(v6, v8, i32(24), v17)
 						v6 = t111
 					}
-					v4 = v4 + i32(1)
+					v5 = v5 + i32(1)
 					goto l15
 				}
 			l14:
@@ -10903,8 +10893,8 @@ l2:
 			}
 			var p112 int32
 			{
-				v4 = v13 & i32(3)
-				if v4 == 0 {
+				v5 = v13 & i32(3)
+				if v5 == 0 {
 					v8 = i32(0)
 					p112 = i32(0)
 					goto l16
@@ -11013,8 +11003,8 @@ l2:
 		if v6 != 0 {
 			goto l6
 		}
-		store32((*m.memory)[int64(uint32(v5))+68:], uint32(v9))
-		store16((*m.memory)[int64(uint32(v5))+66:], uint16(v11&i32(0xff00)|int32(uint32(v11)>>16)))
+		store32((*m.memory)[int64(uint32(v4))+68:], uint32(v9))
+		store16((*m.memory)[int64(uint32(v4))+66:], uint16(v11&i32(0xff00)|int32(uint32(v11)>>16)))
 		if v3 != 0 {
 			store32((*m.memory)[int64(uint32(v4))+72:], uint32(v2))
 			t135 := int32(load32((*m.memory)[int64(uint32(v4))+60:]))
@@ -14789,8 +14779,8 @@ l3:
 	return p0
 }
 func (m *Module) _sqlite3VdbeMemSetStr(v0, v1 int32, v2 int64, v3, v4 int32) int32 {
-	var v5, v6, v7 int32
-	var v8, v9 int64
+	var v5, v6 int32
+	var v7, v8 int64
 	if v1 == 0 {
 		m._sqlite3VdbeMemSetNull(v0)
 		return i32(0)
@@ -14851,7 +14841,7 @@ func (m *Module) _sqlite3VdbeMemSetStr(v0, v1 int32, v2 int64, v3, v4 int32) int
 l1:
 	v5 = v3
 l3:
-	if v8 > v9 {
+	if v7 > v8 {
 		if uint32(v4-i32(1)) > uint32(i32(-3)) {
 			goto l4
 		}
@@ -27585,7 +27575,7 @@ l4:
 	t19 := m.Xsqlite3_bind_null(v0, v1)
 	return t19
 }
-func (m *Module) _sqlite3_bind_zeroblob(v0, v1, v2 int32) int32 {
+func (m *Module) Xsqlite3_bind_zeroblob(v0, v1, v2 int32) int32 {
 	var v3 int32
 	t0 := v0
 	v1 = v1 - i32(1)
@@ -30505,7 +30495,8 @@ func (m *Module) _sqlite3RealSameAsInt(v0 float64, v1 int64) int32 {
 		v3 = p2
 	}
 l0:
-	return v2
+	m.___stack_pointer = v2 + i32(16)
+	return v3
 }
 func (m *Module) _sqlite3Atoi64(v0, v1, v2, v3 int32) int32 {
 	var v4, v5, v6, v7, v8, v9, v10 int32
@@ -45388,42 +45379,6 @@ func (m *Module) _sqlite3ParseUri(v0, v1, v2, v3, v4, v5 int32) int32 {
 	t2 := m._sqlite3Strlen30(v1)
 	v6 = t2
 	{
-		v9 = int32(load32((*m.memory)[uint32(v2):]))
-		if v9&i32(64) == 0 {
-			if int32((*m.memory)[uint32(i32(179750))]) == 0 {
-				goto l0
-			}
-			if uint32(v6) > uint32(i32(4)) {
-				goto l1
-			}
-			goto l0
-		}
-		if uint32(v6) < uint32(i32(5)) {
-			goto l0
-		}
-	l1:
-		if m._memcmp(v1, i32(117075), i32(5)) != 0 {
-			goto l0
-		}
-		v19 = int64(uint32(v6 + i32(8)))
-		v7 = v1
-	l2:
-		if v6 != 0 {
-			v6 = v6 - i32(1)
-			t0 := v19
-			var p1 int32
-			if int32((*m.memory)[uint32(v7)]) == i32(38) {
-				p1 = 1
-			}
-			v19 = t0 + int64(uint32(p1))
-			v7 = v7 + i32(1)
-			goto l2
-		}
-		v6 = m._sqlite3Malloc(v19)
-		if v6 == 0 {
-			goto l3
-		}
-		store32((*m.memory)[uint32(v6):], uint32(i32(0)))
 		{
 			{
 				if v8&i32(64) == 0 {
@@ -45804,7 +45759,7 @@ func (m *Module) _sqlite3ParseUri(v0, v1, v2, v3, v4, v5 int32) int32 {
 		store32((*m.memory)[uint32(t49):], uint32(v1))
 		v6 = i32(0)
 		if v1 != 0 {
-			goto l31
+			goto l30
 		}
 		store32((*m.memory)[uint32(v13):], uint32(v0))
 		v6 = i32(1)
@@ -45814,15 +45769,15 @@ func (m *Module) _sqlite3ParseUri(v0, v1, v2, v3, v4, v5 int32) int32 {
 	}
 l3:
 	v6 = i32(7)
-	goto l32
-l27:
+	goto l31
+l26:
 	store32((*m.memory)[uint32(v5):], uint32(v7))
 	m._sqlite3_free_filename(v10)
 	v10 = i32(0)
-l31:
+l30:
 	store32((*m.memory)[uint32(v4):], uint32(v10))
 	store32((*m.memory)[uint32(v2):], uint32(v14))
-l32:
+l31:
 	m.___stack_pointer = v13 + i32(48)
 	return v6
 }
@@ -45862,6 +45817,8 @@ l0:
 		store64((*m.memory)[int64(uint32(v1))+48:], uint64(i64(0)))
 		store64((*m.memory)[int64(uint32(v1))+40:], uint64(i64(0)))
 		(*m.memory)[int64(uint32(v1))+77] = byte(i32(1))
+		store64((*m.memory)[int64(uint32(v1))+64:], uint64(i64(0)))
+		store64((*m.memory)[int64(uint32(v1))+56:], uint64(i64(0)))
 	}
 	return v1
 }
@@ -48468,7 +48425,7 @@ l2:
 		t25 := int32(load32((*m.memory)[int64(uint32(v1))+4:]))
 		v0 = t24 - t25
 	}
-	return p14
+	return v0
 }
 func (m *Module) _decimalAddFunc(v0, v1, v2 int32) {
 	t0 := int32(load32((*m.memory)[uint32(v2):]))
@@ -48638,7 +48595,7 @@ func (m *Module) _decimal_add(v0, v1 int32) {
 			}
 			(*m.memory)[uint32(t43)] = byte(p44)
 			v1 = int32(uint32(v1) >> 31)
-			v3 = v3 - i32(1)
+			v2 = v2 - i32(1)
 			goto l7
 		}
 	}
@@ -49776,8 +49733,8 @@ func (m *Module) _re_sql_func(v0, v1, v2 int32) {
 	l17:
 		store32((*m.memory)[int64(uint32(v8))+232:], uint32(i32(0)))
 		store32((*m.memory)[int64(uint32(v8))+236:], uint32(v1+v2<<1))
-		v7 = v8 + i32(224) | i32(8)
-		m._re_add_state(v7, i32(0))
+		v6 = v8 + i32(224) | i32(8)
+		m._re_add_state(v6, i32(0))
 	l19:
 		{
 			t56 := int32(load32((*m.memory)[uint32(v6):]))
@@ -50118,8 +50075,8 @@ func (m *Module) _re_sql_func(v0, v1, v2 int32) {
 			}
 		}
 	l18:
+		v7 = i32(0)
 		v5 = i32(0)
-		v6 = i32(0)
 	l48:
 		{
 			if v1 == v5 {
@@ -50154,12 +50111,12 @@ func (m *Module) _re_sql_func(v0, v1, v2 int32) {
 			goto l48
 		}
 	l25:
-		v5 = i32(1)
+		v7 = i32(1)
 	l44:
 		m.Xsqlite3_free(p51)
 	}
 l14:
-	m.Xsqlite3_result_int(v0, v5)
+	m.Xsqlite3_result_int(v0, v7)
 l11:
 	if v17 != 0 {
 		goto l0
@@ -51157,7 +51114,7 @@ func (m *Module) Xsqlite3_invoke_busy_handler_go(v0 int64) int32 {
 	return m.t0[uint(int32(v0))].(func(int32) int32)(int32(int64(uint64(v0) >> 32)))
 }
 func (m *Module) Xsqlite3_create_module_go(v0, v1, v2, v3 int32) int32 {
-	var v4, v5, v6 int32
+	var v4, v5 int32
 	if v3 == 0 {
 		t0 := m.Xsqlite3_create_module_v2(v0, v1, i32(0), i32(0), i32(0))
 		return t0
@@ -51222,7 +51179,7 @@ func (m *Module) Xsqlite3_create_module_go(v0, v1, v2, v3 int32) int32 {
 		store32((*m.memory)[int64(uint32(v4))+96:], uint32(i32(85)))
 	}
 	v2 = v4 + i32(4)
-	if v6 != 0 {
+	if v5 != 0 {
 		if v3 != 0 {
 			goto l0
 		}
@@ -51414,8 +51371,8 @@ func (m *Module) Xsqlite3_vtab_config_go(v0, v1, v2 int32) int32 {
 	m.___stack_pointer = v3 + i32(16)
 	return t1
 }
-func (m *Module) _putchar() {
-	_ = m._fputc(i32(10), i32(1))
+func _sqrt(v0 float64) float64 {
+	return math.Sqrt(v0)
 }
 func _trunc(v0 float64) float64 {
 	return math.Trunc(v0)
@@ -54053,9 +54010,9 @@ l0:
 		store32((*m.memory)[int64(uint32(v0))+44:], uint32(i32(0)))
 		(*m.memory)[int64(uint32(v0))+17] = byte(v1)
 	}
+	store64((*m.memory)[int64(uint32(v0))+88:], uint64(i64(0)))
 	store64((*m.memory)[int64(uint32(v0))+80:], uint64(i64(0)))
 	(*m.memory)[int64(uint32(v0))+20] = byte(i32(0))
-	store64((*m.memory)[int64(uint32(v0))+88:], uint64(i64(0)))
 }
 func (m *Module) _btreePageFromDbPage(v0, v1, v2 int32) int32 {
 	var v3 int32
@@ -54489,7 +54446,7 @@ func (m *Module) _readSuperJournal(v0, v1 int32, v2 int64) int32 {
 		if uint64(t7) <= uint64(v2) {
 			goto l0
 		}
-		if v5 == 0 {
+		if v6 == 0 {
 			goto l0
 		}
 		t8 := int64(load64((*m.memory)[int64(uint32(v3))+16:]))
@@ -61095,8 +61052,9 @@ func (m *Module) _sqlite3VdbeMemStringify(v0, v1, v2 int32) int32 {
 				store32((*m.memory)[int64(uint32(v0))+12:], uint32(t15+i32(2)))
 				goto l3
 			}
-			store64((*m.memory)[int64(uint32(v4))+36:], uint64(i64(0)))
-			store32((*m.memory)[int64(uint32(v4))+32:], uint32(i32(32)))
+			store16((*m.memory)[int64(uint32(v4))+44:], uint16(i32(0)))
+			store32((*m.memory)[int64(uint32(v4))+40:], uint32(i32(0)))
+			store64((*m.memory)[int64(uint32(v4))+32:], uint64(i64(32)))
 			store32((*m.memory)[int64(uint32(v4))+24:], uint32(i32(0)))
 			store32((*m.memory)[int64(uint32(v4))+28:], uint32(v5))
 			t16 := int32(load32((*m.memory)[int64(uint32(v0))+20:]))
@@ -63944,7 +63902,7 @@ func (m *Module) _sqlite3VdbeRecordCompareWithSkip(v0, v1, v2, v3 int32) int32 {
 	{
 		var p2 int32
 		{
-			v11 = v0
+			v10 = v0
 			{
 				t4 := v10
 				var p3 int32
@@ -64366,7 +64324,7 @@ func (m *Module) _sqlite3VdbeRecordCompareWithSkip(v0, v1, v2, v3 int32) int32 {
 							goto l20
 						}
 						v6 = v6 + i32(40)
-						v15 = v15 + i32(4)
+						v14 = v14 + i32(4)
 						goto l26
 					}
 				l25:
@@ -70985,13 +70943,6 @@ func (m *Module) _execSql(v0, v1, v2 int32) int32 {
 				if v2 == 0 {
 					goto l0
 				}
-				if int32((*m.memory)[int64(uint32(v2))+1]) != i32(82) {
-					goto l0
-				}
-				if int32((*m.memory)[int64(uint32(v2))+2]) != i32(69) {
-					goto l0
-				}
-				goto l1
 			}
 		}
 		p9 := i32(0)
@@ -74378,10 +74329,10 @@ func (m *Module) _pragmaVtabConnect(v0, v1, v2, v3, v4, v5 int32) int32 {
 	t0 := m.___stack_pointer
 	v2 = t0 - i32(272)
 	m.___stack_pointer = v2
-	store64((*m.memory)[int64(uint32(v2))+260:], uint64(i64(0)))
-	store32((*m.memory)[int64(uint32(v2))+256:], uint32(i32(200)))
-	store32((*m.memory)[int64(uint32(v2))+248:], uint32(i32(0)))
 	store16((*m.memory)[int64(uint32(v2))+268:], uint16(i32(0)))
+	store32((*m.memory)[int64(uint32(v2))+264:], uint32(i32(0)))
+	store64((*m.memory)[int64(uint32(v2))+256:], uint64(i64(200)))
+	store32((*m.memory)[int64(uint32(v2))+248:], uint32(i32(0)))
 	store32((*m.memory)[int64(uint32(v2))+252:], uint32(v2+i32(48)))
 	m.Xsqlite3_str_appendall(v2+i32(248), i32(66324))
 	t1 := int32((*m.memory)[int64(uint32(v1))+6])
@@ -75356,7 +75307,7 @@ func (m *Module) _jsonLookupStep(v0, v1, v2, v3 int32) int32 {
 				goto l10
 			}
 		l6:
-			v13 = i32(1)
+			v12 = i32(1)
 			v2 = v7
 			v9 = v4
 			if v4 == 0 {
@@ -76958,7 +76909,7 @@ func (m *Module) _jsonbValidityCheck(v0, v1, v2, v3 int32) int32 {
 					}
 					goto l0
 				}
-				if v9 != i32(9) {
+				if v7 != 0 {
 					goto l0
 				}
 				store32((*m.memory)[int64(uint32(v8))+8:], uint32(i32(0)))
@@ -81545,7 +81496,7 @@ func (m *Module) _sqlite3EndTable(v0, v1, v2, v3, v4 int32) {
 				v11 = t64
 				store16((*m.memory)[int64(uint32(t65))+52:], uint16(v11))
 				{
-					if v12 == 0 {
+					if v13 == 0 {
 						goto l17
 					}
 					t66 := int32(load32((*m.memory)[int64(uint32(v8))+44:]))
@@ -81871,11 +81822,12 @@ func (m *Module) _sqlite3EndTable(v0, v1, v2, v3, v4 int32) {
 						store16((*m.memory)[int64(uint32(v6))+36:], uint16(v16))
 						store16((*m.memory)[int64(uint32(v3))+34:], uint16(i32(0)))
 						store32((*m.memory)[int64(uint32(v3))+4:], uint32(i32(0)))
-						m._sqlite3DeleteTable(v13, v3)
-						store64((*m.memory)[int64(uint32(v10))+156:], uint64(i64(0)))
+						m._sqlite3DeleteTable(v12, v3)
+						store32((*m.memory)[int64(uint32(v10))+168:], uint32(i32(0)))
+						store32((*m.memory)[int64(uint32(v10))+156:], uint32(i32(0)))
 						store32((*m.memory)[int64(uint32(v10))+152:], uint32(v9))
 						(*m.memory)[int64(uint32(v10))+148] = byte(i32(11))
-						store64((*m.memory)[int64(uint32(v10))+164:], uint64(i64(0)))
+						store64((*m.memory)[int64(uint32(v10))+160:], uint64(i64(0)))
 						_ = m._sqlite3Select(v0, v4, v10+i32(148))
 						t154 := int32(load32((*m.memory)[int64(uint32(v0))+40:]))
 						if t154 != 0 {
@@ -81902,8 +81854,8 @@ func (m *Module) _sqlite3EndTable(v0, v1, v2, v3, v4 int32) {
 						t163 := int32(load32((*m.memory)[int64(uint32(v10))+164:]))
 						_ = m._sqlite3VdbeAddOp3(v11, i32(99), t162, t163, v3)
 						m._sqlite3TableAffinity(v11, v6, i32(0))
-						_ = m._sqlite3VdbeAddOp3(v11, i32(129), v5, v12, i32(0))
-						_ = m._sqlite3VdbeAddOp3(v11, i32(130), v5, v3, v12)
+						_ = m._sqlite3VdbeAddOp3(v11, i32(129), v5, v13, i32(0))
+						_ = m._sqlite3VdbeAddOp3(v11, i32(130), v5, v3, v13)
 						_ = m._sqlite3VdbeAddOp3(v11, i32(9), i32(0), v9, i32(0))
 						t168 := int32(load32((*m.memory)[int64(uint32(v11))+108:]))
 						v7 = t168
@@ -81943,7 +81895,7 @@ func (m *Module) _sqlite3EndTable(v0, v1, v2, v3, v4 int32) {
 						t181 := m._sqlite3Malloc(v20 + v21*i64(6) + i64(35))
 						v7 = t181
 						if v7 == 0 {
-							m._sqlite3OomFault(v13)
+							m._sqlite3OomFault(v12)
 							goto l33
 						}
 						var p182 int32
@@ -83568,7 +83520,6 @@ func (m *Module) _sqlite3CreateIndex(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10
 						if uint32(t233) < uint32(i32(2)) {
 							goto l43
 						}
-						p51 = v14
 					}
 				l40:
 					store32((*m.memory)[int64(uint32(v0))+240:], uint32(v11))
@@ -83591,8 +83542,6 @@ func (m *Module) _sqlite3CreateIndex(v0, v1, v2, v3, v4, v5, v6, v7, v8, v9, v10
 			v7 = p88
 			m._sqlite3FreeIndex(v13, v11)
 			goto l9
-		l44:
-			v7 = i32(0)
 		}
 	l3:
 		v14 = i32(0)
@@ -83635,7 +83584,7 @@ l0:
 	m._sqlite3ExprDelete(v13, v7)
 	m._sqlite3ExprListDelete(v13, v4)
 	m._sqlite3SrcListDelete(v13, v3)
-	m._sqlite3DbFree(v13, v16)
+	m._sqlite3DbFree(v13, v14)
 	m.___stack_pointer = v12 + i32(224)
 }
 func (m *Module) _sqlite3AddCheckConstraint(v0, v1, v2, v3 int32) {
@@ -83832,7 +83781,7 @@ func (m *Module) _sqlite3CreateForeignKey(v0, v1, v2, v3, v4 int32) {
 						v17 = v1 + v10<<4
 					l6:
 						{
-							if v2 == v7 {
+							if v2 == v6 {
 								goto l5
 							}
 							t26 := int32(load32((*m.memory)[int64(uint32(v8))+4:]))
@@ -83870,10 +83819,10 @@ func (m *Module) _sqlite3CreateForeignKey(v0, v1, v2, v3, v4 int32) {
 				}
 				v7 = p32
 				v2 = v5 + i32(40)
-				v7 = v3 + i32(12)
+				v6 = v3 + i32(12)
 			l9:
 				{
-					if v8 == 0 {
+					if v7 == 0 {
 						goto l8
 					}
 					t33 := int32(load32((*m.memory)[uint32(v6):]))
@@ -83893,9 +83842,9 @@ func (m *Module) _sqlite3CreateForeignKey(v0, v1, v2, v3, v4 int32) {
 					}
 					v10 = v14 + v15
 					(*m.memory)[uint32(v10)] = byte(i32(0))
-					v8 = v8 - i32(1)
+					v7 = v7 - i32(1)
 					v2 = v2 + i32(8)
-					v7 = v7 + i32(16)
+					v6 = v6 + i32(16)
 					goto l9
 				}
 			}
@@ -83909,15 +83858,15 @@ func (m *Module) _sqlite3CreateForeignKey(v0, v1, v2, v3, v4 int32) {
 			v0 = t41
 			if v0 == v5 {
 				m._sqlite3OomFault(v12)
-				v8 = v5
+				v7 = v5
 				goto l0
 			}
 			if v0 != 0 {
 				store32((*m.memory)[int64(uint32(v5))+12:], uint32(v0))
 				store32((*m.memory)[int64(uint32(v0))+16:], uint32(v5))
 			}
-			store32((*m.memory)[int64(uint32(v9))+48:], uint32(v5))
-			v8 = i32(0)
+			store32((*m.memory)[int64(uint32(v8))+48:], uint32(v5))
+			v7 = i32(0)
 			goto l0
 		}
 	l5:
@@ -83927,7 +83876,7 @@ func (m *Module) _sqlite3CreateForeignKey(v0, v1, v2, v3, v4 int32) {
 		v7 = v5
 	}
 l0:
-	m._sqlite3DbFree(v12, v8)
+	m._sqlite3DbFree(v12, v7)
 	m._sqlite3ExprListDelete(v12, v1)
 	m.___stack_pointer = v11 + i32(32)
 	m._sqlite3ExprListDelete(v12, v3)
@@ -95976,24 +95925,6 @@ l0:
 	t5 := m._sqlite3PExpr(v0, v1, v2, v3)
 	return t5
 }
-func (m *Module) _sqlite3ExprUnmapAndDelete(v0, v1 int32) {
-	if v1 != 0 {
-		if uint32(int32((*m.memory)[int64(uint32(v0))+208])) >= uint32(i32(2)) {
-			m._sqlite3RenameExprUnmap(v0, v1)
-		}
-		m._sqlite3ExprDeleteNN(int32(load32((*m.memory)[uint32(v0):])), v1)
-	}
-}
-func (m *Module) _sqlite3PExprAddSelect(v0, v1, v2 int32) {
-	if v1 != 0 {
-		store32((*m.memory)[int64(uint32(v1))+20:], uint32(v2))
-		t0 := v1
-		store32((*m.memory)[int64(uint32(t0))+4:], uint32(int32(load32((*m.memory)[int64(uint32(v1))+4:]))|i32(4198400)))
-		m._sqlite3ExprSetHeightAndFlags(v0, v1)
-		return
-	}
-	m._sqlite3SelectDelete(int32(load32((*m.memory)[uint32(v0):])), v2)
-}
 func (m *Module) _sqlite3ExprSetHeightAndFlags(v0, v1 int32) {
 	var v2, v3, v4, v5, v6 int32
 	t0 := m.___stack_pointer
@@ -100716,7 +100647,7 @@ l0:
 	return m._sqlite3LocateTable(t2, t3, t0, t10)
 }
 func (m *Module) _sqlite3IsShadowTableOf(v0, v1, v2 int32) int32 {
-	var v3, v4, v5 int32
+	var v3, v4 int32
 	{
 		t0 := int32((*m.memory)[int64(uint32(v1))+43])
 		if t0 != i32(1) {
@@ -100757,7 +100688,7 @@ func (m *Module) _sqlite3IsShadowTableOf(v0, v1, v2 int32) int32 {
 		v4 = t12
 	}
 l0:
-	return v5
+	return v4
 }
 func (m *Module) _isAlterableTable(v0, v1 int32) int32 {
 	var v2, v3, v4 int32
@@ -101196,7 +101127,6 @@ func (m *Module) _sqlite3AlterDropConstraint(v0, v1, v2, v3 int32) {
 		if v1 == 0 {
 			goto l0
 		}
-		var p5 int32
 		{
 			if v2 != 0 {
 				t8 := m._sqlite3NameFromToken(v5, v2)
@@ -103601,7 +103531,7 @@ l7:
 }
 func (m *Module) _existsToJoin(v0, v1, v2 int32) {
 	var v3, v4, v5, v6 int32
-l1:
+l2:
 	{
 		{
 			if v2 == 0 {
@@ -103706,7 +103636,6 @@ l1:
 		v2 = t27
 		goto l2
 	}
-l0:
 }
 func (m *Module) _findConstInWhere(v0, v1 int32) {
 	var v2, v3 int32
@@ -104235,7 +104164,7 @@ l0:
 			m._sqlite3DbFree(v24, v8)
 			goto l1
 		}
-		(*m.memory)[int64(uint32(v8))+44] = byte(v15)
+		(*m.memory)[int64(uint32(v8))+44] = byte(v13)
 		store64((*m.memory)[int64(uint32(v8))+20:], uint64(i64(-1)))
 		t9 := int32(load32((*m.memory)[int64(uint32(v0))+60:]))
 		t10 := v0
@@ -104244,7 +104173,7 @@ l0:
 		store16((*m.memory)[int64(uint32(v8))+42:], uint16(v7))
 		store16((*m.memory)[int64(uint32(v8))+40:], uint16(v6))
 		store32((*m.memory)[int64(uint32(v8))+12:], uint32(v4))
-		store32((*m.memory)[int64(uint32(v8))+8:], uint32(v13))
+		store32((*m.memory)[int64(uint32(v8))+8:], uint32(v10))
 		store32((*m.memory)[int64(uint32(v8))+4:], uint32(v1))
 		store32((*m.memory)[uint32(v8):], uint32(v0))
 		store32((*m.memory)[int64(uint32(v8))+16:], uint32(v5))
@@ -104252,15 +104181,15 @@ l0:
 		t11 := int32(int16(load16((*m.memory)[int64(uint32(v0))+16:])))
 		store32((*m.memory)[int64(uint32(v8))+36:], uint32(t11))
 		store32((*m.memory)[int64(uint32(v8))+28:], uint32(v3))
-		v11 = v8 + i32(45)
-		memory_zero(*m.memory, uint32(v11), uint32(i32(35)))
+		v9 = v8 + i32(45)
+		memory_zero(*m.memory, uint32(v9), uint32(i32(35)))
 		v36 = v8 + i32(760)
-		v3 = v10 + i32(72)
+		v3 = v11 + i32(72)
 		if v3 != 0 {
 			memory_zero(*m.memory, uint32(v36), uint32(v3))
 		}
 		store64((*m.memory)[int64(uint32(v8))+500:], uint64(i64(-0x6300000000)))
-		v3 = v8 + v9
+		v3 = v8 + v14
 		store32((*m.memory)[int64(uint32(v3))+52:], uint32(v3+i32(60)))
 		store16((*m.memory)[int64(uint32(v3))+48:], uint16(i32(3)))
 		store16((*m.memory)[int64(uint32(v3))+44:], uint16(i32(0)))
@@ -104573,7 +104502,7 @@ l0:
 				goto l16
 			}
 			v37 = v8 + i32(496)
-			v11 = i32(40)
+			v9 = i32(40)
 			v3 = v26
 			v2 = i32(0)
 		l18:
@@ -104690,7 +104619,7 @@ l0:
 						v2 = v2 + i32(16)
 						goto l24
 					}
-					v3 = v9 + i32(8)
+					v3 = v14 + i32(8)
 				l32:
 					{
 						t106 := int32(load32((*m.memory)[uint32(v3):]))
@@ -104791,7 +104720,7 @@ l0:
 					goto l19
 				}
 			l20:
-				if v13 != 0 {
+				if v10 != 0 {
 					goto l19
 				}
 				store32((*m.memory)[int64(uint32(v8))+8:], uint32(v4))
@@ -104801,7 +104730,7 @@ l0:
 		l19:
 			{
 				{
-					if v15 != i32(1) {
+					if v13 != i32(1) {
 						goto l33
 					}
 					t127 := int32(load32((*m.memory)[int64(uint32(v18))+48:]))
@@ -105005,7 +104934,7 @@ l0:
 							if v10&i32(1024) != 0 {
 								goto l48
 							}
-							if v13&i32(13) == 0 {
+							if v10&i32(13) == 0 {
 								goto l48
 							}
 							t170 := int32((*m.memory)[int64(uint32(v2))+16])
@@ -105064,7 +104993,7 @@ l0:
 				goto l16
 			l45:
 				store16((*m.memory)[int64(uint32(v2))+22:], uint16(i32(1)))
-				store32((*m.memory)[int64(uint32(v10))+836:], uint32(v2))
+				store32((*m.memory)[int64(uint32(v11))+836:], uint32(v2))
 				store64((*m.memory)[int64(uint32(v2))+8:], uint64(i64(1)))
 				store32((*m.memory)[int64(uint32(v11))+764:], uint32(v9))
 				store16((*m.memory)[int64(uint32(v11))+50:], uint16(i32(1)))
@@ -105230,7 +105159,7 @@ l0:
 								}
 							}
 							{
-								if v15 == 0 {
+								if v9 == 0 {
 									goto l59
 								}
 								t223 := int32(load32((*m.memory)[uint32(v3):]))
@@ -105280,7 +105209,7 @@ l0:
 							if v4 == 0 {
 								goto l62
 							}
-							memory_copy(*m.memory, uint32(v11), uint32(v5+v3*i32(88)), uint32(v4))
+							memory_copy(*m.memory, uint32(v13), uint32(v5+v3*i32(88)), uint32(v4))
 						}
 					l62:
 						v41 = v41 & v43
@@ -105432,7 +105361,7 @@ l0:
 			}
 			v27 = p261 | p262
 			v15 = i32(0)
-			v13 = v36
+			v10 = v36
 		l86:
 			if v15 != v16 {
 				t263 := int32((*m.memory)[int64(uint32(v10))+56])
@@ -105455,7 +105384,7 @@ l0:
 							goto l69
 						}
 					}
-					store32((*m.memory)[int64(uint32(v13))+16:], uint32(v2))
+					store32((*m.memory)[int64(uint32(v10))+16:], uint32(v2))
 					goto l70
 				l69:
 					v2 = v36 + v15*i32(88)
@@ -105729,7 +105658,7 @@ l0:
 						if t341&i32(16) != 0 {
 							goto l78
 						}
-						m._wherePartIdxExpr(v0, v11, v25, i32(0), v2, v9)
+						m._wherePartIdxExpr(v0, v9, v25, i32(0), v2, v14)
 					}
 				l78:
 					store32((*m.memory)[int64(uint32(v10))+8:], uint32(v2))
@@ -105792,7 +105721,7 @@ l0:
 					v3 = t357 + i32(1)
 					store32((*m.memory)[int64(uint32(t358))+8:], uint32(v3))
 					store32((*m.memory)[int64(uint32(v0))+48:], uint32(v3))
-					_ = m._sqlite3VdbeAddOp3(v14, i32(77), i32(0), v3, i32(0))
+					_ = m._sqlite3VdbeAddOp3(v12, i32(77), i32(0), v3, i32(0))
 					{
 						t360 := int32((*m.memory)[int64(uint32(v4))+28])
 						if t360&i32(128) == 0 {
@@ -105825,7 +105754,7 @@ l0:
 					(*m.memory)[int64(uint32(v8))+45] = byte(i32(0))
 				}
 			l84:
-				v13 = v13 + i32(88)
+				v10 = v10 + i32(88)
 				v15 = v15 + i32(1)
 				goto l86
 			}
@@ -105838,7 +105767,7 @@ l0:
 			v25 = v8 + i32(904)
 			v47 = int64(uint32(v16))
 			v45 = i64(0)
-		l191:
+		l192:
 			{
 				{
 					{
@@ -106556,7 +106485,7 @@ l0:
 									v2 = t592 + i32(1)
 									store32((*m.memory)[uint32(t593):], uint32(v2))
 									store32((*m.memory)[int64(uint32(v0))+48:], uint32(v2))
-									_ = m._sqlite3VdbeAddOp3(v14, i32(73), i32(0), v2, i32(0))
+									_ = m._sqlite3VdbeAddOp3(v12, i32(73), i32(0), v2, i32(0))
 								}
 							l115:
 								t595 := int32(load16((*m.memory)[int64(uint32(v31))+13:]))
@@ -106813,10 +106742,10 @@ l0:
 					l117:
 						{
 							{
-								if v7&i32(256) == 0 {
+								if v15&i32(256) == 0 {
 									goto l127
 								}
-								if v7&i32(5) == 0 {
+								if v15&i32(5) == 0 {
 									goto l127
 								}
 								t677 := int32(load32((*m.memory)[int64(uint32(v0))+48:]))
@@ -106839,15 +106768,15 @@ l0:
 									_ = m._sqlite3VdbeAddOp4Int(v12, i32(66), t685, v2, v3, i32(1))
 									m._filterPullDown(v0, v8, v21, v2, v44)
 								}
-								_ = m._sqlite3VdbeAddOp3(v14, i32(30), v19, v2, v3)
+								_ = m._sqlite3VdbeAddOp3(v12, i32(30), v19, v2, v3)
 								goto l128
 							}
 						l127:
-							if v7&i32(258) == i32(258) {
-								v11 = i32(0)
+							if v15&i32(258) == i32(258) {
 								v9 = i32(0)
+								v11 = i32(0)
 								v17 = i32(0)
-								if v7&i32(32) != 0 {
+								if v15&i32(32) != 0 {
 									v17 = i32(1)
 									t688 := int32(load32((*m.memory)[int64(uint32(v16))+52:]))
 									t689 := int32(load32((*m.memory)[uint32(t688):]))
@@ -106916,7 +106845,7 @@ l0:
 								{
 									if v4 == 0 {
 										v2 = i32(189)
-										v11 = i32(0)
+										v9 = i32(0)
 										goto l131
 									}
 									t712 := int32(load32((*m.memory)[int64(uint32(v0))+48:]))
@@ -106996,7 +106925,7 @@ l0:
 								t731 := int32(load16((*m.memory)[int64(uint32(v16))+26:]))
 								v11 = t731
 								v22 = i32(0)
-								v15 = i32(0)
+								v14 = i32(0)
 								v3 = i32(0)
 								t732 := int32(load16((*m.memory)[int64(uint32(v16))+24:]))
 								v9 = t732
@@ -107013,7 +106942,7 @@ l0:
 								t736 := int32(load32((*m.memory)[int64(uint32(v16))+32:]))
 								v2 = t736
 								{
-									if v7&i32(16) == 0 {
+									if v15&i32(16) == 0 {
 										v5 = i32(0)
 										goto l135
 									}
@@ -107068,7 +106997,7 @@ l0:
 									store32((*m.memory)[int64(uint32(t751))+44:], uint32(v7))
 									store32((*m.memory)[int64(uint32(v0))+60:], uint32(v7))
 									v22 = i32(1)
-									v15 = i32(1)
+									v14 = i32(1)
 								}
 								v32 = i32(1)
 								t752 := int32(load16((*m.memory)[int64(uint32(v2))+52:]))
@@ -107252,7 +107181,7 @@ l0:
 								m._sqlite3VdbeExplain(v0, i32(1), i32(88217), i32(0))
 								v14 = i32(0)
 								v2 = i32(0)
-							l154:
+							l155:
 								{
 									t801 := int32(load32((*m.memory)[int64(uint32(v22))+12:]))
 									if t801 > v2 {
@@ -107273,10 +107202,10 @@ l0:
 										if t808 != 0 {
 											goto l148
 										}
-										v3 = v5
-										if v13 != 0 {
-											store32((*m.memory)[int64(uint32(v13))+12:], uint32(v3))
-											v3 = v13
+										v3 = v11
+										if v10 != 0 {
+											store32((*m.memory)[int64(uint32(v10))+12:], uint32(v3))
+											v3 = v10
 										}
 										store32((*m.memory)[int64(uint32(v18))+16:], uint32(v2+i32(1)))
 										m._sqlite3VdbeExplain(v0, i32(1), i32(86030), v18+i32(16))
@@ -107286,7 +107215,7 @@ l0:
 											goto l148
 										}
 										v3 = i32(0)
-										m._sqlite3WhereExplainOneScan(v0, v7, v9+i32(760), i32(0))
+										m._sqlite3WhereExplainOneScan(v0, v5, v21+i32(760), i32(0))
 										{
 											t810 := int32((*m.memory)[int64(uint32(v8))+40])
 											if t810&i32(16) != 0 {
@@ -107320,10 +107249,6 @@ l0:
 												m._sqlite3ExprCodeGetColumnOfTable(v12, v15, v19, t820, v9)
 												v9 = v9 + i32(1)
 												v3 = v3 + i32(2)
-												goto l149
-											}
-											if v21 == 0 {
-												v3 = i32(0)
 												goto l150
 											}
 											{
@@ -107355,8 +107280,8 @@ l0:
 										l152:
 											m._sqlite3ReleaseTempRange(v0, v17, v4)
 										}
-									l148:
-										_ = m._sqlite3VdbeAddOp3(v14, i32(10), v20, v29, i32(0))
+									l149:
+										_ = m._sqlite3VdbeAddOp3(v12, i32(10), v20, v29, i32(0))
 										if v3 != 0 {
 											t827 := int32(load32((*m.memory)[uint32(v12):]))
 											t828 := int32((*m.memory)[int64(uint32(t827))+87])
@@ -107396,7 +107321,7 @@ l0:
 											t838 := int32((*m.memory)[int64(uint32(v15))+28])
 											if t838&i32(128) == 0 {
 												v3 = v4
-												goto l152
+												goto l153
 											}
 											t839 := int32(load16((*m.memory)[int64(uint32(v4))+55:]))
 											p840 := i32(0)
@@ -107418,12 +107343,16 @@ l0:
 										v14 = p842
 										m._sqlite3WhereEnd(v21)
 										m._sqlite3VdbeExplainPop(v0)
-										goto l153
+										goto l154
 									}
 									m._sqlite3VdbeExplainPop(v0)
-									store32((*m.memory)[int64(uint32(v12))+68:], uint32(v10))
+									store32((*m.memory)[int64(uint32(v13))+68:], uint32(v7))
+									if v7 != 0 {
+										store32((*m.memory)[int64(uint32(v13))+8:], uint32(v28))
+									}
 									if v10 != 0 {
-										store32((*m.memory)[int64(uint32(v12))+8:], uint32(v28))
+										store32((*m.memory)[int64(uint32(v10))+12:], uint32(i32(0)))
+										m._sqlite3ExprDeleteNN(v23, v10)
 									}
 									t843 := int32(load32((*m.memory)[int64(uint32(v12))+108:]))
 									v3 = t843
@@ -107447,23 +107376,23 @@ l0:
 										m._sqlite3DbFreeNN(v23, v5)
 									}
 									v5 = i32(0)
-									if v15 != 0 {
+									if v14 != 0 {
 										goto l116
 									}
-									m._disableTerm(v12, v30)
+									m._disableTerm(v13, v30)
 									goto l116
 								}
+							l148:
+								v3 = v7
+							l154:
+								m._sqlite3ExprDelete(v23, v11)
+								v7 = v3
 							l147:
-								v3 = v10
-							l153:
-								m._sqlite3ExprDelete(v23, v5)
-								v10 = v3
-							l146:
 								v2 = v2 + i32(1)
-								goto l154
+								goto l155
 							}
 							if v2&i32(128) == 0 {
-								goto l155
+								goto l156
 							}
 						l128:
 							(*m.memory)[int64(uint32(v13))+57] = byte(i32(189))
@@ -107479,14 +107408,14 @@ l0:
 							(*m.memory)[int64(uint32(v13))+59] = byte(i32(1))
 							store32((*m.memory)[int64(uint32(v13))+64:], uint32(v2+i32(1)))
 						}
-					l156:
+					l157:
 						v5 = i32(0)
 						goto l116
 					l137:
 						v7 = v5
 						v5 = v3
-						v10 = v13
-						v13 = v9
+						v15 = v10
+						v10 = v11
 					l138:
 						{
 							if v45 == 0 {
@@ -107561,15 +107490,15 @@ l0:
 							}
 						l160:
 							if v17 != 0 {
-								m._updateRangeAffinityStr(v9, v13, v11+v17)
+								m._updateRangeAffinityStr(v11, v10, v9+v17)
 							}
-							v13 = v11 + v13
+							v10 = v9 + v10
 							v27 = i32(1)
 							v22 = i32(0)
 							t875 := m._sqlite3ExprIsVector(v11)
 							if t875 != 0 {
 								v33 = i32(1)
-								goto l160
+								goto l161
 							}
 							m._disableTerm(v13, v5)
 							t876 := int32(load32((*m.memory)[int64(uint32(v18))+80:]))
@@ -107578,11 +107507,11 @@ l0:
 						}
 						if v22 != 0 {
 							v33 = i32(0)
-							_ = m._sqlite3VdbeAddOp3(v14, i32(77), i32(0), v11+v28, i32(0))
+							_ = m._sqlite3VdbeAddOp3(v12, i32(77), i32(0), v9+v28, i32(0))
 							v22 = i32(1)
-							v13 = v11 + i32(1)
+							v10 = v9 + i32(1)
 							v27 = i32(1)
-							goto l160
+							goto l161
 						}
 						if v4 == 0 {
 							var p878 int32
@@ -107591,15 +107520,15 @@ l0:
 							}
 							v27 = p878
 							v22 = i32(0)
-							v13 = v11
-							goto l160
+							v10 = v9
+							goto l161
 						}
 						v22 = i32(0)
-						_ = m._sqlite3VdbeAddOp3(v14, i32(77), i32(0), v11+v28, i32(0))
+						_ = m._sqlite3VdbeAddOp3(v12, i32(77), i32(0), v9+v28, i32(0))
 						v27 = i32(1)
-						v13 = v11 + i32(1)
-					l160:
-						m._codeApplyAffinity(v0, v28, v13-v22, v17)
+						v10 = v9 + i32(1)
+					l161:
+						m._codeApplyAffinity(v0, v28, v10-v22, v17)
 						{
 							t880 := int32(load16((*m.memory)[int64(uint32(v16))+46:]))
 							v11 = t880
@@ -107610,7 +107539,7 @@ l0:
 								}
 							}
 							if v4 != 0 {
-								_ = m._sqlite3VdbeAddOp3(v14, i32(73), i32(1), v4, i32(0))
+								_ = m._sqlite3VdbeAddOp3(v12, i32(73), i32(1), v4, i32(0))
 							}
 							t882 := int32(load32((*m.memory)[int64(uint32(v13))+48:]))
 							v11 = t882
@@ -107632,15 +107561,15 @@ l0:
 									goto l163
 								}
 								if v21 != i32(23) {
-									goto l162
+									goto l163
 								}
 								t888 := int32(load32((*m.memory)[int64(uint32(v2))+8:]))
 								t889 := int32(int16(load16((*m.memory)[uint32(t888):])))
 								t890 := m._sqlite3VdbeAddOp3(v12, i32(126), (t889+i32(9))/i32(10), i32(0), i32(0))
 								v11 = t890
 								if v5|v7 == 0 {
-									v15 = v9
-									goto l162
+									v14 = v11
+									goto l163
 								}
 								t891 := int32(load32((*m.memory)[int64(uint32(v12))+108:]))
 								v5 = t891
@@ -107660,10 +107589,10 @@ l0:
 								}
 								store32((*m.memory)[int64(uint32(p895))+8:], uint32(v27))
 							}
-						l162:
-							_ = m._sqlite3VdbeAddOp4Int(v14, v21, v29, v30, v28, v13)
+						l163:
+							_ = m._sqlite3VdbeAddOp4Int(v12, v21, v29, v30, v28, v10)
 							if v4 == 0 {
-								goto l161
+								goto l162
 							}
 							t898 := int32(load32((*m.memory)[int64(uint32(v12))+108:]))
 							_ = m._sqlite3VdbeAddOp3(v12, i32(9), i32(0), t898+i32(2), i32(0))
@@ -107675,7 +107604,7 @@ l0:
 							t902 := int32((*m.memory)[int64(uint32(p900|v20))+154724])
 							_ = m._sqlite3VdbeAddOp4Int(t901, t902, v29, v30, v28, v10-v33)
 						}
-					l161:
+					l162:
 						if v7 != 0 {
 							t904 := int32(load32((*m.memory)[uint32(v7):]))
 							t905 := int32(load32((*m.memory)[int64(uint32(t904))+16:]))
@@ -107697,14 +107626,14 @@ l0:
 							}
 						l164:
 							if v3 != 0 {
-								m._updateRangeAffinityStr(v5, v10, v3)
-								m._codeApplyAffinity(v0, v13, v10, v3)
+								m._updateRangeAffinityStr(v5, v15, v3)
+								m._codeApplyAffinity(v0, v10, v15, v3)
 							}
 							v11 = v9 + v15
 							t911 := m._sqlite3ExprIsVector(v5)
 							if t911 != 0 {
 								v34 = i32(1)
-								goto l164
+								goto l165
 							}
 							m._disableTerm(v13, v7)
 							t912 := int32(load32((*m.memory)[int64(uint32(v18))+80:]))
@@ -107712,15 +107641,15 @@ l0:
 							goto l165
 						}
 						if v32 != 0 {
-							v9 = v11
-							goto l164
+							v11 = v9
+							goto l165
 						}
 						if v4 == 0 {
-							_ = m._sqlite3VdbeAddOp3(v14, i32(77), i32(0), v11+v28, i32(0))
+							_ = m._sqlite3VdbeAddOp3(v12, i32(77), i32(0), v9+v28, i32(0))
 							v34 = i32(0)
 						}
-						v9 = v11 + i32(1)
-					l164:
+						v11 = v9 + i32(1)
+					l165:
 						if v17 != 0 {
 							m._sqlite3DbNNFreeNN(v23, v17)
 						}
@@ -107732,11 +107661,11 @@ l0:
 						v3 = t914
 						store32((*m.memory)[int64(uint32(t915))+64:], uint32(v3))
 						{
-							if v9 == 0 {
-								goto l165
+							if v11 == 0 {
+								goto l166
 							}
 							if v4 != 0 {
-								_ = m._sqlite3VdbeAddOp3(v14, i32(17), v4, v3+i32(3), i32(0))
+								_ = m._sqlite3VdbeAddOp3(v12, i32(17), v4, v3+i32(3), i32(0))
 							}
 							t917 := int32((*m.memory)[int64(uint32(v20<<1|v34))+154732])
 							_ = m._sqlite3VdbeAddOp4Int(v12, t917, v29, v30, v28, v11)
@@ -107755,7 +107684,7 @@ l0:
 							t923 := int32(load32((*m.memory)[int64(uint32(v12))+108:]))
 							store32((*m.memory)[int64(uint32(p921))+8:], uint32(t923))
 						}
-					l165:
+					l166:
 						if v4 != 0 {
 							t924 := int32(load32((*m.memory)[int64(uint32(v12))+108:]))
 							_ = m._sqlite3VdbeAddOp3(v12, i32(16), v4, t924+i32(2), i32(0))
@@ -107815,7 +107744,7 @@ l0:
 								t945 := m._sqlite3DbMallocZero(t942, (t944<<2+i64(4))&i64(0xfffffffc))
 								v7 = t945
 								if v7 == 0 {
-									goto l167
+									goto l168
 								}
 								t946 := int32(int16(load16((*m.memory)[int64(uint32(v11))+34:])))
 								store32((*m.memory)[uint32(v7):], uint32(t946))
@@ -107827,7 +107756,7 @@ l0:
 								}
 								v5 = p948 - i32(1)
 								v3 = i32(0)
-							l168:
+							l169:
 								if v3 != v5 {
 									t949 := int32(load32((*m.memory)[int64(uint32(v2))+4:]))
 									t950 := int32(int16(load16((*m.memory)[uint32(t949+v3<<1):])))
@@ -107842,14 +107771,14 @@ l0:
 										v3 = v3 + i32(1)
 										store32((*m.memory)[int64(uint32(t953))+4:], uint32(v3))
 									}
-									goto l168
+									goto l169
 								}
-								m._sqlite3VdbeChangeP4(v13, i32(-1), v7, i32(-15))
-								goto l169
+								m._sqlite3VdbeChangeP4(v10, i32(-1), v7, i32(-15))
+								goto l170
 							}
 							v5 = v2
 							if v19 == v29 {
-								goto l167
+								goto l168
 							}
 							v9 = i32(0)
 							t954 := m._sqlite3PrimaryKeyIndex(v3)
@@ -107873,9 +107802,9 @@ l0:
 									goto l171
 								}
 							}
-							_ = m._sqlite3VdbeAddOp4Int(v14, i32(28), v19, v35, v7, v13)
+							_ = m._sqlite3VdbeAddOp4Int(v12, i32(28), v19, v35, v7, v10)
 						}
-					l169:
+					l170:
 						v5 = v2
 					l168:
 						{
@@ -107952,21 +107881,14 @@ l0:
 							goto l176
 						}
 					l173:
-						if v20 != 0 {
-							(*m.memory)[int64(uint32(v12))+57] = byte(i32(39))
-							goto l175
-						}
-						(*m.memory)[int64(uint32(v12))+57] = byte(i32(40))
-						goto l175
-					l172:
-						(*m.memory)[int64(uint32(v12))+57] = byte(i32(189))
-					l175:
-						store32((*m.memory)[int64(uint32(v12))+60:], uint32(v29))
-						(*m.memory)[int64(uint32(v12))+58] = byte(int32(uint32(v3)>>16) & i32(1))
+						(*m.memory)[int64(uint32(v13))+57] = byte(i32(189))
+					l176:
+						store32((*m.memory)[int64(uint32(v13))+60:], uint32(v29))
+						(*m.memory)[int64(uint32(v13))+58] = byte(int32(uint32(v3)>>16) & i32(1))
 						if v3&i32(15) != 0 {
 							goto l116
 						}
-						(*m.memory)[int64(uint32(v12))+59] = byte(i32(1))
+						(*m.memory)[int64(uint32(v13))+59] = byte(i32(1))
 					}
 				l116:
 					p978 := i32(2)
@@ -108082,10 +108004,10 @@ l0:
 							t1000 := int32(load16((*m.memory)[int64(uint32(v3))+12:]))
 							v4 = t1000
 							if v4&i32(130) == 0 {
-								goto l181
+								goto l182
 							}
 							if v4&i32(2048) == 0 {
-								goto l181
+								goto l182
 							}
 							t1001 := int32(load32((*m.memory)[int64(uint32(v3))+20:]))
 							if t1001 != v19 {
@@ -108101,7 +108023,7 @@ l0:
 							t1005 := m._sqlite3WhereFindTerm(v26, v19, t1004, v44, i32(131), i32(0))
 							v4 = t1005
 							if v4 == 0 {
-								goto l181
+								goto l182
 							}
 							t1006 := int32((*m.memory)[int64(uint32(v4))+10])
 							if t1006&i32(4) != 0 {
@@ -108138,10 +108060,10 @@ l0:
 							t1014 := int32(load16((*m.memory)[int64(uint32(v4))+10:]))
 							store16((*m.memory)[int64(uint32(v4))+10:], uint16(t1014|i32(4)))
 						}
-					l181:
+					l182:
 						v3 = v3 + i32(48)
 						v2 = v2 - i32(1)
-						goto l183
+						goto l184
 					}
 					t1015 := int32(load32((*m.memory)[int64(uint32(v13))+52:]))
 					v5 = t1015
@@ -108173,15 +108095,15 @@ l0:
 							v2 = v7
 						l186:
 							{
-								if v3 == v9 {
-									goto l184
+								if v3 == v14 {
+									goto l185
 								}
 								t1026 := int32(load32((*m.memory)[int64(uint32(v11))+4:]))
 								t1027 := int32(int16(load16((*m.memory)[uint32(t1026+v3):])))
 								m._sqlite3ExprCodeGetColumnOfTable(v12, v10, v19, t1027, v2)
 								v2 = v2 + i32(1)
 								v3 = v3 + i32(2)
-								goto l185
+								goto l186
 							}
 						}
 					l185:
@@ -108286,7 +108208,7 @@ l0:
 				v25 = v25 + i32(88)
 				v39 = v39 - i32(1)
 				v45 = v45 + i64(1)
-				goto l191
+				goto l192
 			}
 		}
 	l16:
@@ -109294,8 +109216,8 @@ l6:
 							}
 							_ = m._sqlite3VdbeAddOp3(t85, i32(25), t84, t86+p87+i32(2), i32(0))
 						}
-						if v2 != i32(0x40000) {
-							goto l23
+						if v5 != i32(0x40000) {
+							goto l3
 						}
 						t89 := int32(load32((*m.memory)[int64(uint32(v2))+8:]))
 						t90 := int32(load32((*m.memory)[int64(uint32(v4))+108:]))
@@ -109833,10 +109755,6 @@ l26:
 						goto l25
 					}
 				}
-				store32((*m.memory)[int64(uint32(p92))+8:], uint32(v10))
-				v1 = v1 - i32(20)
-				v5 = v5 - i32(1)
-				goto l24
 			}
 		l17:
 			v7 = v7 + i32(88)
@@ -112607,7 +112525,7 @@ func (m *Module) _sqlite3MaterializeView(v0, v1, v2, v3 int32) {
 	store32((*m.memory)[int64(uint32(v4))+12:], uint32(i32(0)))
 	store32((*m.memory)[int64(uint32(v4))+8:], uint32(v3))
 	(*m.memory)[int64(uint32(v4))+4] = byte(i32(10))
-	store64((*m.memory)[int64(uint32(v4))+20:], uint64(i64(0)))
+	store64((*m.memory)[int64(uint32(v4))+16:], uint64(i64(0)))
 	_ = m._sqlite3Select(v0, v1, v4+i32(4))
 	m.___stack_pointer = v4 + i32(32)
 	m._sqlite3SelectDelete(v5, v1)
@@ -113240,7 +113158,7 @@ l3:
 		t27 := int32(load32((*m.memory)[int64(uint32(v3))+4:]))
 		store32((*m.memory)[int64(uint32(v3))+4:], uint32(t27|i32(0x8000000)))
 	}
-	store64((*m.memory)[int64(uint32(v6))+16:], uint64(i64(0)))
+	store32((*m.memory)[int64(uint32(v6))+24:], uint32(i32(0)))
 	store32((*m.memory)[int64(uint32(v6))+8:], uint32(v1))
 	(*m.memory)[int64(uint32(v6))+4] = byte(v7)
 	store64((*m.memory)[int64(uint32(v6))+16:], uint64(i64(0)))
@@ -122810,6 +122728,7 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 						if t68 != v7 {
 							goto l8
 						}
+						store32((*m.memory)[int64(uint32(v8))+36:], uint32(i32(0)))
 						store64((*m.memory)[int64(uint32(v8))+28:], uint64(i64(0)))
 						store32((*m.memory)[int64(uint32(v8))+24:], uint32(v2))
 						(*m.memory)[int64(uint32(v8))+20] = byte(i32(9))
@@ -122820,10 +122739,10 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 						t70 := int32(load32((*m.memory)[uint32(v0):]))
 						v4 = t70
 						if v3 == 0 {
-							goto l8
+							goto l9
 						}
 						if v5 == 0 {
-							goto l8
+							goto l9
 						}
 						t71 := int32((*m.memory)[int64(uint32(v4))+82])
 						if t71&i32(8) != 0 {
@@ -122851,7 +122770,7 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 					if v3 >= i32(65) {
 						v7 = i32(67)
 						if v3 != i32(69) {
-							goto l9
+							goto l10
 						}
 					}
 					(*m.memory)[int64(uint32(v8))+20] = byte(v7)
@@ -122883,17 +122802,17 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 							store32((*m.memory)[int64(uint32(v1))+4:], uint32(t85&i32(-33554433)))
 						}
 						v5 = i32(0)
-					l10:
+					l11:
 						m._sqlite3ExprCode(v0, v10, v4)
-						_ = m._sqlite3VdbeAddOp4(v6, i32(99), v4, i32(1), v12, v8+i32(20), i32(1))
-						_ = m._sqlite3VdbeAddOp4Int(v6, i32(140), v2, v12, v4, i32(1))
+						_ = m._sqlite3VdbeAddOp4(v6, i32(99), v4, i32(1), v11, v8+i32(20), i32(1))
+						_ = m._sqlite3VdbeAddOp4Int(v6, i32(140), v2, v11, v4, i32(1))
 						v3 = v3 + i32(16)
 						v7 = v7 - i32(1)
-						goto l11
+						goto l12
 					}
 					m._sqlite3ReleaseTempReg(v0, v4)
-					m._sqlite3ReleaseTempReg(v0, v12)
-					goto l7
+					m._sqlite3ReleaseTempReg(v0, v11)
+					goto l8
 				}
 			l9:
 				t88 := m._sqlite3SelectDup(v4, v10, i32(0))
@@ -122920,7 +122839,7 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 				m._sqlite3DbFree(t95, t96)
 				{
 					if v14 == 0 {
-						goto l12
+						goto l13
 					}
 					t97 := int32(load32((*m.memory)[int64(uint32(v8))+28:]))
 					v3 = t97
@@ -122941,16 +122860,16 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 						}
 						store32((*m.memory)[uint32(i32(169368)):], uint32(v3))
 						if v3 != 0 {
-							goto l12
+							goto l13
 						}
 						p98 = i32(169356)
 					}
 				l14:
 					store32((*m.memory)[int64(uint32(p98))+4:], uint32(i32(10)))
 				}
-			l12:
+			l13:
 				if v16 == 0 {
-					goto l14
+					goto l15
 				}
 				v4 = i32(0)
 				p103 := i32(0)
@@ -122960,10 +122879,10 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 				v10 = p103
 				v7 = v12 + i32(20)
 				v3 = v13 + i32(8)
-			l15:
+			l16:
 				{
 					if v4 == v10 {
-						goto l7
+						goto l8
 					}
 					t104 := m._sqlite3VectorFieldSubexpr(v11, v4)
 					t105 := int32(load32((*m.memory)[uint32(v3):]))
@@ -122972,18 +122891,18 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 					v7 = v7 + i32(4)
 					v3 = v3 + i32(16)
 					v4 = v4 + i32(1)
-					goto l15
+					goto l16
 				}
 			}
-		l7:
+		l8:
 			if v9 != 0 {
 				(*m.memory)[int64(uint32(v9))+4] = byte(i32(1))
 			}
-			if v11 != 0 {
-				m._sqlite3VdbeChangeP4(v6, v15, v11, i32(-9))
+			if v12 != 0 {
+				m._sqlite3VdbeChangeP4(v6, v15, v12, i32(-9))
 			}
 			if v5 == 0 {
-				goto l6
+				goto l7
 			}
 			_ = m._sqlite3VdbeAddOp3(v6, i32(138), v2, i32(0), i32(0))
 			t108 := int32(load32((*m.memory)[int64(uint32(v6))+108:]))
@@ -123003,12 +122922,12 @@ func (m *Module) _sqlite3CodeRhsOfIN(v0, v1, v2, v3 int32) {
 			_ = m._sqlite3VdbeAddOp3(v6, i32(69), t113, t114, i32(1))
 			store32((*m.memory)[int64(uint32(v0))+32:], uint32(i32(0)))
 			(*m.memory)[int64(uint32(v0))+19] = byte(i32(0))
-			goto l6
+			goto l7
 		}
-	l14:
-		m._sqlite3KeyInfoUnref(v11)
+	l15:
+		m._sqlite3KeyInfoUnref(v12)
 	}
-l6:
+l7:
 	m.___stack_pointer = v8 + i32(48)
 }
 func (m *Module) _sqlite3CodeVerifySchemaAtToplevel(v0, v1 int32) {
@@ -141781,7 +141700,7 @@ l0:
 		m.Xsqlite3_str_append(v0, v5, i32(1))
 		v5 = i32(117715)
 	}
-	m._sqlite3_str_append(v0, v5, i32(1))
+	m.Xsqlite3_str_append(v0, v5, i32(1))
 	v4 = i32(0)
 l1:
 	if v2 != v4 {
@@ -145464,7 +145383,7 @@ func (m *Module) _sqlite3ResultStrAccum(v0, v1 int32) {
 		m.Xsqlite3_result_text(v0, i32(132201), i32(0), i32(0))
 	}
 l0:
-	m._sqlite3_str_reset(v1)
+	m.Xsqlite3_str_reset(v1)
 }
 func (m *Module) _versionFunc(v0, v1, v2 int32) {
 	m.Xsqlite3_result_text(v0, i32(65536), i32(-1), i32(0))
@@ -147211,11 +147130,10 @@ func (m *Module) _replaceFunc(v0, v1, v2 int32) {
 		if v1 == 0 {
 			return
 		}
-		v13 = v7 - i32(1)
-		v14 = v6 - v7
-		v17 = int64(v6 ^ i32(-1))
-		v18 = int64(uint32(v8 - v7))
-		v1 = i32(0)
+		v13 = v6 - i32(1)
+		v14 = v5 - v6
+		v17 = int64(v5 ^ i32(-1))
+		v18 = int64(uint32(v7 - v6))
 		v2 = i32(0)
 	l5:
 		{
@@ -147249,16 +147167,16 @@ func (m *Module) _replaceFunc(v0, v1, v2 int32) {
 					v16 = v16 + v18
 					if t26 < v16-i64(1) {
 						m.Xsqlite3_result_error_toobig(v0)
-						m.Xsqlite3_free(v3)
+						m.Xsqlite3_free(v1)
 						return
 					}
-					v4 = v1
-					v1 = v4 + i32(1)
-					if v1&v4 == 0 {
+					v3 = v15
+					v15 = v3 + i32(1)
+					if v15&v3 == 0 {
 						goto l3
 					}
 				}
-				v4 = v3
+				v3 = v1
 				goto l4
 			l3:
 				t27 := m._sqlite3Realloc(v1, int64(int32(v16))+(v16+v17))
@@ -147267,20 +147185,20 @@ func (m *Module) _replaceFunc(v0, v1, v2 int32) {
 					goto l4
 				}
 				m.Xsqlite3_result_error_nomem(v0)
-				m.Xsqlite3_free(v3)
+				m.Xsqlite3_free(v1)
 				return
 			}
-			v1 = v6 - v2
-			if v1 != 0 {
-				memory_copy(*m.memory, uint32(v3+v5), uint32(v2+v9), uint32(v1))
+			v3 = v5 - v2
+			if v3 != 0 {
+				memory_copy(*m.memory, uint32(v1+v4), uint32(v2+v8), uint32(v3))
 			}
 			v2 = v3 + v4
 			(*m.memory)[uint32(v2+v1)] = byte(i32(0))
 			m.Xsqlite3_result_text(v0, v1, v2, i32(12))
 			return
 		l4:
-			if v8 != 0 {
-				memory_copy(*m.memory, uint32(v4+v5), uint32(v12), uint32(v8))
+			if v7 != 0 {
+				memory_copy(*m.memory, uint32(v3+v4), uint32(v12), uint32(v7))
 			}
 			v2 = v2 + v13
 			v1 = v3
@@ -147978,7 +147896,7 @@ func (m *Module) _groupConcatStep(v0, v1, v2 int32) {
 		if v0 == 0 {
 			return
 		}
-		m._sqlite3_str_append(v3, v0, v1)
+		m.Xsqlite3_str_append(v3, v0, v1)
 	}
 }
 func (m *Module) _groupConcatFinalize(v0 int32) {
@@ -152547,7 +152465,7 @@ func (m *Module) _strftimeFunc(v0, v1, v2 int32) {
 				goto l0
 			}
 			if uint32(v1) > uint32(v2) {
-				m._sqlite3_str_append(v3+i32(360), v2+v6, v1-v2)
+				m.Xsqlite3_str_append(v3+i32(360), v2+v6, v1-v2)
 			}
 			v2 = v1 + i32(2)
 			{
@@ -153425,7 +153343,7 @@ func (m *Module) _toLocaltime(v0, v1 int32) int32 {
 	t0 := m.___stack_pointer
 	v2 = t0 - i32(96)
 	m.___stack_pointer = v2
-	memory_zero(*m.memory, uint32(v2+i32(60)), uint32(i32(36)))
+	memory_zero(*m.memory, uint32(v2+i32(52)), uint32(i32(44)))
 	m._computeJD(v0)
 	var p1 int32
 	{
@@ -153566,8 +153484,8 @@ func (m *Module) _jsonRemoveFunc(v0, v1, v2 int32) {
 	}
 }
 func (m *Module) _jsonParseFuncArg(v0, v1, v2 int32) int32 {
-	var v3, v4, v5, v6, v7, v8, v9, v10, v11, v12 int32
-	var v13 int64
+	var v3, v4, v5, v6, v7, v8, v9, v10, v11 int32
+	var v12 int64
 	{
 		t0 := int64(load16((*m.memory)[int64(uint32(v1))+16:]))
 		v12 = i64_shl(i64(1), t0)
@@ -153575,7 +153493,7 @@ func (m *Module) _jsonParseFuncArg(v0, v1, v2 int32) int32 {
 			goto l0
 		}
 		{
-			if v13&i64(0x4000000040004) == 0 {
+			if v12&i64(0x4000000040004) == 0 {
 				goto l1
 			}
 			t1 := m._sqlite3ValueText(v1, i32(1))
@@ -153638,7 +153556,7 @@ func (m *Module) _jsonParseFuncArg(v0, v1, v2 int32) int32 {
 			}
 		l2:
 			v5 = i32(0)
-			if v3 >= v6 {
+			if v3 >= v8 {
 				goto l1
 			}
 			{
@@ -153681,7 +153599,7 @@ func (m *Module) _jsonParseFuncArg(v0, v1, v2 int32) int32 {
 		}
 		v9 = p19
 		v7 = v2 & i32(1)
-		v13 = v13 & i64(0x1000000010001)
+		v12 = v12 & i64(0x1000000010001)
 	l12:
 		{
 			t20 := m._sqlite3DbMallocZero(v10, i64(56))
@@ -153691,7 +153609,7 @@ func (m *Module) _jsonParseFuncArg(v0, v1, v2 int32) int32 {
 			}
 			memory_zero(*m.memory, uint32(v3), uint32(i32(56)))
 			store32((*m.memory)[int64(uint32(v3))+24:], uint32(i32(1)))
-			store32((*m.memory)[int64(uint32(v3))+16:], uint32(v9))
+			store32((*m.memory)[int64(uint32(v3))+16:], uint32(v10))
 			if v5 != 0 {
 				t21 := int32(load32((*m.memory)[int64(uint32(v5))+4:]))
 				t22 := v3
@@ -154980,8 +154898,8 @@ func (m *Module) _jsonMergePatch(v0, v1, v2, v3, v4 int32) int32 {
 		v7 = i32(2)
 	}
 l0:
-	m.___stack_pointer = v5 + i32(32)
-	return v4
+	m.___stack_pointer = v6 + i32(32)
+	return v7
 }
 func (m *Module) _jsonPrettyFunc(v0, v1, v2 int32) {
 	var v3, v4 int32
@@ -158417,10 +158335,10 @@ func (m *Module) _seriesFilter(v0, v1, v2, v3, v4 int32) int32 {
 		goto l17
 	}
 l1:
-	store64((*m.memory)[int64(uint32(v0))+40:], uint64(i64(0)))
-	store64((*m.memory)[int64(uint32(v0))+32:], uint64(i64(0)))
 	(*m.memory)[int64(uint32(v0))+64] = byte(i32(0))
 	store64((*m.memory)[int64(uint32(v0))+48:], uint64(i64(1)))
+	store64((*m.memory)[int64(uint32(v0))+40:], uint64(i64(0)))
+	store64((*m.memory)[int64(uint32(v0))+32:], uint64(i64(0)))
 	p1 = i32(1)
 l17:
 	(*m.memory)[int64(uint32(t2))+65] = byte(p1)
@@ -160802,7 +160720,7 @@ l4:
 	return v2
 }
 func (m *Module) _extractToken(v0, v1, v2, v3 int32) int32 {
-	var v4 int32
+	var v4, v5 int32
 	if v1 > i32(0) {
 		t0 := v1
 		v3 = v3 - i32(1)
@@ -161577,15 +161495,7 @@ l0:
 		m._printf(i32(129553), v1)
 	}
 l2:
-	store32((*m.memory)[int64(uint32(v1))+4:], uint32(v0))
-	store32((*m.memory)[uint32(v1):], uint32(v3))
-	m._printf(i32(138652), v1)
-l1:
 	m.___stack_pointer = v1 + i32(32)
-	return
-l0:
-	v2 = v2 - i32(1)
-	goto l3
 }
 func (m *Module) _speedtest1_shrink_memory() {
 	t0 := int32(load32((*m.memory)[uint32(i32(169668)):]))
@@ -161930,7 +161840,7 @@ l107:
 		{
 			{
 				{
-					if v0 > v6 {
+					{
 						{
 							{
 								{
@@ -164478,84 +164388,6 @@ l107:
 					m._fatal_error(i32(121403), v4+i32(304))
 					panic("unreachable")
 				}
-			l2:
-				store32((*m.memory)[uint32(v4):], uint32(v9))
-				m._fatal_error(i32(130521), v4)
-				panic("unreachable")
-			l3:
-				store32((*m.memory)[int64(uint32(v4))+16:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(16))
-				panic("unreachable")
-			l4:
-				store32((*m.memory)[int64(uint32(v4))+32:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(32))
-				panic("unreachable")
-			l5:
-				store32((*m.memory)[int64(uint32(v4))+48:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(48))
-				panic("unreachable")
-			l6:
-				store32((*m.memory)[int64(uint32(v4))+64:], uint32(v9))
-				m._fatal_error(i32(130521), v4-i32(-64))
-				panic("unreachable")
-			l7:
-				store32((*m.memory)[int64(uint32(v4))+80:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(80))
-				panic("unreachable")
-			l8:
-				store32((*m.memory)[int64(uint32(v4))+112:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(112))
-				panic("unreachable")
-			l9:
-				m._fatal_error(i32(131999), i32(0))
-				panic("unreachable")
-			l10:
-				store32((*m.memory)[int64(uint32(v4))+128:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(128))
-				panic("unreachable")
-			l11:
-				store32((*m.memory)[int64(uint32(v4))+144:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(144))
-				panic("unreachable")
-			l13:
-				store32((*m.memory)[int64(uint32(v4))+160:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(160))
-				panic("unreachable")
-			l14:
-				store32((*m.memory)[int64(uint32(v4))+192:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(192))
-				panic("unreachable")
-			l15:
-				store32((*m.memory)[int64(uint32(v4))+208:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(208))
-				panic("unreachable")
-			l16:
-				store32((*m.memory)[int64(uint32(v4))+224:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(224))
-				panic("unreachable")
-			l17:
-				store32((*m.memory)[int64(uint32(v4))+240:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(240))
-				panic("unreachable")
-			l18:
-				m._fatal_error(i32(117358), i32(0))
-				panic("unreachable")
-			l19:
-				store32((*m.memory)[int64(uint32(v4))+256:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(256))
-				panic("unreachable")
-			l20:
-				store32((*m.memory)[int64(uint32(v4))+272:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(272))
-				panic("unreachable")
-			l21:
-				store32((*m.memory)[int64(uint32(v4))+288:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(288))
-				panic("unreachable")
-			l22:
-				store32((*m.memory)[int64(uint32(v4))+304:], uint32(v9))
-				m._fatal_error(i32(130521), v4+i32(304))
-				panic("unreachable")
 			l24:
 				t624 := int32(load32((*m.memory)[uint32(v1):]))
 				store32((*m.memory)[int64(uint32(v4))+320:], uint32(t624))
@@ -164719,85 +164551,99 @@ func (m *Module) X__stack_pointer() *int32 {
 	return &m.___stack_pointer
 }
 
+// Compiler error if endianess is unknown.
+var _ = map[bool]struct{}{big: {}, little: {}}
+
+// go.dev/src/cmd/compile/internal/ssa/config.go
+const (
+	big = false ||
+		runtime.GOARCH == "ppc64" || runtime.GOARCH == "s390x" ||
+		runtime.GOARCH == "mips" || runtime.GOARCH == "mips64"
+
+	little = false ||
+		runtime.GOARCH == "386" || runtime.GOARCH == "amd64" ||
+		runtime.GOARCH == "arm" || runtime.GOARCH == "arm64" ||
+		runtime.GOARCH == "riscv64" || runtime.GOARCH == "wasm" ||
+		runtime.GOARCH == "ppc64le" || runtime.GOARCH == "loong64" ||
+		runtime.GOARCH == "mipsle" || runtime.GOARCH == "mips64le"
+
+	unalignedOK = false ||
+		runtime.GOARCH == "386" || runtime.GOARCH == "amd64" ||
+		runtime.GOARCH == "arm64" || runtime.GOARCH == "loong64" ||
+		runtime.GOARCH == "ppc64" || runtime.GOARCH == "ppc64le" ||
+		runtime.GOARCH == "s390x" || runtime.GOARCH == "wasm"
+)
+
 //go:nosplit
 func load16(b []byte) uint16 {
-	switch runtime.GOARCH {
-	case "386", "amd64", "arm64", "loong64", "ppc64", "ppc64le", "s390x", "wasm":
-		v := *(*uint16)(unsafe.Pointer((*[2]byte)(b)))
-		switch runtime.GOARCH {
-		case "ppc64", "s390x":
-			return bits.ReverseBytes16(v)
-		}
-		return v
+	if !unalignedOK {
+		return binary.LittleEndian.Uint16(b)
 	}
-	return binary.LittleEndian.Uint16(b)
+	v := *(*uint16)(unsafe.Pointer((*[2]byte)(b)))
+	if big {
+		return bits.ReverseBytes16(v)
+	}
+	return v
 }
 
 //go:nosplit
 func store16(b []byte, v uint16) {
-	switch runtime.GOARCH {
-	default:
+	if !unalignedOK {
 		binary.LittleEndian.PutUint16(b, v)
-	case "ppc64", "s390x":
-		v = bits.ReverseBytes16(v)
-		fallthrough
-	case "386", "amd64", "arm64", "loong64", "ppc64le", "wasm":
-		*(*uint16)(unsafe.Pointer((*[2]byte)(b))) = v
+		return
 	}
+	if big {
+		v = bits.ReverseBytes16(v)
+	}
+	*(*uint16)(unsafe.Pointer((*[2]byte)(b))) = v
 }
 
 //go:nosplit
 func load32(b []byte) uint32 {
-	switch runtime.GOARCH {
-	case "386", "amd64", "arm64", "loong64", "ppc64", "ppc64le", "s390x", "wasm":
-		v := *(*uint32)(unsafe.Pointer((*[4]byte)(b)))
-		switch runtime.GOARCH {
-		case "ppc64", "s390x":
-			return bits.ReverseBytes32(v)
-		}
-		return v
+	if !unalignedOK {
+		return binary.LittleEndian.Uint32(b)
 	}
-	return binary.LittleEndian.Uint32(b)
+	v := *(*uint32)(unsafe.Pointer((*[4]byte)(b)))
+	if big {
+		return bits.ReverseBytes32(v)
+	}
+	return v
 }
 
 //go:nosplit
 func store32(b []byte, v uint32) {
-	switch runtime.GOARCH {
-	default:
+	if !unalignedOK {
 		binary.LittleEndian.PutUint32(b, v)
-	case "ppc64", "s390x":
-		v = bits.ReverseBytes32(v)
-		fallthrough
-	case "386", "amd64", "arm64", "loong64", "ppc64le", "wasm":
-		*(*uint32)(unsafe.Pointer((*[4]byte)(b))) = v
+		return
 	}
+	if big {
+		v = bits.ReverseBytes32(v)
+	}
+	*(*uint32)(unsafe.Pointer((*[4]byte)(b))) = v
 }
 
 //go:nosplit
 func load64(b []byte) uint64 {
-	switch runtime.GOARCH {
-	case "386", "amd64", "arm64", "loong64", "ppc64", "ppc64le", "s390x", "wasm":
-		v := *(*uint64)(unsafe.Pointer((*[8]byte)(b)))
-		switch runtime.GOARCH {
-		case "ppc64", "s390x":
-			return bits.ReverseBytes64(v)
-		}
-		return v
+	if !unalignedOK {
+		return binary.LittleEndian.Uint64(b)
 	}
-	return binary.LittleEndian.Uint64(b)
+	v := *(*uint64)(unsafe.Pointer((*[8]byte)(b)))
+	if big {
+		return bits.ReverseBytes64(v)
+	}
+	return v
 }
 
 //go:nosplit
 func store64(b []byte, v uint64) {
-	switch runtime.GOARCH {
-	default:
+	if !unalignedOK {
 		binary.LittleEndian.PutUint64(b, v)
-	case "ppc64", "s390x":
-		v = bits.ReverseBytes64(v)
-		fallthrough
-	case "386", "amd64", "arm64", "loong64", "ppc64le", "wasm":
-		*(*uint64)(unsafe.Pointer((*[8]byte)(b))) = v
+		return
 	}
+	if big {
+		v = bits.ReverseBytes64(v)
+	}
+	*(*uint64)(unsafe.Pointer((*[8]byte)(b))) = v
 }
 
 //go:nosplit

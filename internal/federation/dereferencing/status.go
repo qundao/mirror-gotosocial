@@ -509,7 +509,7 @@ func (d *Dereferencer) enrichStatus(
 	// The status author, and the status
 	// JSON-LD ID must have the same host.
 	if attributedTo.Host != jsonldID.Host {
-		err := gtserror.Newf("id and attributedTo hostnames differ: id=%s attributedTo=%s", attributedTo.Host, statusURI.Host)
+		err := gtserror.Newf("id and attributedTo hostnames differ: id=%s attributedTo=%s", jsonldID.Host, attributedTo.Host)
 		return nil, nil, gtserror.SetMalformed(err)
 	}
 

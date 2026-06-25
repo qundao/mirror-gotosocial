@@ -5,6 +5,7 @@ package sqlite3_wasm
 import (
 	"bytes"
 	"math"
+	"math/bits"
 	"strconv"
 	"time"
 	"unsafe"
@@ -86,19 +87,14 @@ func (m *Module) _strcmp(s1, s2 int32) int32 {
 	return int32(bytes.Compare(b1[:sz], b2[:sz]))
 }
 
-func (m *Module) _strcpy(d, s int32) int32 {
-	b := (*m.memory)[uint32(s):]
-	b = b[:bytes.IndexByte(b, 0)+1]
-	copy((*m.memory)[uint32(d):], b)
-	return d
-}
 func (m *Module) _strcspn(s, reject int32) int32 {
 	b := (*m.memory)[uint32(s):]
 	r := (*m.memory)[uint32(reject):]
 	r = r[:bytes.IndexByte(r, 0)+1]
 
-	for i, b := range b {
-		if bytes.IndexByte(r, b) >= 0 {
+	set := m._makeByteSet(r)
+	for i, c := range b {
+		if set[c/bits.UintSize]&(1<<(c%bits.UintSize)) != 0 {
 			return int32(i)
 		}
 	}
@@ -131,8 +127,9 @@ func (m *Module) _strspn(s, accept int32) int32 {
 	a := (*m.memory)[uint32(accept):]
 	a = a[:bytes.IndexByte(a, 0)]
 
-	for i, b := range b {
-		if bytes.IndexByte(a, b) < 0 {
+	set := m._makeByteSet(a)
+	for i, c := range b {
+		if set[c/bits.UintSize]&(1<<(c%bits.UintSize)) == 0 {
 			return int32(i)
 		}
 	}
