@@ -24,6 +24,7 @@ import (
 
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 )
 
@@ -84,7 +85,7 @@ func SetJSONLDIdStr(with WithJSONLDId, id string) error {
 // GetTo returns the IRIs contained in the To property of 'with'. Panics on entries with missing ID.
 func GetTo(with WithTo) []*url.URL {
 	toProp := with.GetActivityStreamsTo()
-	return getIRIs[vocab.ActivityStreamsToPropertyIterator](toProp)
+	return getIRIs(toProp)
 }
 
 // AppendTo appends the given IRIs to the To property of 'with'.
@@ -102,7 +103,7 @@ func AppendTo(with WithTo, to ...*url.URL) {
 // GetCc returns the IRIs contained in the Cc property of 'with'. Panics on entries with missing ID.
 func GetCc(with WithCc) []*url.URL {
 	ccProp := with.GetActivityStreamsCc()
-	return extractIRIs[vocab.ActivityStreamsCcPropertyIterator](ccProp)
+	return extractIRIs(ccProp)
 }
 
 // AppendCc appends the given IRIs to the Cc property of 'with'.
@@ -120,7 +121,7 @@ func AppendCc(with WithCc, cc ...*url.URL) {
 // GetBcc returns the IRIs contained in the Bcc property of 'with'. Panics on entries with missing ID.
 func GetBcc(with WithBcc) []*url.URL {
 	bccProp := with.GetActivityStreamsBcc()
-	return extractIRIs[vocab.ActivityStreamsBccPropertyIterator](bccProp)
+	return extractIRIs(bccProp)
 }
 
 // AppendBcc appends the given IRIs to the Bcc property of 'with'.
@@ -190,10 +191,24 @@ func AppendURL(with WithURL, url ...*url.URL) {
 	}
 }
 
+// GetOneActorIRI extracts a single `actor` property IRI from 'with', else returns error.
+// Note: it is an error for the passed type to return any count other than 1 actor value.
+func GetOneActorIRI(with WithActor) (*url.URL, error) {
+	actors := GetActorIRIs(with)
+	if len(actors) != 1 {
+		return nil, gtserror.NewfAt(3, "expected single actor, received: %v", log.Formatted(actors))
+	}
+	return actors[0], nil
+}
+
+// If > 1 is accepted, but only first wanted, use:
+//
+// func GetFirstActorIRI(...) (*url.URL, error) {}
+
 // GetActorIRIs returns the IRIs contained in the Actor property of 'with'.
 func GetActorIRIs(with WithActor) []*url.URL {
 	actorProp := with.GetActivityStreamsActor()
-	return extractIRIs[vocab.ActivityStreamsActorPropertyIterator](actorProp)
+	return extractIRIs(actorProp)
 }
 
 // AppendActorIRIs appends the given IRIs to the Actor property of 'with'.
@@ -208,10 +223,24 @@ func AppendActorIRIs(with WithActor, actor ...*url.URL) {
 	}, actor...)
 }
 
+// GetOneObjectIRI extracts a single `object` property IRI from 'with', else returns error.
+// Note: it is an error for the passed type to return any count other than 1 object value.
+func GetOneObjectIRI(with WithObject) (*url.URL, error) {
+	objects := GetObjectIRIs(with)
+	if len(objects) != 1 {
+		return nil, gtserror.NewfAt(3, "expected single object, received: %v", log.Formatted(objects))
+	}
+	return objects[0], nil
+}
+
+// If > 1 is accepted, but only first wanted, use:
+//
+// func GetFirstObjectIRI(...) (*url.URL, error) {}
+
 // GetObjectIRIs returns the IRIs contained in the Object property of 'with'.
 func GetObjectIRIs(with WithObject) []*url.URL {
 	objectProp := with.GetActivityStreamsObject()
-	return extractIRIs[vocab.ActivityStreamsObjectPropertyIterator](objectProp)
+	return extractIRIs(objectProp)
 }
 
 // AppendObjectIRIs appends the given IRIs to the Object property of 'with'.
@@ -238,6 +267,16 @@ func AppendInstrumentIRIs(with WithInstrument, instrument ...*url.URL) {
 	}, instrument...)
 }
 
+// GetOneResultIRI extracts a single `result` property IRI from 'with', else returns error.
+// Note: it is an error for the passed type to return any count other than 1 result value.
+func GetOneResultIRI(with WithResult) (*url.URL, error) {
+	results := GetResultIRIs(with)
+	if len(results) != 1 {
+		return nil, gtserror.NewfAt(3, "expected single result, received: %v", log.Formatted(results))
+	}
+	return results[0], nil
+}
+
 // GetResultIRIs returns the IRIs contained in the `result` property of 'with'.
 func GetResultIRIs(with WithResult) []*url.URL {
 	resultProp := with.GetActivityStreamsResult()
@@ -256,13 +295,23 @@ func AppendResultIRIs(with WithResult, result ...*url.URL) {
 	}, result...)
 }
 
-// GetTargetIRIs returns the IRIs contained in the Target property of 'with'.
-func GetTargetIRIs(with WithTarget) []*url.URL {
-	targetProp := with.GetActivityStreamsTarget()
-	return extractIRIs[vocab.ActivityStreamsTargetPropertyIterator](targetProp)
+// GetOneTargetIRI extracts a single `target` IRI property from 'with', else returns error.
+// Note: it is an error for the passed type to return any count other than 1 target value.
+func GetOneTargetIRI(with WithTarget) (*url.URL, error) {
+	targets := GetTargetIRIs(with)
+	if len(targets) != 1 {
+		return nil, gtserror.NewfAt(3, "expected single target, received: %v", log.Formatted(targets))
+	}
+	return targets[0], nil
 }
 
-// AppendTargetIRIs appends the given IRIs to the Target property of 'with'.
+// GetTargetIRIs returns the IRIs contained in the `target` property of 'with'.
+func GetTargetIRIs(with WithTarget) []*url.URL {
+	targetProp := with.GetActivityStreamsTarget()
+	return extractIRIs(targetProp)
+}
+
+// AppendTargetIRIs appends the given IRIs to the `target` property of 'with'.
 func AppendTargetIRIs(with WithTarget, target ...*url.URL) {
 	appendIRIs(func() Property[vocab.ActivityStreamsTargetPropertyIterator] {
 		targetProp := with.GetActivityStreamsTarget()
@@ -274,10 +323,24 @@ func AppendTargetIRIs(with WithTarget, target ...*url.URL) {
 	}, target...)
 }
 
+// GetOneAttributedTo extracts a single attributedTo property from 'with', else returns error.
+// Note: it is an error for the passed type to return any count other than 1 attributedTo value.
+func GetOneAttributedTo(with WithAttributedTo) (*url.URL, error) {
+	attribTo := GetAttributedTo(with)
+	if len(attribTo) != 1 {
+		return nil, gtserror.NewfAt(3, "expected single attributedTo, received: %v", log.Formatted(attribTo))
+	}
+	return attribTo[0], nil
+}
+
+// If > 1 is accepted, but only first wanted, use:
+//
+// func GetFirstAttributedTo(...) (*url.URL, error) {}
+
 // GetAttributedTo returns the IRIs contained in the AttributedTo property of 'with'.
 func GetAttributedTo(with WithAttributedTo) []*url.URL {
 	attribProp := with.GetActivityStreamsAttributedTo()
-	return extractIRIs[vocab.ActivityStreamsAttributedToPropertyIterator](attribProp)
+	return extractIRIs(attribProp)
 }
 
 // AppendAttributedTo appends the given IRIs to the AttributedTo property of 'with'.
@@ -290,6 +353,16 @@ func AppendAttributedTo(with WithAttributedTo, attribTo ...*url.URL) {
 		}
 		return attribProp
 	}, attribTo...)
+}
+
+// GetOneInteractingObject extracts a single interactingObject property from 'with', else returns error.
+// Note: it is an error for the passed type to return any count other than 1 interactingObject value.
+func GetOneInteractingObject(with WithInteractingObject) (*url.URL, error) {
+	object := GetInteractingObject(with)
+	if len(object) != 1 {
+		return nil, gtserror.NewfAt(3, "expected single interactingObject, received: %v", log.Formatted(object))
+	}
+	return object[0], nil
 }
 
 // GetInteractingObject returns IRIs contained in the interactingObject property of 'with'.
@@ -308,6 +381,16 @@ func AppendInteractingObject(with WithInteractingObject, interactingObject ...*u
 		}
 		return intObjProp
 	}, interactingObject...)
+}
+
+// GetOneInteractionTarget extracts a single interactingTarget property from 'with', else returns error.
+// Note: it is an error for the passed type to return any count other than 1 interactionTarget value.
+func GetOneInteractionTarget(with WithInteractionTarget) (*url.URL, error) {
+	target := GetInteractionTarget(with)
+	if len(target) != 1 {
+		return nil, gtserror.NewfAt(3, "expected single interactionTarget, received: %v", log.Formatted(target))
+	}
+	return target[0], nil
 }
 
 // GetInteractionTarget returns IRIs contained in the interactionTarget property of 'with'.
@@ -331,7 +414,7 @@ func AppendInteractionTarget(with WithInteractionTarget, interactionTarget ...*u
 // GetInReplyTo returns the IRIs contained in the InReplyTo property of 'with'.
 func GetInReplyTo(with WithInReplyTo) []*url.URL {
 	replyProp := with.GetActivityStreamsInReplyTo()
-	return extractIRIs[vocab.ActivityStreamsInReplyToPropertyIterator](replyProp)
+	return extractIRIs(replyProp)
 }
 
 // AppendInReplyTo appends the given IRIs to the InReplyTo property of 'with'.
@@ -463,7 +546,7 @@ func SetMovedTo(with WithMovedTo, movedTo *url.URL) {
 // GetAlsoKnownAs returns the IRI contained in the alsoKnownAs property of 'with'.
 func GetAlsoKnownAs(with WithAlsoKnownAs) []*url.URL {
 	alsoKnownAsProp := with.GetActivityStreamsAlsoKnownAs()
-	return getIRIs[vocab.ActivityStreamsAlsoKnownAsPropertyIterator](alsoKnownAsProp)
+	return getIRIs(alsoKnownAsProp)
 }
 
 // SetAlsoKnownAs sets the given IRIs on the alsoKnownAs property of 'with'.

@@ -626,22 +626,20 @@ func (f *DB) parseAcceptInteractionRequestable(
 
 	// Ensure we have actor IRI on
 	// the interaction requestable.
-	actors := ap.GetActorIRIs(intRequestable)
-	if len(actors) != 1 {
+	actorURI, err := ap.GetOneActorIRI(intRequestable)
+	if err != nil {
 		const text = "invalid or missing actor property on embedded interaction request"
-		return nil, gtserror.NewErrorBadRequest(errors.New(text), text)
+		return nil, gtserror.NewErrorBadRequest(err, text)
 	}
-	actorURI := actors[0]
 
 	// Ensure we have an object URI, which
 	// should point to the statusable being
 	// interacted with, ie., the parent status.
-	objects := ap.GetObjectIRIs(intRequestable)
-	if len(objects) != 1 {
+	parentURI, err := ap.GetOneObjectIRI(intRequestable)
+	if err != nil {
 		const text = "invalid or missing object property on embedded interaction request"
-		return nil, gtserror.NewErrorBadRequest(errors.New(text), text)
+		return nil, gtserror.NewErrorBadRequest(err, text)
 	}
-	parentURI := objects[0]
 
 	// Ensure we have instrument, which should
 	// be or point to the activity/object that
@@ -670,12 +668,11 @@ func (f *DB) parseAcceptInteractionRequestable(
 
 	// Ensure we have result URI, which should
 	// point to an authorization for this interaction.
-	results := ap.GetResultIRIs(accept)
-	if len(results) != 1 {
+	authURI, err := ap.GetOneResultIRI(accept)
+	if err != nil {
 		const text = "invalid or missing result property on embedded interaction request"
-		return nil, gtserror.NewErrorBadRequest(errors.New(text), text)
+		return nil, gtserror.NewErrorBadRequest(err, text)
 	}
-	authURI := results[0]
 
 	// Check if we have a gtsmodel interaction
 	// request already stored for this interaction.

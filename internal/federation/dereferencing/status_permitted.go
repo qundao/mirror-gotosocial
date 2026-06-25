@@ -724,17 +724,13 @@ func (d *Dereferencer) isValidAuthURI(
 		// as the ID of the Accept we were returned.
 		switch {
 		case rspURL.Host != authIRI.Host:
-			l.Errorf(
-				"final deref host %s did not match authIRI host",
-				rspURL.Host,
-			)
+			l.Errorf("final deref host %s did not match authIRI host",
+				rspURL.Host)
 			return false, nil
 
 		case authIDStr != rspURLStr:
-			l.Errorf(
-				"final deref uri %s did not match returned ID %s",
-				rspURLStr, authIDStr,
-			)
+			l.Errorf("final deref uri %s did not match returned ID %s",
+				rspURLStr, authIDStr)
 			return false, nil
 		}
 	}
@@ -744,27 +740,33 @@ func (d *Dereferencer) isValidAuthURI(
 
 	// First try to parse type as Authorization stamp.
 	if authable, ok := ap.ToAuthorizationable(t); ok {
-		return isValidAuthorization(
-			ctx,
+		if err := isValidAuthorization(
 			interactionType,
 			authable,
 			authID,
 			expectActorURIStr,  // actor
 			expectObjectURIStr, // object
 			expectTargetURIStr, // target
-		)
+		); err != nil {
+			log.Warn(ctx, err)
+			return false, nil
+		}
+		return true, nil
 	}
 
 	// Fall back to parsing as a simple Accept.
 	if acceptable, ok := ap.ToAcceptable(t); ok {
-		return isValidAcceptable(
-			ctx,
+		if err := isValidAcceptable(
 			acceptable,
 			authID,
 			expectActorURIStr,  // actor
 			expectObjectURIStr, // object
 			expectTargetURIStr, // target
-		)
+		); err != nil {
+			log.Warn(ctx, err)
+			return false, nil
+		}
+		return true, nil
 	}
 
 	// Type wasn't something we
@@ -777,94 +779,85 @@ func (d *Dereferencer) isValidAuthURI(
 }
 
 func isValidAcceptable(
-	ctx context.Context,
 	acceptable ap.Acceptable,
 	acceptID *url.URL,
 	expectActorURIStr string, // actor Eg., "https://example.org/users/someone"
 	expectObjectURIStr string, // object Eg., "https://some.instance.example.org/users/someone_else/statuses/01J27414TWV9F7DC39FN8ABB5R"
 	expectTargetURIStr string, // target Eg., "https://example.org/users/someone/statuses/01JM4REQTJ1BZ1R4BPYP1W4R9E"
-) (bool, error) {
-	l := log.
-		WithContext(ctx).
-		WithField("accept", acceptID.String())
+) error {
 
-	// Extract the actor IRI and string from Accept.
-	actorIRIs := ap.GetActorIRIs(acceptable)
-	actorIRI, actorIRIStr := extractIRI(actorIRIs)
-	switch {
-	case actorIRIStr == "":
-		l.Error("Accept missing actor IRI")
-		return false, nil
+	// Extract the actor IRI from acceptable type.
+	actorIRI, err := ap.GetOneActorIRI(acceptable)
+	if err != nil {
+		return err
+	}
+
+	// Serialize actor ID just once.
+	actorIRIStr := actorIRI.String()
 
 	// Ensure the Accept Actor is on
 	// the instance hosting the Accept.
-	case actorIRI.Host != acceptID.Host:
-		l.Errorf(
-			"actor %s not on the same host as Accept",
-			actorIRIStr,
-		)
-		return false, nil
+	if actorIRI.Host != acceptID.Host {
+		return gtserror.Newf("actor %s not on the same host as Accept",
+			actorIRIStr)
+	}
 
 	// Ensure the Accept Actor is who we expect
 	// it to be, and not someone else trying to
 	// do an Accept for an interaction with a
 	// statusable they don't own.
-	case actorIRIStr != expectActorURIStr:
-		l.Errorf(
-			"actor %s was not the same as expected actor %s",
-			actorIRIStr, expectActorURIStr,
-		)
-		return false, nil
+	if actorIRIStr != expectActorURIStr {
+		return gtserror.Newf("actor %s was not the same as expected actor %s",
+			actorIRIStr, expectActorURIStr)
 	}
 
-	// Extract the object IRI string from Accept.
-	objectIRIs := ap.GetObjectIRIs(acceptable)
-	_, objectIRIStr := extractIRI(objectIRIs)
-	switch {
-	case objectIRIStr == "":
-		l.Error("missing Accept object IRI")
-		return false, nil
+	// Extract the object IRI from acceptable type.
+	objectIRI, err := ap.GetOneObjectIRI(acceptable)
+	if err != nil {
+		return err
+	}
+
+	// Serialize object ID just once.
+	objectIRIStr := objectIRI.String()
 
 	// Ensure the Accept Object is what we expect
 	// it to be, ie., it's Accepting the interaction
 	// we need it to Accept, and not something else.
-	case objectIRIStr != expectObjectURIStr:
-		l.Errorf(
-			"resolved Accept object IRI %s was not the same as expected object %s",
-			objectIRIStr, expectObjectURIStr,
-		)
-		return false, nil
+	if objectIRIStr != expectObjectURIStr {
+		return gtserror.Newf("resolved Accept object IRI %s was not the same as expected object %s",
+			objectIRIStr, expectObjectURIStr)
 	}
+
+	// Extract the target IRI from acceptable type.
+	targetIRI, err := ap.GetOneTargetIRI(acceptable)
+	if err != nil {
+		return err
+	}
+
+	// Serialize target ID just once.
+	targetIRIStr := targetIRI.String()
 
 	// If there's a Target set then verify it's
 	// what we expect it to be, ie., it should point
 	// back to the post that's being interacted with.
-	targetIRIs := ap.GetTargetIRIs(acceptable)
-	_, targetIRIStr := extractIRI(targetIRIs)
-	if targetIRIStr != "" && targetIRIStr != expectTargetURIStr {
-		l.Errorf(
-			"resolved Accept target IRI %s was not the same as expected target %s",
-			targetIRIStr, expectTargetURIStr,
-		)
-		return false, nil
+	if targetIRIStr != expectTargetURIStr {
+		return gtserror.Newf("resolved Accept target IRI %s was not the same as expected target %s",
+			targetIRIStr, expectTargetURIStr)
 	}
 
-	// Everything looks OK.
-	return true, nil
+	// Everything
+	// looks OK.
+	return nil
 }
 
 func isValidAuthorization(
-	ctx context.Context,
 	interactionType gtsmodel.InteractionType,
 	auth ap.Authorizationable,
 	authID *url.URL,
 	expectActorURIStr string, // actor Eg., "https://example.org/users/someone"
 	expectObjectURIStr string, // object Eg., "https://some.instance.example.org/users/someone_else/statuses/01J27414TWV9F7DC39FN8ABB5R"
 	expectTargetURIStr string, // target Eg., "https://example.org/users/someone/statuses/01JM4REQTJ1BZ1R4BPYP1W4R9E"
-) (bool, error) {
-	l := log.
-		WithContext(ctx).
-		WithField("auth", authID.String())
+) error {
 
 	// Check that the type of the Authorization
 	// matches the interaction it's approving.
@@ -875,83 +868,71 @@ func isValidAuthorization(
 		// All good baby!
 	default:
 		// There's a mismatch.
-		l.Errorf(
-			"authorization type %s cannot approve %s",
-			tn, interactionType.String(),
-		)
-		return false, nil
+		return gtserror.Newf("authorization type %s cannot approve %s",
+			tn, interactionType.String())
 	}
 
-	// Extract the actor IRI and string from Approval.
-	actorIRIs := ap.GetAttributedTo(auth)
-	actorIRI, actorIRIStr := extractIRI(actorIRIs)
-	switch {
-	case actorIRIStr == "":
-		l.Error("authorization missing attributedTo IRI")
-		return false, nil
+	// Extract the actor IRI from authorization.
+	actorIRI, err := ap.GetOneAttributedTo(auth)
+	if err != nil {
+		return err
+	}
+
+	// Serialize actor ID just once.
+	actorIRIStr := actorIRI.String()
 
 	// Ensure the authorization actor is on
 	// the instance hosting the Approval.
-	case actorIRI.Host != authID.Host:
-		l.Errorf(
-			"actor %s not on the same host as authorization",
-			actorIRIStr,
-		)
-		return false, nil
+	if actorIRI.Host != authID.Host {
+		return gtserror.Newf("actor %s not on the same host as authorization",
+			actorIRIStr)
+	}
 
 	// Ensure the auth actor is who we expect
 	// it to be, and not someone else trying to
 	// do an auth for an interaction with a
 	// statusable they don't own.
-	case actorIRIStr != expectActorURIStr:
-		l.Errorf(
-			"actor %s was not the same as expected actor %s",
-			actorIRIStr, expectActorURIStr,
-		)
-		return false, nil
+	if actorIRIStr != expectActorURIStr {
+		return gtserror.Newf("actor %s was not the same as expected actor %s",
+			actorIRIStr, expectActorURIStr)
 	}
 
-	// Extract the object IRI string from authorization.
-	objectIRIs := ap.GetInteractingObject(auth)
-	_, objectIRIStr := extractIRI(objectIRIs)
-	switch {
-	case objectIRIStr == "":
-		l.Error("missing authorization interactingObject IRI")
-		return false, nil
+	// Extract interacting object IRI from authorization.
+	objectIRI, err := ap.GetOneInteractingObject(auth)
+	if err != nil {
+		return err
+	}
+
+	// Serialize object ID just once.
+	objectIRIStr := objectIRI.String()
 
 	// Ensure the authorization object is what we expect
 	// it to be, ie., it's approving the interaction
 	// we need it to approve, and not something else.
-	case objectIRIStr != expectObjectURIStr:
-		l.Errorf(
+	if objectIRIStr != expectObjectURIStr {
+		return gtserror.Newf(
 			"resolved authorization interactingObject IRI %s was not the same as expected object %s",
-			objectIRIStr, expectObjectURIStr,
-		)
-		return false, nil
+			objectIRIStr, expectObjectURIStr)
 	}
+
+	// Extract interaction target IRI from authorization.
+	targetIRI, err := ap.GetOneInteractionTarget(auth)
+	if err != nil {
+		return err
+	}
+
+	// Serialize target ID just once.
+	targetIRIStr := targetIRI.String()
 
 	// Ensure the authorization target is what we expect,
 	// ie., it should be the status being interacted with.
-	targetIRIs := ap.GetInteractionTarget(auth)
-	_, targetIRIStr := extractIRI(targetIRIs)
-	if targetIRIStr != "" && targetIRIStr != expectTargetURIStr {
-		l.Errorf(
+	if targetIRIStr != expectTargetURIStr {
+		return gtserror.Newf(
 			"resolved authorization interactionTarget IRI %s was not the same as expected target %s",
-			targetIRIStr, expectTargetURIStr,
-		)
-		return false, nil
+			targetIRIStr, expectTargetURIStr)
 	}
 
-	// Everything looks OK.
-	return true, nil
-}
-
-// extractIRI is shorthand to extract the first IRI
-// url.URL{} object and serialized form from slice.
-func extractIRI(iris []*url.URL) (*url.URL, string) {
-	if len(iris) == 0 {
-		return nil, ""
-	}
-	u := iris[0]
-	return u, u.String()
+	// Everything
+	// looks OK.
+	return nil
 }

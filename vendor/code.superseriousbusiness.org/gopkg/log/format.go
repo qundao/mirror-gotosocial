@@ -18,32 +18,24 @@
 package log
 
 import (
-	"unsafe"
-
-	"codeberg.org/gruf/go-byteutil"
-	"codeberg.org/gruf/go-mempool"
+	"codeberg.org/gruf/go-kv/v2/format"
 )
 
-// memory pool of log buffers.
-var bufpool mempool.UnsafePool
+// LogFormatted provides log formatting
+// of wrapped interface via String() method.
+type LogFormatted struct{ any }
 
-// getBuf acquires a buffer from memory pool.
-func getBuf() *byteutil.Buffer {
-	buf := (*byteutil.Buffer)(bufpool.Get())
-	if buf == nil {
-		buf = new(byteutil.Buffer)
-		buf.B = make([]byte, 0, 512)
-	}
-	return buf
+// String: implements fmt.Stringer{}.
+func (f LogFormatted) String() string {
+	buf := bufpool.Get()
+	buf.B = format.Global.Append(buf.B, f.any, argArgs)
+	str := string(buf.B)
+	bufpool.Put(buf)
+	return str
 }
 
-// putBuf places (after resetting) buffer back in
-// memory pool, dropping if capacity too large.
-func putBuf(buf *byteutil.Buffer) {
-	if cap(buf.B) > int(^uint16(0)) {
-		return // drop large buffer
-	}
-	buf.B = buf.B[:0]
-	ptr := unsafe.Pointer(buf)
-	bufpool.Put(ptr)
+// Formatted wraps value in LogFormatted{}
+// for nicer formatting via String() method.
+func Formatted(v any) LogFormatted {
+	return LogFormatted{v}
 }

@@ -52,40 +52,18 @@ func typeNames(objects []ap.TypeOrIRI) []string {
 
 // isSender returns whether an object with AttributedTo property comes from the given requesting account.
 func isSender(with ap.WithAttributedTo, requester *gtsmodel.Account) bool {
-	for _, uri := range ap.GetAttributedTo(with) {
-		if uri.String() == requester.URI {
-			return true
-		}
-	}
-	return false
+	uri, _ := ap.GetOneAttributedTo(with)
+	return uri != nil && uri.String() == requester.URI
 }
 
-func sameActor(actor1 vocab.ActivityStreamsActorProperty, actor2 vocab.ActivityStreamsActorProperty) bool {
+func sameActor(actor1 ap.WithActor, actor2 ap.WithActor) bool {
 	if actor1 == nil || actor2 == nil {
 		return false
 	}
-
-	for a1Iter := actor1.Begin(); a1Iter != actor1.End(); a1Iter = a1Iter.Next() {
-		a1IRI := a1Iter.GetIRI()
-		if a1IRI == nil {
-			return false
-		}
-
-		a1IRIStr := a1IRI.String()
-		for a2Iter := actor2.Begin(); a2Iter != actor2.End(); a2Iter = a2Iter.Next() {
-			a2IRI := a2Iter.GetIRI()
-			if a2IRI == nil {
-				return false
-			}
-
-			a2IRIStr := a2IRI.String()
-			if a1IRIStr == a2IRIStr {
-				return true
-			}
-		}
-	}
-
-	return false
+	actor1URI, _ := ap.GetOneActorIRI(actor1)
+	actor2URI, _ := ap.GetOneActorIRI(actor2)
+	return actor1URI != nil && actor2URI != nil &&
+		actor1URI.String() == actor2URI.String()
 }
 
 // NewID creates a new IRI id for the provided activity or object. The

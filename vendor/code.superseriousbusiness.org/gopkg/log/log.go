@@ -24,6 +24,7 @@ import (
 	"runtime"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/buffers"
 	"code.superseriousbusiness.org/gopkg/log/format"
 	"code.superseriousbusiness.org/gopkg/log/level"
 	"code.superseriousbusiness.org/gopkg/xslices"
@@ -44,6 +45,9 @@ var state = struct {
 		_, _ = os.Stdout.Write(line)
 	},
 }
+
+// memory pool of log buffers.
+var bufpool = buffers.Pool(1024)
 
 // Level returns the
 // currently set log.
@@ -391,8 +395,8 @@ func logf(ctx context.Context, lvl LEVEL, fields []kv.Field, msg string, args ..
 	_ = runtime.Callers(3, pcs)
 
 	// Acquire buffer.
-	buf := getBuf()
-	defer putBuf(buf)
+	buf := bufpool.Get()
+	defer bufpool.Put(buf)
 
 	if ctx != nil && len(state.hooks) > 0 {
 		// Ensure fields have space for our context hooks.

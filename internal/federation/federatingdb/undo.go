@@ -127,8 +127,8 @@ func (f *DB) undoFollow(
 	// Make sure the Undo
 	// actor owns the target.
 	if !sameActor(
-		undo.GetActivityStreamsActor(),
-		asFollow.GetActivityStreamsActor(),
+		undo,
+		asFollow,
 	) {
 		// Ignore this Activity.
 		return nil
@@ -204,8 +204,8 @@ func (f *DB) undoLike(
 	// Make sure the Undo
 	// actor owns the target.
 	if !sameActor(
-		undo.GetActivityStreamsActor(),
-		asLike.GetActivityStreamsActor(),
+		undo,
+		asLike,
 	) {
 		// Ignore this Activity.
 		return nil
@@ -304,8 +304,8 @@ func (f *DB) undoBlock(
 	// Make sure the Undo
 	// actor owns the target.
 	if !sameActor(
-		undo.GetActivityStreamsActor(),
-		asBlock.GetActivityStreamsActor(),
+		undo,
+		asBlock,
 	) {
 		// Ignore this Activity.
 		return nil
@@ -374,8 +374,8 @@ func (f *DB) undoAnnounce(
 	// Make sure the Undo actor owns the
 	// Announce they're trying to undo.
 	if !sameActor(
-		undo.GetActivityStreamsActor(),
-		asAnnounce.GetActivityStreamsActor(),
+		undo,
+		asAnnounce,
 	) {
 		// Ignore this Activity.
 		return nil

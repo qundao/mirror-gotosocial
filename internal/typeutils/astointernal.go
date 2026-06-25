@@ -381,7 +381,6 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	// Account that created the status. Assume we have this
 	// in the db by the time this function is called, else error.
 	status.Account, err = c.getASAttributedToAccount(ctx,
-		status.URI,
 		statusable,
 	)
 	if err != nil {
@@ -493,12 +492,12 @@ func (c *Converter) ASFollowToFollowRequest(ctx context.Context, followable ap.F
 	// Stringify uri obj.
 	uri := uriObj.String()
 
-	origin, err := c.getASActorAccount(ctx, uri, followable)
+	origin, err := c.getASActorAccount(ctx, followable)
 	if err != nil {
 		return nil, err
 	}
 
-	target, err := c.getASObjectAccount(ctx, uri, followable)
+	target, err := c.getASObjectAccount(ctx, followable)
 	if err != nil {
 		return nil, err
 	}
@@ -523,12 +522,12 @@ func (c *Converter) ASFollowToFollow(ctx context.Context, followable ap.Followab
 	// Stringify uri obj.
 	uri := uriObj.String()
 
-	origin, err := c.getASActorAccount(ctx, uri, followable)
+	origin, err := c.getASActorAccount(ctx, followable)
 	if err != nil {
 		return nil, err
 	}
 
-	target, err := c.getASObjectAccount(ctx, uri, followable)
+	target, err := c.getASObjectAccount(ctx, followable)
 	if err != nil {
 		return nil, err
 	}
@@ -555,12 +554,12 @@ func (c *Converter) ASLikeToFave(ctx context.Context, likeable ap.Likeable) (*gt
 	// Stringify uri obj.
 	uri := uriObj.String()
 
-	origin, err := c.getASActorAccount(ctx, uri, likeable)
+	origin, err := c.getASActorAccount(ctx, likeable)
 	if err != nil {
 		return nil, err
 	}
 
-	target, err := c.getASObjectStatus(ctx, uri, likeable)
+	target, err := c.getASObjectStatus(ctx, likeable)
 	if err != nil {
 		return nil, err
 	}
@@ -591,12 +590,12 @@ func (c *Converter) ASBlockToBlock(ctx context.Context, blockable ap.Blockable) 
 	// Stringify uri obj.
 	uri := uriObj.String()
 
-	origin, err := c.getASActorAccount(ctx, uri, blockable)
+	origin, err := c.getASActorAccount(ctx, blockable)
 	if err != nil {
 		return nil, err
 	}
 
-	target, err := c.getASObjectAccount(ctx, uri, blockable)
+	target, err := c.getASObjectAccount(ctx, blockable)
 	if err != nil {
 		return nil, err
 	}
@@ -674,7 +673,6 @@ func (c *Converter) ASAnnounceToStatus(
 	// Extract and load the boost actor account,
 	// (this MUST already be in database by now).
 	boost.Account, err = c.getASActorAccount(ctx,
-		uri,
 		announceable,
 	)
 	if err != nil {
@@ -724,7 +722,7 @@ func (c *Converter) ASFlagToReport(ctx context.Context, flaggable ap.Flaggable) 
 	uri := uriObj.String()
 
 	// Extract the origin (actor) account for report.
-	origin, err := c.getASActorAccount(ctx, uri, flaggable)
+	origin, err := c.getASActorAccount(ctx, flaggable)
 	if err != nil {
 		return nil, err
 	}
@@ -849,16 +847,14 @@ func (c *Converter) ASFlagToReport(ctx context.Context, flaggable ap.Flaggable) 
 	}, nil
 }
 
-func (c *Converter) getASActorAccount(ctx context.Context, id string, with ap.WithActor) (*gtsmodel.Account, error) {
-	// Get actor IRIs from type.
-	actor := ap.GetActorIRIs(with)
-	if len(actor) == 0 {
-		err := gtserror.Newf("unusable actor property iri for %s", id)
+func (c *Converter) getASActorAccount(ctx context.Context, with ap.WithActor) (*gtsmodel.Account, error) {
+	actorIRI, err := ap.GetOneActorIRI(with)
+	if err != nil {
 		return nil, gtserror.SetMalformed(err)
 	}
 
-	// Check for account in database with provided actor URI.
-	account, err := c.state.DB.GetAccountByURI(ctx, actor[0].String())
+	// Check for account in database with the extracted actor URI.
+	account, err := c.state.DB.GetAccountByURI(ctx, actorIRI.String())
 	if err != nil {
 		return nil, gtserror.Newf("error getting actor account from database: %w", err)
 	}
@@ -866,16 +862,14 @@ func (c *Converter) getASActorAccount(ctx context.Context, id string, with ap.Wi
 	return account, nil
 }
 
-func (c *Converter) getASAttributedToAccount(ctx context.Context, id string, with ap.WithAttributedTo) (*gtsmodel.Account, error) {
-	// Get attribTo IRIs from type.
-	attribTo := ap.GetAttributedTo(with)
-	if len(attribTo) == 0 {
-		err := gtserror.Newf("unusable attributedTo property iri for %s", id)
+func (c *Converter) getASAttributedToAccount(ctx context.Context, with ap.WithAttributedTo) (*gtsmodel.Account, error) {
+	attribTo, err := ap.GetOneAttributedTo(with)
+	if err != nil {
 		return nil, gtserror.SetMalformed(err)
 	}
 
-	// Check for account in database with provided attributedTo URI.
-	account, err := c.state.DB.GetAccountByURI(ctx, attribTo[0].String())
+	// Check for account in database with extracted attributedTo URI.
+	account, err := c.state.DB.GetAccountByURI(ctx, attribTo.String())
 	if err != nil {
 		return nil, gtserror.Newf("error getting actor account from database: %w", err)
 	}
@@ -883,16 +877,14 @@ func (c *Converter) getASAttributedToAccount(ctx context.Context, id string, wit
 	return account, nil
 }
 
-func (c *Converter) getASObjectAccount(ctx context.Context, id string, with ap.WithObject) (*gtsmodel.Account, error) {
-	// Get object IRIs from type.
-	object := ap.GetObjectIRIs(with)
-	if len(object) == 0 {
-		err := gtserror.Newf("unusable object property iri for %s", id)
+func (c *Converter) getASObjectAccount(ctx context.Context, with ap.WithObject) (*gtsmodel.Account, error) {
+	objectIRI, err := ap.GetOneObjectIRI(with)
+	if err != nil {
 		return nil, gtserror.SetMalformed(err)
 	}
 
-	// Check for account in database with provided object URI.
-	account, err := c.state.DB.GetAccountByURI(ctx, object[0].String())
+	// Check for account in database with the extracted object URI.
+	account, err := c.state.DB.GetAccountByURI(ctx, objectIRI.String())
 	if err != nil {
 		return nil, gtserror.Newf("error getting object account from database: %w", err)
 	}
@@ -900,16 +892,14 @@ func (c *Converter) getASObjectAccount(ctx context.Context, id string, with ap.W
 	return account, nil
 }
 
-func (c *Converter) getASObjectStatus(ctx context.Context, id string, with ap.WithObject) (*gtsmodel.Status, error) {
-	// Get object IRIs from type.
-	object := ap.GetObjectIRIs(with)
-	if len(object) == 0 {
-		err := gtserror.Newf("unusable object property iri for %s", id)
+func (c *Converter) getASObjectStatus(ctx context.Context, with ap.WithObject) (*gtsmodel.Status, error) {
+	objectIRI, err := ap.GetOneObjectIRI(with)
+	if err != nil {
 		return nil, gtserror.SetMalformed(err)
 	}
 
-	// Check for status in database with provided object URI.
-	status, err := c.state.DB.GetStatusByURI(ctx, object[0].String())
+	// Check for status in database with the extracted object URI.
+	status, err := c.state.DB.GetStatusByURI(ctx, objectIRI.String())
 	if err != nil {
 		return nil, gtserror.Newf("error getting object status from database: %w", err)
 	}

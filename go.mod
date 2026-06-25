@@ -11,16 +11,16 @@ replace github.com/gin-gonic/gin => codeberg.org/superseriousbusiness/gin v1.11.
 require (
 	code.superseriousbusiness.org/activity v1.19.0
 	code.superseriousbusiness.org/exif-terminator v0.11.4
-	code.superseriousbusiness.org/gopkg v0.0.0-20260520114201-7a01c90db818
+	code.superseriousbusiness.org/gopkg v0.0.0-20260623123713-4ead213a2d22
 	code.superseriousbusiness.org/httpsig v1.5.0
 	code.superseriousbusiness.org/oauth2/v4 v4.5.4-0.20250812115401-3961e46a7384
 	codeberg.org/gruf/go-bytesize v1.0.4
 	codeberg.org/gruf/go-byteutil v1.3.0
 	codeberg.org/gruf/go-cache/v3 v3.6.2
-	codeberg.org/gruf/go-caller v0.0.0-20250806133437-db8d0b1f71cf
+	codeberg.org/gruf/go-caller v0.0.0-20260615202027-bc5a6ff3cb31
 	codeberg.org/gruf/go-debug v1.3.0
 	codeberg.org/gruf/go-errors/v2 v2.3.4
-	codeberg.org/gruf/go-fastcopy v1.1.3
+	codeberg.org/gruf/go-fastcopy v1.2.1
 	codeberg.org/gruf/go-fastpath/v2 v2.0.1
 	codeberg.org/gruf/go-ffmpreg v0.6.20
 	codeberg.org/gruf/go-iotools v0.0.0-20240710125620-934ae9c654cf

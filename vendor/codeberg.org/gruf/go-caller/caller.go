@@ -66,6 +66,19 @@ func Name(pc uintptr) string {
 // Get will return calling func information for given PC value,
 // caching func names by their PC values to reduce calls to Caller().
 func Get(pc uintptr) string {
+	ptr := callerCache.Load()
+	if ptr != nil {
+		name, ok := (*ptr)[pc]
+		if ok {
+			return name
+		}
+	}
+	return get_slow(pc)
+}
+
+// get_slow is the outlined version of the slow
+// parts of Get() in order to inline the fast parts.
+func get_slow(pc uintptr) string {
 	var cache map[uintptr]string
 	for {
 		// Load caller cache map.

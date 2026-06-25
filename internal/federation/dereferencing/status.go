@@ -452,9 +452,9 @@ func (d *Dereferencer) enrichStatus(
 	}
 
 	// Get the attributed-to account in order to fetch profile.
-	attributedTo, err := ap.ExtractAttributedToURI(statusable)
+	attributedTo, err := ap.GetOneAttributedTo(statusable)
 	if err != nil {
-		return nil, nil, gtserror.New("attributedTo was empty")
+		return nil, nil, gtserror.SetMalformed(err)
 	}
 
 	// Ensure we have the author account of the status dereferenced (+ up-to-date). If this is a new status
@@ -485,22 +485,32 @@ func (d *Dereferencer) enrichStatus(
 
 	// Ensure the final parsed status URI or URL matches
 	// the input URI we fetched (or received) it as.
+	jsonldID := ap.GetJSONLDId(statusable)
 	matches, err := util.URIMatches(uri, append(
-		ap.GetURL(statusable),      // status URL(s)
-		ap.GetJSONLDId(statusable), // status URI
+		ap.GetURL(statusable), // status URL(s)
+		jsonldID,              // status URI
 	)...)
 	if err != nil {
-		return nil, nil, gtserror.Newf(
+		err := gtserror.Newf(
 			"error checking dereferenced status uri %s: %w",
 			latestStatus.URI, err,
 		)
+		return nil, nil, gtserror.SetMalformed(err)
 	}
 
 	if !matches {
-		return nil, nil, gtserror.Newf(
+		err := gtserror.Newf(
 			"dereferenced status uri %s does not match %s",
 			latestStatus.URI, uri.String(),
 		)
+		return nil, nil, gtserror.SetMalformed(err)
+	}
+
+	// The status author, and the status
+	// JSON-LD ID must have the same host.
+	if attributedTo.Host != jsonldID.Host {
+		err := gtserror.Newf("id and attributedTo hostnames differ: id=%s attributedTo=%s", attributedTo.Host, statusURI.Host)
+		return nil, nil, gtserror.SetMalformed(err)
 	}
 
 	if isNew {

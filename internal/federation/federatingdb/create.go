@@ -285,7 +285,11 @@ func (f *DB) createStatusable(
 	forwarded bool,
 ) error {
 	// Check for spam / relevance.
-	ok, err := f.statusableOK(ctx, receiver, requester, statusable)
+	ok, err := f.statusableOK(ctx,
+		receiver,
+		requester,
+		statusable,
+	)
 	if err != nil {
 		// Error already
 		// wrapped.

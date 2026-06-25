@@ -94,26 +94,26 @@ func newErrOtherIRIBlocked(
 // to the ResponseWriter as is expected that the caller to PostInbox will
 // do so when handling the error.
 func (f *Federator) PostInboxRequestBodyHook(ctx context.Context, r *http.Request, activity pub.Activity) (context.Context, error) {
-	// Extract any other IRIs involved in this activity.
-	otherIRIs := []*url.URL{}
+
+	// Extract any other IRIs
+	// involved in this activity.
+	var otherIRIs []*url.URL
 
 	// Get the ID of the Activity itslf.
-	activityID, err := pub.GetId(activity)
-	if err == nil {
+	activityID, _ := pub.GetId(activity)
+	if activityID != nil {
 		otherIRIs = append(otherIRIs, activityID)
 	}
 
 	// Check if the Activity has an 'inReplyTo'.
 	if replyToable, ok := activity.(ap.ReplyToable); ok {
-		if inReplyToURI := ap.ExtractInReplyToURI(replyToable); inReplyToURI != nil {
-			otherIRIs = append(otherIRIs, inReplyToURI)
-		}
+		otherIRIs = append(otherIRIs, ap.GetInReplyTo(replyToable)...)
 	}
 
 	// Check for TO and CC URIs on the Activity.
 	if addressable, ok := activity.(ap.Addressable); ok {
-		otherIRIs = append(otherIRIs, ap.ExtractToURIs(addressable)...)
-		otherIRIs = append(otherIRIs, ap.ExtractCcURIs(addressable)...)
+		otherIRIs = append(otherIRIs, ap.GetTo(addressable)...)
+		otherIRIs = append(otherIRIs, ap.GetCc(addressable)...)
 	}
 
 	// Now perform the same checks, but
@@ -131,20 +131,18 @@ func (f *Federator) PostInboxRequestBodyHook(ctx context.Context, r *http.Reques
 				continue
 			}
 
-			objectID, err := pub.GetId(t)
-			if err == nil {
+			objectID, _ := pub.GetId(t)
+			if objectID != nil {
 				otherIRIs = append(otherIRIs, objectID)
 			}
 
 			if replyToable, ok := t.(ap.ReplyToable); ok {
-				if inReplyToURI := ap.ExtractInReplyToURI(replyToable); inReplyToURI != nil {
-					otherIRIs = append(otherIRIs, inReplyToURI)
-				}
+				otherIRIs = append(otherIRIs, ap.GetInReplyTo(replyToable)...)
 			}
 
 			if addressable, ok := t.(ap.Addressable); ok {
-				otherIRIs = append(otherIRIs, ap.ExtractToURIs(addressable)...)
-				otherIRIs = append(otherIRIs, ap.ExtractCcURIs(addressable)...)
+				otherIRIs = append(otherIRIs, ap.GetTo(addressable)...)
+				otherIRIs = append(otherIRIs, ap.GetCc(addressable)...)
 			}
 		}
 	}

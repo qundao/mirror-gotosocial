@@ -91,9 +91,11 @@ func ExtractActivityObjectsAndInstruments(
 	rawJSON map[string]any,
 ) ([]TypeOrIRI, []any) {
 	switch typeName := activity.GetTypeName(); {
+
 	// Activity: has "object"
 	// and/or "instrument".
 	case isActivity(typeName):
+
 		// Gather object types and raw json.
 		objTypes, objJSON := extractObjectTypesAndJSON(activity, rawJSON)
 
@@ -312,26 +314,6 @@ func ExtractName(i WithName) string {
 	return ""
 }
 
-// ExtractInReplyToURI extracts the first inReplyTo URI
-// property it can find from an interface. Will return
-// nil if no valid URI can be found.
-func ExtractInReplyToURI(i WithInReplyTo) *url.URL {
-	inReplyToProp := i.GetActivityStreamsInReplyTo()
-	if inReplyToProp == nil {
-		return nil
-	}
-
-	for iter := inReplyToProp.Begin(); iter != inReplyToProp.End(); iter = iter.Next() {
-		iri, err := pub.ToId(iter)
-		if err == nil && iri != nil {
-			// Found one we can use.
-			return iri
-		}
-	}
-
-	return nil
-}
-
 // ExtractItemsURIs extracts each URI it can
 // find for an item from the provided WithItems.
 func ExtractItemsURIs(i WithItems) []*url.URL {
@@ -350,64 +332,6 @@ func ExtractItemsURIs(i WithItems) []*url.URL {
 	}
 
 	return uris
-}
-
-// ExtractToURIs returns a slice of URIs
-// that the given WithTo addresses as To.
-func ExtractToURIs(i WithTo) []*url.URL {
-	toProp := i.GetActivityStreamsTo()
-	if toProp == nil {
-		return nil
-	}
-
-	uris := make([]*url.URL, 0, toProp.Len())
-	for iter := toProp.Begin(); iter != toProp.End(); iter = iter.Next() {
-		uri, err := pub.ToId(iter)
-		if err == nil {
-			// Found one we can use.
-			uris = append(uris, uri)
-		}
-	}
-
-	return uris
-}
-
-// ExtractCcURIs returns a slice of URIs
-// that the given WithCC addresses as Cc.
-func ExtractCcURIs(i WithCc) []*url.URL {
-	ccProp := i.GetActivityStreamsCc()
-	if ccProp == nil {
-		return nil
-	}
-
-	urls := make([]*url.URL, 0, ccProp.Len())
-	for iter := ccProp.Begin(); iter != ccProp.End(); iter = iter.Next() {
-		uri, err := pub.ToId(iter)
-		if err == nil {
-			// Found one we can use.
-			urls = append(urls, uri)
-		}
-	}
-
-	return urls
-}
-
-// ExtractAttributedToURI returns the first URI it can find in the
-// given WithAttributedTo, or an error if no URI can be found.
-func ExtractAttributedToURI(i WithAttributedTo) (*url.URL, error) {
-	attributedToProp := i.GetActivityStreamsAttributedTo()
-	if attributedToProp == nil {
-		return nil, gtserror.New("attributedToProp was nil")
-	}
-
-	for iter := attributedToProp.Begin(); iter != attributedToProp.End(); iter = iter.Next() {
-		id, err := pub.ToId(iter)
-		if err == nil {
-			return id, nil
-		}
-	}
-
-	return nil, gtserror.New("couldn't find iri for attributed to")
 }
 
 // ExtractIconURI extracts the first URI it can find from
@@ -691,21 +615,20 @@ func ExtractPubKeyFromActor(i WithPublicKey) (
 		return nil, nil, nil, gtserror.New("public key property was nil")
 	}
 
-	// Take the first public key we can find.
-	for iter := pubKeyProp.Begin(); iter != pubKeyProp.End(); iter = iter.Next() {
-		if !iter.IsW3IDSecurityV1PublicKey() {
-			continue
-		}
-
-		pkey := iter.Get()
-		if pkey == nil {
-			continue
-		}
-
-		return ExtractPubKeyFromKey(pkey)
+	if l := pubKeyProp.Len(); l != 1 {
+		return nil, nil, nil, gtserror.Newf("unexpected public key property length: %d", l)
 	}
 
-	return nil, nil, nil, gtserror.New("couldn't find valid public key")
+	// Start property iterator.
+	iter := pubKeyProp.Begin()
+
+	// Ensure this is a expected valid key.
+	if !iter.IsW3IDSecurityV1PublicKey() {
+		return nil, nil, nil, gtserror.New("couldn't find valid public key")
+	}
+
+	// Extract RSA details from key type.
+	return ExtractPubKeyFromKey(iter.Get())
 }
 
 // ExtractPubKeyFromActor extracts the public key, public key ID, and public
@@ -718,32 +641,32 @@ func ExtractPubKeyFromKey(pkey vocab.W3IDSecurityV1PublicKey) (
 ) {
 	pubKeyID, err := pub.GetId(pkey)
 	if err != nil {
-		return nil, nil, nil, errors.New("no id set on public key")
+		return nil, nil, nil, gtserror.New("no id set on public key")
 	}
 
 	pubKeyOwnerProp := pkey.GetW3IDSecurityV1Owner()
 	if pubKeyOwnerProp == nil {
-		return nil, nil, nil, errors.New("nil pubKeyOwnerProp")
+		return nil, nil, nil, gtserror.New("nil pubKeyOwnerProp")
 	}
 
 	pubKeyOwner := pubKeyOwnerProp.GetIRI()
 	if pubKeyOwner == nil {
-		return nil, nil, nil, errors.New("nil iri on pubKeyOwnerProp")
+		return nil, nil, nil, gtserror.New("nil iri on pubKeyOwnerProp")
 	}
 
 	pubKeyPemProp := pkey.GetW3IDSecurityV1PublicKeyPem()
 	if pubKeyPemProp == nil {
-		return nil, nil, nil, errors.New("nil pubKeyPemProp")
+		return nil, nil, nil, gtserror.New("nil pubKeyPemProp")
 	}
 
 	pkeyPem := pubKeyPemProp.Get()
 	if pkeyPem == "" {
-		return nil, nil, nil, errors.New("empty pubKeyPemProp")
+		return nil, nil, nil, gtserror.New("empty pubKeyPemProp")
 	}
 
 	block, _ := pem.Decode([]byte(pkeyPem))
 	if block == nil {
-		return nil, nil, nil, errors.New("nil pubKeyPem")
+		return nil, nil, nil, gtserror.New("nil pubKeyPem")
 	}
 
 	var p crypto.PublicKey
@@ -753,20 +676,19 @@ func ExtractPubKeyFromKey(pkey vocab.W3IDSecurityV1PublicKey) (
 	case "RSA PUBLIC KEY":
 		p, err = x509.ParsePKCS1PublicKey(block.Bytes)
 	default:
-		err = fmt.Errorf("unknown block type: %q", block.Type)
+		err = gtserror.Newf("unknown block type: %q", block.Type)
 	}
 	if err != nil {
-		err = fmt.Errorf("could not parse public key from block bytes: %w", err)
-		return nil, nil, nil, err
+		return nil, nil, nil, gtserror.Newf("could not parse public key from block bytes: %w", err)
 	}
 
 	if p == nil {
-		return nil, nil, nil, fmt.Errorf("returned public key was empty")
+		return nil, nil, nil, gtserror.New("returned public key was empty")
 	}
 
 	pubKey, ok := p.(*rsa.PublicKey)
 	if !ok {
-		return nil, nil, nil, fmt.Errorf("could not type pubKey to *rsa.PublicKey")
+		return nil, nil, nil, gtserror.New("could not type pubKey to *rsa.PublicKey")
 	}
 
 	return pubKey, pubKeyID, pubKeyOwner, nil
@@ -1209,45 +1131,6 @@ func ExtractActorURI(withActor WithActor) (*url.URL, error) {
 	return nil, gtserror.New("no iri found for actor prop")
 }
 
-// ExtractObjectURI extracts the first Object URI
-// it can find from a WithObject interface.
-func ExtractObjectURI(withObject WithObject) (*url.URL, error) {
-	objectProp := withObject.GetActivityStreamsObject()
-	if objectProp == nil {
-		return nil, gtserror.New("object property was nil")
-	}
-
-	for iter := objectProp.Begin(); iter != objectProp.End(); iter = iter.Next() {
-		id, err := pub.ToId(iter)
-		if err == nil {
-			// Found one we can use.
-			return id, nil
-		}
-	}
-
-	return nil, gtserror.New("no iri found for object prop")
-}
-
-// ExtractObjectURIs extracts the URLs of each Object
-// it can find from a WithObject interface.
-func ExtractObjectURIs(withObject WithObject) ([]*url.URL, error) {
-	objectProp := withObject.GetActivityStreamsObject()
-	if objectProp == nil {
-		return nil, gtserror.New("object property was nil")
-	}
-
-	urls := make([]*url.URL, 0, objectProp.Len())
-	for iter := objectProp.Begin(); iter != objectProp.End(); iter = iter.Next() {
-		id, err := pub.ToId(iter)
-		if err == nil {
-			// Found one we can use.
-			urls = append(urls, id)
-		}
-	}
-
-	return urls, nil
-}
-
 // ExtractVisibility extracts the gtsmodel.Visibility
 // of a given addressable with a To and CC property.
 //
@@ -1258,8 +1141,8 @@ func ExtractObjectURIs(withObject WithObject) ([]*url.URL, error) {
 // eg., `https://example.org/users/whoever/followers`.
 func ExtractVisibility(addressable Addressable, actorFollowersURI string) (gtsmodel.Visibility, error) {
 	var (
-		to = ExtractToURIs(addressable)
-		cc = ExtractCcURIs(addressable)
+		to = GetTo(addressable)
+		cc = GetCc(addressable)
 	)
 
 	if len(to) == 0 && len(cc) == 0 {

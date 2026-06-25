@@ -213,8 +213,9 @@ code.superseriousbusiness.org/go-jpeg-image-structure/v2
 # code.superseriousbusiness.org/go-png-image-structure/v2 v2.3.0
 ## explicit; go 1.12
 code.superseriousbusiness.org/go-png-image-structure/v2
-# code.superseriousbusiness.org/gopkg v0.0.0-20260520114201-7a01c90db818
-## explicit; go 1.24.6
+# code.superseriousbusiness.org/gopkg v0.0.0-20260623123713-4ead213a2d22
+## explicit; go 1.25.0
+code.superseriousbusiness.org/gopkg/buffers
 code.superseriousbusiness.org/gopkg/log
 code.superseriousbusiness.org/gopkg/log/format
 code.superseriousbusiness.org/gopkg/log/level
@@ -241,7 +242,7 @@ codeberg.org/gruf/go-byteutil
 codeberg.org/gruf/go-cache/v3
 codeberg.org/gruf/go-cache/v3/simple
 codeberg.org/gruf/go-cache/v3/ttl
-# codeberg.org/gruf/go-caller v0.0.0-20250806133437-db8d0b1f71cf
+# codeberg.org/gruf/go-caller v0.0.0-20260615202027-bc5a6ff3cb31
 ## explicit; go 1.24.5
 codeberg.org/gruf/go-caller
 # codeberg.org/gruf/go-debug v1.3.0
@@ -250,7 +251,7 @@ codeberg.org/gruf/go-debug
 # codeberg.org/gruf/go-errors/v2 v2.3.4
 ## explicit; go 1.24.5
 codeberg.org/gruf/go-errors/v2
-# codeberg.org/gruf/go-fastcopy v1.1.3
+# codeberg.org/gruf/go-fastcopy v1.2.1
 ## explicit; go 1.17
 codeberg.org/gruf/go-fastcopy
 # codeberg.org/gruf/go-fastpath/v2 v2.0.1

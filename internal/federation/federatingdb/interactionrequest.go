@@ -398,9 +398,8 @@ func (f *DB) ReplyRequest(ctx context.Context, replyReq vocab.GoToSocialReplyReq
 	}
 
 	// Extract the attributed to (i.e. author) URI of status.
-	attributedToURI, err := ap.ExtractAttributedToURI(statusable)
+	attributedToURI, err := ap.GetOneAttributedTo(statusable)
 	if err != nil {
-		err := gtserror.Newf("invalid status attributedTo value: %w", err)
 		return gtserror.WrapWithCode(http.StatusBadRequest, err)
 	}
 
