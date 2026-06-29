@@ -122,7 +122,7 @@ function InstanceDeliveryErrors({ data: instance }: { data: AdminInstance }): Re
 				{ instance.delivery_errors.map((err, i) => {
 					return (
 						<div className="info-list-entry" key={i}>
-							<dt><DateTimeSecond iso8601={err.time} /></dt>
+							<dt><DateTimeSecond iso8601={err.time}/></dt>
 							<dd>{err.error}</dd>
 						</div>
 					);

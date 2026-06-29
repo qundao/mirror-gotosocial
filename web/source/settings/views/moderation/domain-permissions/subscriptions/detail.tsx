@@ -105,11 +105,11 @@ function DomainPermSubDetails({ permSub }: { permSub: DomainPermissionSubscripti
 			</div>
 			<div className="info-list-entry">
 				<dt>Last fetch attempt:</dt>
-				<dd><DateTimeSecond iso8601={permSub.fetched_at} /></dd>
+				<dd><DateTimeSecond iso8601={permSub.fetched_at}/></dd>
 			</div>
 			<div className="info-list-entry">
 				<dt>Last successful fetch:</dt>
-				<dd><DateTimeSecond iso8601={permSub.successfully_fetched_at} /></dd>
+				<dd><DateTimeSecond iso8601={permSub.successfully_fetched_at}/></dd>
 			</div>
 			<div className="info-list-entry">
 				<dt>Discovered {permSub.permission_type}s:</dt>
