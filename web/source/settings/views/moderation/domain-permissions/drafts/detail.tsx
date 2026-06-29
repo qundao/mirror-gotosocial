@@ -76,7 +76,7 @@ export default function DomainPermissionDraftDetail() {
 			<dl className="info-list">
 				<div className="info-list-entry">
 					<dt>Created</dt>
-					<dd>{DateTimeMinute(permDraft.created_at)}</dd>
+					<dd><DateTimeMinute iso8601={permDraft.created_at}/></dd>
 				</div>
 				<div className="info-list-entry">
 					<dt>Created By</dt>

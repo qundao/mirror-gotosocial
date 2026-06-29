@@ -70,7 +70,7 @@ export default function RelayDetailForm({
 				</div>
 				<div className="info-list-entry">
 					<dt>Created at:</dt>
-					<dd>{DateTimeMinute(conn.created_at)}</dd>
+					<dd><DateTimeMinute iso8601={conn.created_at}/></dd>
 				</div>
 				{
 					conn.account_id &&

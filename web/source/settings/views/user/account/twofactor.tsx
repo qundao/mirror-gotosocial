@@ -263,7 +263,7 @@ function DisableForm({ twoFactorEnabledAt }: { twoFactorEnabledAt: string }) {
 			<TwoFactorHeader
 				blurb={
 					<p>
-						Two-factor auth is enabled for your account, since <b>{DateTimeMinute(twoFactorEnabledAt)}</b>.
+						Two-factor auth is enabled for your account, since <b><DateTimeMinute iso8601={twoFactorEnabledAt}/></b>.
 						<br/>To disable 2FA, supply your password for verification and click "Disable 2FA".
 					</p>
 				}

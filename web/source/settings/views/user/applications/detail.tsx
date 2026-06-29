@@ -81,7 +81,7 @@ function AppBasicInfo({ app }: { app: App }) {
 
 			<div className="info-list-entry">
 				<dt>Created:</dt>
-				<dd>{DateTimeMinute(app.created_at)}</dd>
+				<dd><DateTimeMinute iso8601={app.created_at}/></dd>
 			</div>
 
 			<div className="info-list-entry">

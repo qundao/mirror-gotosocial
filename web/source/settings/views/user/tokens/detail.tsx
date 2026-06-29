@@ -78,11 +78,11 @@ function TokenDetailForm({ data: tokenInfo }: { data: TokenInfo, backLocation: s
 				</div>
 				<div className="info-list-entry">
 					<dt>Last used:</dt>
-					<dd>{DateTimeMinute(tokenInfo.last_used)}</dd>
+					<dd><DateTimeMinute iso8601={tokenInfo.last_used}/></dd>
 				</div>
 				<div className="info-list-entry">
 					<dt>Created:</dt>
-					<dd>{DateTimeMinute(tokenInfo.created_at)}</dd>
+					<dd><DateTimeMinute iso8601={tokenInfo.created_at}/></dd>
 				</div>
 			</dl>
 			<form onSubmit={submit}>

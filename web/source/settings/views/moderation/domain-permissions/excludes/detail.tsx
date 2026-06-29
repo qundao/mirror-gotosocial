@@ -63,7 +63,7 @@ export default function DomainPermissionExcludeDetail() {
 			<dl className="info-list">
 				<div className="info-list-entry">
 					<dt>Created</dt>
-					<dd>{DateTimeMinute(permExclude.created_at)}</dd>
+					<dd><DateTimeMinute iso8601={permExclude.created_at}/></dd>
 				</div>
 				<div className="info-list-entry">
 					<dt>Created By</dt>

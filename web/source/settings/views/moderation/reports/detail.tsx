@@ -140,7 +140,7 @@ function ReportBasicInfo({ report, baseUrl, location }: ReportSectionProps) {
 
 			<div className="info-list-entry">
 				<dt>Created</dt>
-				<dd>{DateTimeMinute(report.created_at)}</dd>
+				<dd><DateTimeMinute iso8601={report.created_at}/></dd>
 			</div>
 
 			<div className="info-list-entry">
@@ -179,7 +179,7 @@ function ReportHistory({ report, baseUrl, location }: ReportSectionProps) {
 
 				<div className="info-list-entry">
 					<dt>Handled</dt>
-					<dd>{DateTimeMinute(report.action_taken_at)}</dd>
+					<dd><DateTimeMinute iso8601={report.action_taken_at}/></dd>
 				</div>
 
 				<div className="info-list-entry">

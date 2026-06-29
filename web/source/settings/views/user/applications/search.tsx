@@ -181,7 +181,7 @@ function ApplicationListEntry({ app, linkTo, backLocation }: ApplicationListEntr
 
 				<div className="info-list-entry">
 					<dt>Created:</dt>
-					<dd className="text-cutoff">{DateTimeMinute(app.created_at)}</dd>
+					<dd className="text-cutoff"><DateTimeMinute iso8601={app.created_at}/></dd>
 				</div>
 
 				<div className="info-list-entry">

@@ -261,7 +261,7 @@ function ReportListEntry({ report, linkTo, backLocation }: ReportEntryProps) {
 
 				<div className="info-list-entry">
 					<dt>Created:</dt>
-					<dd className="text-cutoff">{DateTimeMinute(report.created_at)}</dd>
+					<dd className="text-cutoff"><DateTimeMinute iso8601={report.created_at}/></dd>
 				</div>
 			</dl>
 		</span>

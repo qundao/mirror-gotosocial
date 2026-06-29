@@ -199,12 +199,12 @@ function InstanceListEntry({ instance, linkTo, backLocation }: InstanceEntryProp
 
 				<div className="info-list-entry">
 					<dt>First seen:</dt>
-					<dd className="text-cutoff">{DateTimeMinute(instance.first_seen)}</dd>
+					<dd className="text-cutoff"><DateTimeMinute iso8601={instance.first_seen}/></dd>
 				</div>
 
 				<div className="info-list-entry">
 					<dt>Latest successful delivery:</dt>
-					<dd className="text-cutoff">{DateTimeMinute(instance.latest_successful_delivery)}</dd>
+					<dd className="text-cutoff"><DateTimeMinute iso8601={instance.latest_successful_delivery}/></dd>
 				</div>
 
 				{ deliveryErrors &&

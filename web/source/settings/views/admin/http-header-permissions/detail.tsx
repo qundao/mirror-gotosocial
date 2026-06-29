@@ -138,7 +138,7 @@ function PermDeets({
 				</div>
 				<div className="info-list-entry">
 					<dt>Created</dt>
-					<dd>{DateTimeMinute(perm.created_at)}</dd>
+					<dd><DateTimeMinute iso8601={perm.created_at}/></dd>
 				</div>
 				<div className="info-list-entry">
 					<dt>Created By</dt>

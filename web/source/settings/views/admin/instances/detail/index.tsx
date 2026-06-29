@@ -72,11 +72,11 @@ function InstanceDetailForm({ data: instance }: { data: AdminInstance }) {
 
 				<div className="info-list-entry">
 					<dt>First seen:</dt>
-					<dd>{DateTimeMinute(instance.first_seen)}</dd>
+					<dd><DateTimeMinute iso8601={instance.first_seen}/></dd>
 				</div>
 				<div className="info-list-entry">
 					<dt>Latest successful delivery:</dt>
-					<dd>{DateTimeMinute(instance.latest_successful_delivery)}</dd>
+					<dd><DateTimeMinute iso8601={instance.latest_successful_delivery}/></dd>
 				</div>
 			</dl>
 			<InstanceDeliveryErrors data={instance} />
@@ -122,7 +122,7 @@ function InstanceDeliveryErrors({ data: instance }: { data: AdminInstance }): Re
 				{ instance.delivery_errors.map((err, i) => {
 					return (
 						<div className="info-list-entry" key={i}>
-							<dt>{DateTimeSecond(err.time)}</dt>
+							<dt><DateTimeSecond iso8601={err.time} /></dt>
 							<dd>{err.error}</dd>
 						</div>
 					);

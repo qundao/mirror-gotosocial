@@ -194,11 +194,11 @@ function TokenInfoListEntry({ tokenInfo }: TokenInfoListEntryProps) {
 				</div>
 				<div className="info-list-entry">
 					<dt>Last used:</dt>
-					<dd className="text-cutoff">{DateTimeMinute(tokenInfo.last_used)}</dd>
+					<dd className="text-cutoff"><DateTimeMinute iso8601={tokenInfo.last_used}/></dd>
 				</div>
 				<div className="info-list-entry">
 					<dt>Created:</dt>
-					<dd className="text-cutoff">{DateTimeMinute(tokenInfo.created_at)}</dd>
+					<dd className="text-cutoff"><DateTimeMinute iso8601={tokenInfo.created_at}/></dd>
 				</div>
 			</dl>
 			<div className="action-buttons">

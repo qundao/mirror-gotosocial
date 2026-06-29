@@ -103,7 +103,7 @@ function DomainLimitDetails({ limit }: { limit: DomainLimit }) {
 		<dl className="info-list">
 			<div className="info-list-entry">
 				<dt>Created</dt>
-				<dd>{DateTimeMinute(limit.created_at)}</dd>
+				<dd><DateTimeMinute iso8601={limit.created_at}/></dd>
 			</div>
 			<div className="info-list-entry">
 				<dt>Created By</dt>

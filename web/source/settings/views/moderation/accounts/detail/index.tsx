@@ -121,11 +121,11 @@ function GeneralAccountDetails({ adminAcct } : { adminAcct: AdminAccount }) {
 				</div>
 				<div className="info-list-entry">
 					<dt>Created</dt>
-					<dd>{DateTimeMinute(adminAcct.created_at)}</dd>
+					<dd><DateTimeMinute iso8601={adminAcct.created_at}/></dd>
 				</div>
 				<div className="info-list-entry">
 					<dt>Last posted</dt>
-					<dd>{DateTimeMinute(adminAcct.account.last_status_at)}</dd>
+					<dd><DateTimeMinute iso8601={adminAcct.account.last_status_at}/></dd>
 				</div>
 				<div className="info-list-entry">
 					<dt>Suspended</dt>

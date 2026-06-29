@@ -28,17 +28,20 @@ import React, { useMemo } from "react";
  * @param iso8601 
  * @returns 
  */
-export function DateTimeMinute(iso8601: string | undefined): React.JSX.Element {
-	return useMemo(() => {
-		if (!iso8601) {
-			return <>unknown / never</>;
+export function DateTimeMinute({iso8601}: {iso8601: string | undefined}) {
+	const set = !(!iso8601);
+	const v = useMemo(() => {
+		if (!set) {
+			return "unknown / never";
 		}
-		return (
-			<time dateTime={iso8601}>
-				{dtMinuteFormat.format(new Date(iso8601))}
-			</time>
-		);
-	}, [iso8601]);
+		return dtMinuteFormat.format(new Date(iso8601));
+	}, [set, iso8601]);
+
+	return (
+		<>
+			{ iso8601 ? <time dateTime={iso8601}>{v}</time> : <>{v}</> } 
+		</>
+	);
 }
 
 const dtMinuteFormat = new Intl.DateTimeFormat(undefined, {
@@ -55,17 +58,20 @@ const dtMinuteFormat = new Intl.DateTimeFormat(undefined, {
  * @param iso8601 
  * @returns 
  */
-export function DateTimeSecond(iso8601: string | undefined): React.JSX.Element {
-	return useMemo(() => {
-		if (!iso8601) {
-			return <>unknown / never</>;
+export function DateTimeSecond({iso8601}: {iso8601: string | undefined}) {
+	const set = !(!iso8601);
+	const v = useMemo(() => {
+		if (!set) {
+			return "unknown / never";
 		}
-		return (
-			<time dateTime={iso8601}>
-				{dtSecondFormat.format(new Date(iso8601))}
-			</time>
-		);
-	}, [iso8601]);
+		return dtSecondFormat.format(new Date(iso8601));
+	}, [set, iso8601]);
+
+	return (
+		<>
+			{ iso8601 ? <time dateTime={iso8601}>{v}</time> : <>{v}</> } 
+		</>
+	);
 }
 
 const dtSecondFormat = new Intl.DateTimeFormat(undefined, {
