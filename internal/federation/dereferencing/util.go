@@ -128,7 +128,8 @@ func pollStateUpdated(existing, latest *gtsmodel.Poll) bool {
 
 // pollJustClosed returns whether a poll has *just* closed.
 func pollJustClosed(existing, latest *gtsmodel.Poll) bool {
-	return existing.ClosedAt.IsZero() && time.Now().After(latest.ClosedAt)
+	return existing.ClosedAt.IsZero() &&
+		!latest.ClosedAt.IsZero() && time.Now().After(latest.ClosedAt)
 }
 
 // keyedList is a simple alternative to a hashmap which can
