@@ -1,6 +1,6 @@
 module code.superseriousbusiness.org/gotosocial
 
-go 1.27.0
+go 1.25.0
 
 // Replace modernc/sqlite with our version that fixes the concurrency INTERRUPT issue
 replace modernc.org/sqlite => gitlab.com/NyaaaWhatsUpDoc/sqlite v1.56.0-concurrency-workaround
