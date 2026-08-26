@@ -59,9 +59,8 @@ func (p *Processor) FollowCreate(
 			ctx,
 			requestingAccount,
 			form,
-			follow.ShowReblogs,
-			follow.Notify,
-			func(columns ...string) error { return p.state.DB.UpdateFollow(ctx, follow, columns...) },
+			&follow.Flags,
+			func() error { return p.state.DB.UpdateFollow(ctx, follow, "flags") },
 		)
 	}
 
@@ -79,9 +78,8 @@ func (p *Processor) FollowCreate(
 			ctx,
 			requestingAccount,
 			form,
-			followRequest.ShowReblogs,
-			followRequest.Notify,
-			func(columns ...string) error { return p.state.DB.UpdateFollowRequest(ctx, followRequest, columns...) },
+			&followRequest.Flags,
+			func() error { return p.state.DB.UpdateFollowRequest(ctx, followRequest, "flags") },
 		)
 	}
 
@@ -94,6 +92,9 @@ func (p *Processor) FollowCreate(
 		followID,
 	)
 
+	var flags gtsmodel.FollowFlags
+	flags.SetShowReblogs(util.PtrOrValue(form.Reblogs, true))
+	flags.SetNotify(util.PtrOrValue(form.Notify, false))
 	fr := &gtsmodel.FollowRequest{
 		ID:              followID,
 		URI:             followURI,
@@ -101,8 +102,7 @@ func (p *Processor) FollowCreate(
 		Account:         requestingAccount,
 		TargetAccountID: form.ID,
 		TargetAccount:   targetAccount,
-		ShowReblogs:     form.Reblogs,
-		Notify:          form.Notify,
+		Flags:           flags,
 	}
 
 	// Insert the new follow request.
@@ -123,8 +123,8 @@ func (p *Processor) FollowCreate(
 	if targetAccount.IsLocal() && !*targetAccount.Locked {
 		rel.Requested = false
 		rel.Following = true
-		rel.ShowingReblogs = util.PtrOrValue(fr.ShowReblogs, true)
-		rel.Notifying = util.PtrOrValue(fr.Notify, false)
+		rel.ShowingReblogs = fr.Flags.ShowReblogs()
+		rel.Notifying = fr.Flags.Notify()
 	}
 
 	// Handle side effects async.
@@ -178,35 +178,34 @@ func (p *Processor) updateFollow(
 	ctx context.Context,
 	requestingAccount *gtsmodel.Account,
 	form *apimodel.AccountFollowRequest,
-	currentShowReblogs *bool,
-	currentNotify *bool,
-	update func(...string) error,
+	flags *gtsmodel.FollowFlags,
+	update func() error,
 ) (*apimodel.Relationship, gtserror.WithCode) {
 	if form.Reblogs == nil && form.Notify == nil {
 		// There's nothing to update.
 		return p.c.APIRelationship(ctx, requestingAccount, form.ID)
 	}
 
-	// Including "updated_at", max 3 columns may change.
-	columns := make([]string, 0, 3)
+	// Check what we need to
+	// update (if anything).
+	var updatingFlags bool
 
-	// Check what we need to update (if anything).
-	if newReblogs := form.Reblogs; newReblogs != nil && *newReblogs != *currentShowReblogs {
-		*currentShowReblogs = *newReblogs
-		columns = append(columns, "show_reblogs")
+	if newReblogs := form.Reblogs; newReblogs != nil && *newReblogs != flags.ShowReblogs() {
+		flags.SetShowReblogs(*newReblogs)
+		updatingFlags = true
 	}
 
-	if newNotify := form.Notify; newNotify != nil && *newNotify != *currentNotify {
-		*currentNotify = *newNotify
-		columns = append(columns, "notify")
+	if newNotify := form.Notify; newNotify != nil && *newNotify != flags.Notify() {
+		flags.SetNotify(*newNotify)
+		updatingFlags = true
 	}
 
-	if len(columns) == 0 {
+	if !updatingFlags {
 		// Nothing actually changed.
 		return p.c.APIRelationship(ctx, requestingAccount, form.ID)
 	}
 
-	if err := update(columns...); err != nil {
+	if err := update(); err != nil {
 		err = gtserror.Newf("error updating existing follow (request): %w", err)
 		return nil, gtserror.NewErrorInternalError(err)
 	}

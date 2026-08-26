@@ -39,8 +39,8 @@ func (suite *FollowTestSuite) TestUpdateExistingFollowChangeBoth() {
 	targetAccount := suite.testAccounts["admin_account"]
 
 	// Change both Reblogs and Notify.
-	// Trace logs should show a query similar to this:
-	//	UPDATE "follows" AS "follow" SET "show_reblogs" = FALSE, "notify" = TRUE, "updated_at" = '2023-04-09 11:42:39.424705+00:00' WHERE ("follow"."id" = '01F8PY8RHWRQZV038T4E8T9YK8')
+	// Logs should show something like:
+	// "UPDATE \"follows\" AS \"follow\" SET \"flags\" = 4, \"updated_at\" = '2026-08-26 15:27:38.553627+00:00' WHERE (\"follow\".\"id\" = '01F8PY8RHWRQZV038T4E8T9YK8')"
 	relationship, err := suite.accountProcessor.FollowCreate(ctx, requestingAccount, &apimodel.AccountFollowRequest{
 		ID:      targetAccount.ID,
 		Reblogs: util.Ptr(false),
@@ -112,9 +112,7 @@ func (suite *FollowTestSuite) TestUpdateExistingFollowReqChangeNotify() {
 		Account:         requestingAcct,
 		TargetAccountID: targetAcct.ID,
 		TargetAccount:   targetAcct,
-		ShowReblogs:     util.Ptr(true),
 		URI:             "https://fossbros-anonymous.io/users/foss_satan/follows/01F8PY8RHWRQZV038T4E8T9YK8",
-		Notify:          util.Ptr(false),
 	}
 	if err := suite.state.DB.PutFollowRequest(ctx, followReq); err != nil {
 		suite.FailNow(err.Error())

@@ -23,7 +23,6 @@ import (
 
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
@@ -72,9 +71,9 @@ func (suite *StatusStatusHomeTimelineableTestSuite) TestFollowingBoostedStatusHo
 	// doesn't want to see reblogs by admin_account.
 	follow := &gtsmodel.Follow{}
 	*follow = *suite.testFollows["local_account_1_admin_account"]
-	follow.ShowReblogs = util.Ptr(false)
+	follow.Flags.SetShowReblogs(false)
 
-	if err := suite.db.UpdateFollow(ctx, follow, "show_reblogs"); err != nil {
+	if err := suite.db.UpdateFollow(ctx, follow, "flags"); err != nil {
 		suite.FailNow(err.Error())
 	}
 

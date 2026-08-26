@@ -28,7 +28,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/filter/relay"
 	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
@@ -87,9 +86,7 @@ func (suite *FederatingActorTestSuite) TestSendRemoteFollower() {
 		UpdatedAt:       testrig.TimeMustParse("2022-06-02T12:22:21+02:00"),
 		AccountID:       testRemoteAccount.ID,
 		TargetAccountID: testAccount.ID,
-		ShowReblogs:     util.Ptr(true),
 		URI:             "http://fossbros-anonymous.io/users/foss_satan/follows/01G1TRWV4AYCDBX5HRWT2EVBCV",
-		Notify:          util.Ptr(false),
 	})
 	suite.NoError(err)
 

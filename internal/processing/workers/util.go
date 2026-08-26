@@ -32,6 +32,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/surfacing"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
+	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // util provides util functions used by both
@@ -193,8 +194,8 @@ func (u *utils) redirectFollowers(
 				follow.Account,
 				&apimodel.AccountFollowRequest{
 					ID:      targetAcct.ID,
-					Reblogs: follow.ShowReblogs,
-					Notify:  follow.Notify,
+					Reblogs: util.Ptr(follow.Flags.ShowReblogs()),
+					Notify:  util.Ptr(follow.Flags.Notify()),
 				},
 			); err != nil {
 				log.Errorf(ctx,

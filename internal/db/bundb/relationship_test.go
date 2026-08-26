@@ -27,7 +27,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
-	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -930,8 +929,8 @@ func (suite *RelationshipTestSuite) TestUpdateFollow() {
 	follow := &gtsmodel.Follow{}
 	*follow = *suite.testFollows["local_account_1_admin_account"]
 
-	follow.Notify = util.Ptr(true)
-	if err := suite.db.UpdateFollow(ctx, follow, "notify"); err != nil {
+	follow.Flags.SetNotify(true)
+	if err := suite.db.UpdateFollow(ctx, follow, "flags"); err != nil {
 		suite.FailNow(err.Error())
 	}
 
@@ -940,7 +939,7 @@ func (suite *RelationshipTestSuite) TestUpdateFollow() {
 		suite.FailNow(err.Error())
 	}
 
-	suite.True(*dbFollow.Notify)
+	suite.True(dbFollow.Flags.Notify())
 
 	relationship, err := suite.db.GetRelationship(ctx, follow.AccountID, follow.TargetAccountID)
 	if err != nil {

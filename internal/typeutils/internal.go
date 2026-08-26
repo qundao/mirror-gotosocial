@@ -35,15 +35,18 @@ import (
 // FollowRequestToFollow just converts a follow request
 // into a follow, that's it! No bells and whistles.
 func FollowRequestToFollow(fr *gtsmodel.FollowRequest) *gtsmodel.Follow {
+	var flags gtsmodel.FollowFlags
+	flags.SetShowReblogs(fr.Flags.ShowReblogs())
+	flags.SetNotify(fr.Flags.Notify())
+	flags.SetUseInboxURI(fr.Flags.UseInboxURI())
 	return &gtsmodel.Follow{
 		ID:              fr.ID,
 		CreatedAt:       fr.CreatedAt,
 		UpdatedAt:       fr.UpdatedAt,
 		AccountID:       fr.AccountID,
 		TargetAccountID: fr.TargetAccountID,
-		ShowReblogs:     util.Ptr(*fr.ShowReblogs),
 		URI:             fr.URI,
-		Notify:          util.Ptr(*fr.Notify),
+		Flags:           flags,
 	}
 }
 

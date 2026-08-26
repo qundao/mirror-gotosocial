@@ -129,9 +129,9 @@ func (c *Converter) FollowingToCSV(
 			// -- NOTE: without the leading '@'!
 			follow.TargetAccount.Username + "@" + domain,
 			// Show boosts: eg., true
-			strconv.FormatBool(*follow.ShowReblogs),
+			strconv.FormatBool(follow.Flags.ShowReblogs()),
 			// Notify on new posts, eg., true
-			strconv.FormatBool(*follow.Notify),
+			strconv.FormatBool(follow.Flags.Notify()),
 			// Languages: compat only, leave blank.
 			"",
 		})
@@ -478,13 +478,15 @@ func (c *Converter) CSVToFollowing(
 		// don't do anything with it.
 
 		// Looks good, whack it in the slice.
+		var flags gtsmodel.FollowFlags
+		flags.SetShowReblogs(*showReblogs)
+		flags.SetNotify(*notify)
 		follows = append(follows, &gtsmodel.Follow{
 			TargetAccount: &gtsmodel.Account{
 				Username: username,
 				Domain:   domain,
 			},
-			ShowReblogs: showReblogs,
-			Notify:      notify,
+			Flags: flags,
 		})
 	}
 

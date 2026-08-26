@@ -33,7 +33,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
-	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // FollowRelayActor checks if a follow or follow request exists from our instance account towards
@@ -79,8 +78,11 @@ func (p *Processor) FollowRelayActor(ctx context.Context, relayActor *gtsmodel.A
 		Account:         iAcct,
 		TargetAccountID: relayActor.ID,
 		TargetAccount:   relayActor,
-		ShowReblogs:     util.Ptr(false),
-		Notify:          util.Ptr(false),
+		Flags: func() (flags gtsmodel.FollowFlags) {
+			flags.SetShowReblogs(false)
+			flags.SetNotify(false)
+			return
+		}(),
 	}
 
 	// Insert the follow request.

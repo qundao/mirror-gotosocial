@@ -31,7 +31,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/stream"
-	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // TimelineAndNotifyStatus handles streaming a create event for the given status model to HOME, LIST, LOCAL
@@ -394,11 +393,17 @@ func (s *Surfacer) timelineAndNotifyStatusForFollowers(
 	// If the poster is also local, add a fake entry for them
 	// so they can see their own status in their timeline.
 	if status.Account.IsLocal() {
+		var flags gtsmodel.FollowFlags
+		// Account should
+		// show own reblogs.
+		flags.SetShowReblogs(true)
+		// Account shouldn't
+		// notify itself.
+		flags.SetNotify(false)
 		follows = append(follows, &gtsmodel.Follow{
-			AccountID:   status.AccountID,
-			Account:     status.Account,
-			Notify:      util.Ptr(false), // Account shouldn't notify itself.
-			ShowReblogs: util.Ptr(true),  // Account should show own reblogs.
+			AccountID: status.AccountID,
+			Account:   status.Account,
+			Flags:     flags,
 		})
 	}
 
@@ -479,7 +484,7 @@ func (s *Surfacer) timelineAndNotifyStatusForFollowers(
 			processed[follow.AccountID] = struct{}{}
 		}
 
-		if !*follow.Notify {
+		if !follow.Flags.Notify() {
 			// This follower doesn't have notifs
 			// set for this account's new posts.
 			continue

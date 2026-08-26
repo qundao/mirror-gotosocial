@@ -195,11 +195,11 @@ func importFollowingAsyncF(
 
 				// Show reblogs on
 				// the new follow.
-				showReblogs = follow.ShowReblogs
+				showReblogs = follow.Flags.ShowReblogs()
 
 				// Notify when new
 				// follow posts.
-				notify = follow.Notify
+				notify = follow.Flags.Notify()
 			)
 
 			if overwrite {
@@ -229,8 +229,8 @@ func importFollowingAsyncF(
 				requester,
 				&apimodel.AccountFollowRequest{
 					ID:      targetAcct.ID,
-					Reblogs: showReblogs,
-					Notify:  notify,
+					Reblogs: &showReblogs,
+					Notify:  &notify,
 				},
 			); errWithCode != nil {
 				log.Errorf(ctx, "could not follow account: %v", errWithCode.Unwrap())

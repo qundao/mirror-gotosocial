@@ -266,8 +266,8 @@ func (suite *FromClientAPITestSuite) TestProcessCreateStatusWithNotification() {
 	follow := new(gtsmodel.Follow)
 	*follow = *suite.testFollows["local_account_1_admin_account"]
 
-	follow.Notify = util.Ptr(true)
-	if err := testStructs.State.DB.UpdateFollow(ctx, follow); err != nil {
+	follow.Flags.SetNotify(true)
+	if err := testStructs.State.DB.UpdateFollow(ctx, follow, "flags"); err != nil {
 		suite.FailNow(err.Error())
 	}
 
@@ -934,8 +934,8 @@ func (suite *FromClientAPITestSuite) TestProcessCreateStatusBoostNoReblogs() {
 	// to not show boosts in timeline.
 	follow := new(gtsmodel.Follow)
 	*follow = *suite.testFollows["local_account_1_admin_account"]
-	follow.ShowReblogs = util.Ptr(false)
-	if err := testStructs.State.DB.UpdateFollow(ctx, follow, "show_reblogs"); err != nil {
+	follow.Flags.SetShowReblogs(false)
+	if err := testStructs.State.DB.UpdateFollow(ctx, follow, "flags"); err != nil {
 		suite.FailNow(err.Error())
 	}
 
@@ -1880,8 +1880,8 @@ func (suite *FromClientAPITestSuite) TestProcessCreateStatusWithAuthorOnExclusiv
 	// that receiving account wants notifs when posting account posts.
 	follow := new(gtsmodel.Follow)
 	*follow = *testFollow
-	follow.Notify = util.Ptr(true)
-	if err := testStructs.State.DB.UpdateFollow(ctx, follow); err != nil {
+	follow.Flags.SetNotify(true)
+	if err := testStructs.State.DB.UpdateFollow(ctx, follow, "flags"); err != nil {
 		suite.FailNow(err.Error())
 	}
 

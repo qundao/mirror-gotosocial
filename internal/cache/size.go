@@ -403,9 +403,7 @@ func sizeofFollow() uintptr {
 		UpdatedAt:       exampleTime,
 		AccountID:       exampleID,
 		TargetAccountID: exampleID,
-		ShowReblogs:     func() *bool { ok := true; return &ok }(),
 		URI:             exampleURI,
-		Notify:          func() *bool { ok := false; return &ok }(),
 	}))
 }
 
@@ -416,9 +414,7 @@ func sizeofFollowRequest() uintptr {
 		UpdatedAt:       exampleTime,
 		AccountID:       exampleID,
 		TargetAccountID: exampleID,
-		ShowReblogs:     func() *bool { ok := true; return &ok }(),
 		URI:             exampleURI,
-		Notify:          func() *bool { ok := false; return &ok }(),
 	}))
 }
 

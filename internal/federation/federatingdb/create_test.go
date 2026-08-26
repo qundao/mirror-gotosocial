@@ -27,7 +27,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
-	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -71,8 +70,6 @@ func (suite *CreateTestSuite) TestCreateNoteForward() {
 		URI:             "https://this.is.a.url",
 		AccountID:       receivingAccount.ID,
 		TargetAccountID: requestingAccount.ID,
-		ShowReblogs:     util.Ptr(true),
-		Notify:          util.Ptr(false),
 	})
 	suite.NoError(err)
 

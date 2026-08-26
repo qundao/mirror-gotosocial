@@ -298,8 +298,6 @@ func (p *Processor) deleteAccountRelations(
 					Account:         followReq.Account,
 					TargetAccountID: followReq.TargetAccountID,
 					TargetAccount:   followReq.TargetAccount,
-					ShowReblogs:     new(bool),
-					Notify:          new(bool),
 				},
 				account,
 				followReq.TargetAccount,

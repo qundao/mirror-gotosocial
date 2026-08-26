@@ -203,7 +203,7 @@ func (f *Filter) isStatusHomeTimelineable(ctx context.Context, owner *gtsmodel.A
 		return false, nil
 	}
 
-	if status.BoostOfID != "" && !*follow.ShowReblogs {
+	if status.BoostOfID != "" && !follow.Flags.ShowReblogs() {
 		// Status is a boost, but the owner of this follow
 		// doesn't want to see boosts from this account.
 		return false, nil

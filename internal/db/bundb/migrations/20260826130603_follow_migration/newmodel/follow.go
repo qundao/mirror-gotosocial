@@ -25,6 +25,17 @@ import (
 	"codeberg.org/gruf/go-byteutil"
 )
 
+// smallint is the largest size supported
+// by a PostgreSQL SMALLINT, since an SQLite
+// SMALLINT is actually variable in size.
+type smallint int16
+
+// bitFieldType is the type we use
+// for database int bit fields, at
+// least where the smallest int size
+// will suffice for number of fields.
+type bitFieldType smallint
+
 // FollowFlag is the bit type for
 // individual FollowFlags members.
 type FollowFlag bitFieldType
@@ -137,7 +148,6 @@ func (f FollowFlags) String() string {
 // and the metadata around that follow.
 type Follow struct {
 	// ID of this item in the database.
-	// Encodes creation time as ULID.
 	ID string `bun:"type:CHAR(26),pk,nullzero,notnull,unique"`
 
 	// Time when the item was created.
@@ -152,16 +162,8 @@ type Follow struct {
 	// ID of the follow origin account.
 	AccountID string `bun:"type:CHAR(26),unique:srctarget,notnull,nullzero"`
 
-	// Account corresponding to AccountID.
-	// Not stored in the db.
-	Account *Account `bun:"-"`
-
 	// ID of the follow target account.
 	TargetAccountID string `bun:"type:CHAR(26),unique:srctarget,notnull,nullzero"`
-
-	// Account corresponding to TargetAccountID.
-	// Not stored in the db.
-	TargetAccount *Account `bun:"-"`
 
 	// Flags controlling Follow behavior.
 	Flags FollowFlags `bun:",notnull,default:2"`
@@ -185,16 +187,8 @@ type FollowRequest struct {
 	// ID of the follow request origin account.
 	AccountID string `bun:"type:CHAR(26),unique:frsrctarget,notnull,nullzero"`
 
-	// Account corresponding to AccountID.
-	// Not stored in the db.
-	Account *Account `bun:"-"`
-
 	// ID of the follow request target account.
 	TargetAccountID string `bun:"type:CHAR(26),unique:frsrctarget,notnull,nullzero"`
-
-	// Account corresponding to TargetAccountID.
-	// Not stored in the db.
-	TargetAccount *Account `bun:"-"`
 
 	// Flags controlling Follow behavior.
 	Flags FollowFlags `bun:",notnull,default:2"`

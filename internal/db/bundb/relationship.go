@@ -55,8 +55,8 @@ func (r *relationshipDB) GetRelationship(ctx context.Context, requestingAccount 
 		// Follow exists so we can
 		// fill additional fields out.
 		rel.Following = true
-		rel.ShowingReblogs = *follow.ShowReblogs
-		rel.Notifying = *follow.Notify
+		rel.ShowingReblogs = follow.Flags.ShowReblogs()
+		rel.Notifying = follow.Flags.Notify()
 	} else {
 		// Follow doesn't exist,
 		// see if follow request does.
@@ -73,8 +73,8 @@ func (r *relationshipDB) GetRelationship(ctx context.Context, requestingAccount 
 		// fill additional fields out.
 		if followReq != nil {
 			rel.Requested = true
-			rel.ShowingReblogs = *followReq.ShowReblogs
-			rel.Notifying = *followReq.Notify
+			rel.ShowingReblogs = followReq.Flags.ShowReblogs()
+			rel.Notifying = followReq.Flags.Notify()
 		}
 	}
 
