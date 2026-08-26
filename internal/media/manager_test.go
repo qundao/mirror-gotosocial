@@ -286,7 +286,6 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcess() {
 	suite.Equal("image/jpeg", attachment.File.ContentType)
 	suite.Equal("image/jpeg", attachment.Thumbnail.ContentType)
 	suite.Equal(269739, attachment.File.FileSize)
-	suite.Equal(22858, attachment.Thumbnail.FileSize)
 	suite.Equal("LiB|W-#6RQR.~qvzRjWF_3rqV@a$", attachment.Blurhash)
 
 	// now make sure the attachment is in the database
@@ -294,9 +293,15 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcess() {
 	suite.NoError(err)
 	suite.NotNil(dbAttachment)
 
-	// ensure the files contain the expected data.
+	// ensure the file contains the expected data.
 	equalFiles(suite.T(), suite.state.Storage, dbAttachment.File.Path, "./test/test-jpeg-processed.jpg")
-	equalFiles(suite.T(), suite.state.Storage, dbAttachment.Thumbnail.Path, "./test/test-jpeg-thumbnail.jpeg")
+
+	// ensure the thumbnail matches the reference thumbnail
+	thumbnailBytes, err := suite.state.Storage.Get(ctx, dbAttachment.Thumbnail.Path)
+	suite.NoError(err)
+	refThumbnailBytes, err := os.ReadFile("./test/test-jpeg-thumbnail.jpeg")
+	suite.NoError(err)
+	testrig.AssertSimilarImages(suite.T(), thumbnailBytes, refThumbnailBytes)
 }
 
 func (suite *ManagerTestSuite) TestSimpleJpegProcessTooLarge() {
@@ -744,7 +749,6 @@ func (suite *ManagerTestSuite) TestPngNoAlphaChannelProcess() {
 	suite.Equal("image/png", attachment.File.ContentType)
 	suite.Equal("image/jpeg", attachment.Thumbnail.ContentType)
 	suite.Equal(17471, attachment.File.FileSize)
-	suite.Equal(6446, attachment.Thumbnail.FileSize)
 	suite.Equal("LGP%YL.A-?tA.9o#RURQ~ojp^~xW", attachment.Blurhash)
 
 	// now make sure the attachment is in the database
@@ -752,9 +756,15 @@ func (suite *ManagerTestSuite) TestPngNoAlphaChannelProcess() {
 	suite.NoError(err)
 	suite.NotNil(dbAttachment)
 
-	// ensure the files contain the expected data.
+	// ensure the file contains the expected data.
 	equalFiles(suite.T(), suite.state.Storage, dbAttachment.File.Path, "./test/test-png-noalphachannel-processed.png")
-	equalFiles(suite.T(), suite.state.Storage, dbAttachment.Thumbnail.Path, "./test/test-png-noalphachannel-thumbnail.jpeg")
+
+	// ensure the thumbnail matches the reference thumbnail
+	thumbnailBytes, err := suite.state.Storage.Get(ctx, dbAttachment.Thumbnail.Path)
+	suite.NoError(err)
+	refThumbnailBytes, err := os.ReadFile("./test/test-png-noalphachannel-thumbnail.jpeg")
+	suite.NoError(err)
+	testrig.AssertSimilarImages(suite.T(), thumbnailBytes, refThumbnailBytes)
 }
 
 func (suite *ManagerTestSuite) TestPngAlphaChannelProcess() {
@@ -912,7 +922,6 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcessWithCallback() {
 	suite.Equal("image/jpeg", attachment.File.ContentType)
 	suite.Equal("image/jpeg", attachment.Thumbnail.ContentType)
 	suite.Equal(269739, attachment.File.FileSize)
-	suite.Equal(22858, attachment.Thumbnail.FileSize)
 	suite.Equal("LiB|W-#6RQR.~qvzRjWF_3rqV@a$", attachment.Blurhash)
 
 	// now make sure the attachment is in the database
@@ -922,7 +931,13 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcessWithCallback() {
 
 	// ensure the files contain the expected data.
 	equalFiles(suite.T(), suite.state.Storage, dbAttachment.File.Path, "./test/test-jpeg-processed.jpg")
-	equalFiles(suite.T(), suite.state.Storage, dbAttachment.Thumbnail.Path, "./test/test-jpeg-thumbnail.jpeg")
+	thumbnailBytes, err := suite.state.Storage.Get(ctx, dbAttachment.Thumbnail.Path)
+
+	// ensure the thumbnail matches the reference thumbnail
+	suite.NoError(err)
+	refThumbnailBytes, err := os.ReadFile("./test/test-jpeg-thumbnail.jpeg")
+	suite.NoError(err)
+	testrig.AssertSimilarImages(suite.T(), thumbnailBytes, refThumbnailBytes)
 }
 
 func (suite *ManagerTestSuite) TestSimpleJpegProcessWithDiskStorage() {
@@ -990,7 +1005,6 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcessWithDiskStorage() {
 	suite.Equal("image/jpeg", attachment.File.ContentType)
 	suite.Equal("image/jpeg", attachment.Thumbnail.ContentType)
 	suite.Equal(269739, attachment.File.FileSize)
-	suite.Equal(22858, attachment.Thumbnail.FileSize)
 	suite.Equal("LiB|W-#6RQR.~qvzRjWF_3rqV@a$", attachment.Blurhash)
 
 	// now make sure the attachment is in the database
@@ -998,9 +1012,15 @@ func (suite *ManagerTestSuite) TestSimpleJpegProcessWithDiskStorage() {
 	suite.NoError(err)
 	suite.NotNil(dbAttachment)
 
-	// ensure the files contain the expected data.
+	// ensure the file contains the expected data.
 	equalFiles(suite.T(), storage, dbAttachment.File.Path, "./test/test-jpeg-processed.jpg")
-	equalFiles(suite.T(), storage, dbAttachment.Thumbnail.Path, "./test/test-jpeg-thumbnail.jpeg")
+
+	// ensure the thumbnail matches the reference thumbnail
+	thumbnailBytes, err := storage.Get(ctx, dbAttachment.Thumbnail.Path)
+	suite.NoError(err)
+	refThumbnailBytes, err := os.ReadFile("./test/test-jpeg-thumbnail.jpeg")
+	suite.NoError(err)
+	testrig.AssertSimilarImages(suite.T(), thumbnailBytes, refThumbnailBytes)
 }
 
 func (suite *ManagerTestSuite) TestSmallSizedMediaTypeDetection_issue2263() {

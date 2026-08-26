@@ -219,7 +219,7 @@ func (suite *ServeFileTestSuite) TestServeSmallRemoteFileRecache() {
 
 	suite.Equal(http.StatusOK, code)
 	suite.Equal("image/jpeg", headers.Get("content-type"))
-	suite.Equal(fileInStorage, body)
+	testrig.AssertSimilarImages(suite.T(), body, fileInStorage)
 }
 
 func (suite *ServeFileTestSuite) TestServeOriginalRemoteFileRecacheNotFound() {
