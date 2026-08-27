@@ -235,12 +235,7 @@ func (r *relationshipDB) AcceptFollowRequest(ctx context.Context, sourceAccountI
 		TargetAccountID: targetAccountID,
 		TargetAccount:   followReq.TargetAccount,
 		URI:             followReq.URI,
-		Flags: func() (flags gtsmodel.FollowFlags) {
-			flags.SetShowReblogs(followReq.Flags.ShowReblogs())
-			flags.SetNotify(followReq.Flags.Notify())
-			flags.SetUseInboxURI(followReq.Flags.UseInboxURI())
-			return
-		}(),
+		Flags:           followReq.Flags,
 	}
 
 	// Insert the new follow modelled after request into database.
