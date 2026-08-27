@@ -479,8 +479,8 @@ func (c *Converter) CSVToFollowing(
 
 		// Looks good, whack it in the slice.
 		var flags gtsmodel.FollowFlags
-		flags.SetShowReblogs(*showReblogs)
-		flags.SetNotify(*notify)
+		flags.SetShowReblogs(util.PtrOrValue(showReblogs, true))
+		flags.SetNotify(util.PtrOrValue(notify, false))
 		follows = append(follows, &gtsmodel.Follow{
 			TargetAccount: &gtsmodel.Account{
 				Username: username,
