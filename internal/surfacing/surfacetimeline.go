@@ -393,17 +393,18 @@ func (s *Surfacer) timelineAndNotifyStatusForFollowers(
 	// If the poster is also local, add a fake entry for them
 	// so they can see their own status in their timeline.
 	if status.Account.IsLocal() {
-		var flags gtsmodel.FollowFlags
-		// Account should
-		// show own reblogs.
-		flags.SetShowReblogs(true)
-		// Account shouldn't
-		// notify itself.
-		flags.SetNotify(false)
 		follows = append(follows, &gtsmodel.Follow{
 			AccountID: status.AccountID,
 			Account:   status.Account,
-			Flags:     flags,
+			Flags: func() (flags gtsmodel.FollowFlags) {
+				// Account should
+				// show own reblogs.
+				flags.SetShowReblogs(true)
+				// Account shouldn't
+				// notify itself.
+				flags.SetNotify(false)
+				return
+			}(),
 		})
 	}
 

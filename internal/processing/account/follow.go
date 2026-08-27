@@ -92,9 +92,6 @@ func (p *Processor) FollowCreate(
 		followID,
 	)
 
-	var flags gtsmodel.FollowFlags
-	flags.SetShowReblogs(util.PtrOrValue(form.Reblogs, true))
-	flags.SetNotify(util.PtrOrValue(form.Notify, false))
 	fr := &gtsmodel.FollowRequest{
 		ID:              followID,
 		URI:             followURI,
@@ -102,7 +99,11 @@ func (p *Processor) FollowCreate(
 		Account:         requestingAccount,
 		TargetAccountID: form.ID,
 		TargetAccount:   targetAccount,
-		Flags:           flags,
+		Flags: func() (flags gtsmodel.FollowFlags) {
+			flags.SetShowReblogs(util.PtrOrValue(form.Reblogs, true))
+			flags.SetNotify(util.PtrOrValue(form.Notify, false))
+			return
+		}(),
 	}
 
 	// Insert the new follow request.
