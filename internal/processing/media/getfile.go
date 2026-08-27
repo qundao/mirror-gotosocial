@@ -179,24 +179,18 @@ func (p *Processor) getAttachmentContent(
 		requestUser = requester.Username
 	}
 
-	// Start preparing API content model and other
-	// values depending on requested media size.
-	var content apimodel.Content
+	// Media path depends on requested size type string.
 	var mediaPath func(*gtsmodel.MediaAttachment) string
 	switch sizeStr {
 
 	// Original media size.
 	case media.SizeOriginal:
-		content.ContentType = attach.File.ContentType
-		content.ContentLength = int64(attach.File.FileSize)
 		mediaPath = func(a *gtsmodel.MediaAttachment) string {
 			return a.File.Path
 		}
 
 	// Thumbnail media size.
 	case media.SizeSmall:
-		content.ContentType = attach.Thumbnail.ContentType
-		content.ContentLength = int64(attach.Thumbnail.FileSize)
 		mediaPath = func(a *gtsmodel.MediaAttachment) string {
 			return a.Thumbnail.Path
 		}
@@ -260,6 +254,25 @@ func (p *Processor) getAttachmentContent(
 		}
 	}
 
+	// Start preparing API content model and other
+	// values depending on requested size type str.
+	//
+	// This happens AFTER any recaching in case
+	// of changes since last media processing.
+	var content apimodel.Content
+	switch sizeStr {
+
+	// Original media size.
+	case media.SizeOriginal:
+		content.ContentType = attach.File.ContentType
+		content.ContentLength = int64(attach.File.FileSize)
+
+	// Thumbnail media size.
+	case media.SizeSmall:
+		content.ContentType = attach.Thumbnail.ContentType
+		content.ContentLength = int64(attach.Thumbnail.FileSize)
+	}
+
 	// If running on S3 storage with proxying disabled,
 	// just fetch a pre-signed URL instead of the content.
 	url := p.state.Storage.URL(ctx, mediaPath(attach))
@@ -311,24 +324,18 @@ func (p *Processor) getEmojiContent(
 		return nil, gtserror.NewErrorNotFound(errors.New(text), text)
 	}
 
-	// Start preparing API content model and other
-	// values depending on requested media size.
-	var content apimodel.Content
+	// Media path depends on size type string.
 	var emojiPath func(*gtsmodel.Emoji) string
 	switch sizeStr {
 
 	// Original emoji image.
 	case media.SizeOriginal:
-		content.ContentType = emoji.ImageContentType
-		content.ContentLength = int64(emoji.ImageFileSize)
 		emojiPath = func(e *gtsmodel.Emoji) string {
 			return e.ImagePath
 		}
 
 	// Static emoji image.
 	case media.SizeStatic:
-		content.ContentType = emoji.ImageStaticContentType
-		content.ContentLength = int64(emoji.ImageStaticFileSize)
 		emojiPath = func(e *gtsmodel.Emoji) string {
 			return e.ImageStaticPath
 		}
@@ -382,6 +389,25 @@ func (p *Processor) getEmojiContent(
 			err := gtserror.Newf("storage error getting recached emoji %s: %w", emoji.URI, err)
 			return nil, gtserror.WrapWithCode(http.StatusInternalServerError, err)
 		}
+	}
+
+	// Start preparing API content model and other
+	// values depending on requested size type str.
+	//
+	// This happens AFTER any recaching in case
+	// of changes since last media processing.
+	var content apimodel.Content
+	switch sizeStr {
+
+	// Original emoji image.
+	case media.SizeOriginal:
+		content.ContentType = emoji.ImageContentType
+		content.ContentLength = int64(emoji.ImageFileSize)
+
+	// Static emoji image.
+	case media.SizeStatic:
+		content.ContentType = emoji.ImageStaticContentType
+		content.ContentLength = int64(emoji.ImageStaticFileSize)
 	}
 
 	// If running on S3 storage with proxying disabled,

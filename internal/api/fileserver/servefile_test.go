@@ -215,7 +215,7 @@ func (suite *ServeFileTestSuite) TestServeSmallRemoteFileRecache() {
 		targetAttachment.AccountID,
 		media.TypeAttachment,
 		media.SizeSmall,
-		targetAttachment.ID+".webp",
+		targetAttachment.ID+".jpeg",
 	)
 
 	suite.Equal(http.StatusOK, code)
