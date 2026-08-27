@@ -19,10 +19,6 @@ package gtsmodel
 
 import "time"
 
-type WithID interface {
-	GetID() string
-}
-
 // Follow represents one account following another, and the metadata around that follow.
 type Follow struct {
 	ID              string    `bun:"type:CHAR(26),pk,nullzero,notnull,unique"`                    // id of this item in the database
@@ -35,10 +31,6 @@ type Follow struct {
 	Notify          *bool     `bun:",nullzero,notnull,default:false"`                             // does the following account want to be notified when the followed account posts?
 }
 
-func (f *Follow) GetID() string {
-	return f.ID
-}
-
 // FollowRequest represents one account requesting to follow another, and the metadata around that request.
 type FollowRequest struct {
 	ID              string    `bun:"type:CHAR(26),pk,nullzero,notnull,unique"`                    // id of this item in the database
@@ -49,8 +41,4 @@ type FollowRequest struct {
 	TargetAccountID string    `bun:"type:CHAR(26),unique:frsrctarget,notnull,nullzero"`           // Who is the target of this follow request?
 	ShowReblogs     *bool     `bun:",nullzero,notnull,default:true"`                              // Does this follow also want to see reblogs and not just posts?
 	Notify          *bool     `bun:",nullzero,notnull,default:false"`                             // does the following account want to be notified when the followed account posts?
-}
-
-func (f *FollowRequest) GetID() string {
-	return f.ID
 }
