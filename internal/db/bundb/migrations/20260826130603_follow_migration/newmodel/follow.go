@@ -57,12 +57,15 @@ const (
 	// Default is false.
 	FollowFlagNotify FollowFlag = 1 << 2
 
-	// FollowFlagUseInboxURI indicates that the follow (request)
-	// originally targeted the inbox URI of the followed account,
-	// rather than the AP ID/URI. This is used for relay follows.
+	// FollowFlagUsePublicURI indicates that the follow
+	// (request) originally used the ActivityPub Public
+	// URI as the object of the Follow, rather than the
+	// AP ID/URI of the Followed actor.
+	//
+	// This is used for relay follows from Masto / *key.
 	//
 	// Default is false.
-	FollowFlagUseInboxURI FollowFlag = 1 << 3
+	FollowFlagUsePublicURI FollowFlag = 1 << 3
 )
 
 // String returns a human-readable form of FollowFlag.
@@ -74,8 +77,8 @@ func (f FollowFlag) String() string {
 		return "show_reblogs"
 	case FollowFlagNotify:
 		return "notify"
-	case FollowFlagUseInboxURI:
-		return "use_inbox_uri"
+	case FollowFlagUsePublicURI:
+		return "use_public_uri"
 	default:
 		panic(fmt.Sprintf("invalid follow flag: %d", f))
 	}
@@ -114,17 +117,17 @@ func (f *FollowFlags) SetNotify(ok bool) {
 	}
 }
 
-// UseInboxURI returns whether FollowFlagUseInboxURI is set.
-func (f FollowFlags) UseInboxURI() bool {
-	return f&FollowFlags(FollowFlagUseInboxURI) != 0
+// UsePublicURI returns whether FollowFlagUsePublicURI is set.
+func (f FollowFlags) UsePublicURI() bool {
+	return f&FollowFlags(FollowFlagUsePublicURI) != 0
 }
 
-// SetUseInboxURI sets / unsets the FollowFlagUseInboxURI bit.
-func (f *FollowFlags) SetUseInboxURI(ok bool) {
+// SetUsePublicURI sets / unsets the FollowFlagUsePublicURI bit.
+func (f *FollowFlags) SetUsePublicURI(ok bool) {
 	if ok {
-		*f |= FollowFlags(FollowFlagUseInboxURI)
+		*f |= FollowFlags(FollowFlagUsePublicURI)
 	} else {
-		*f &= ^FollowFlags(FollowFlagUseInboxURI)
+		*f &= ^FollowFlags(FollowFlagUsePublicURI)
 	}
 }
 
@@ -138,8 +141,8 @@ func (f FollowFlags) String() string {
 	buf.B = append(buf.B, "notify="...)
 	buf.B = strconv.AppendBool(buf.B, f.Notify())
 	buf.B = append(buf.B, ',')
-	buf.B = append(buf.B, "use_inbox_uri="...)
-	buf.B = strconv.AppendBool(buf.B, f.UseInboxURI())
+	buf.B = append(buf.B, "use_public_uri="...)
+	buf.B = strconv.AppendBool(buf.B, f.UsePublicURI())
 	buf.B = append(buf.B, '}')
 	return buf.String()
 }
