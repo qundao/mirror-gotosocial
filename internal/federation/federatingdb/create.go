@@ -49,8 +49,8 @@ import (
 func (f *DB) Create(ctx context.Context, asType vocab.Type) error {
 	log.DebugKV(ctx, "create", Serialize{asType})
 
-	// Cache entry for this activity type's ID for later
-	// checks in the Exist() function if we see it again.
+	// Cache entry for this type's ID for later checks
+	// in the Exists() function if we see it again.
 	f.activityIDs.Set(ap.GetJSONLDId(asType).String(), struct{}{})
 
 	// Extract relevant values from passed ctx.
@@ -59,8 +59,8 @@ func (f *DB) Create(ctx context.Context, asType vocab.Type) error {
 		return nil // Already processed.
 	}
 
-	requesting := activityContext.requestingAcct
-	receiving := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	if requesting.IsMoving() {
 		// A Moving account
@@ -68,47 +68,70 @@ func (f *DB) Create(ctx context.Context, asType vocab.Type) error {
 		return nil
 	}
 
-	// Cast to the expected types we handle in this func.
-	creatable, ok := asType.(vocab.ActivityStreamsCreate)
-	if !ok {
-		log.Debugf(ctx, "unhandled object type: %s", asType.GetTypeName())
-		return nil
-	}
-
-	var errs gtserror.MultiError
-
-	// Extract objects from create activity.
-	objects := ap.ExtractObjects(creatable)
-
-	// If the receiver is our own instance service
-	// account, process the Create differently.
 	if receiving.IsInstance() {
+		// If the receiver is our own instance
+		// service account, assume the item
+		// was delivered by a relay we follow.
 		return f.createViaInstanceAccount(ctx,
 			requesting,
 			receiving,
-			objects,
+			asType,
 		)
 	}
 
-	// Extract PollOptionables (votes!) from objects slice.
-	optionables, objects := ap.ExtractPollOptionables(objects)
+	if receiving.IsRelayActor() {
+		// If the receiver is a relay actor,
+		// assume the item was delivered
+		// by an actor connected to the relay.
+		return f.createViaRelayActor(ctx,
+			requesting,
+			receiving,
+			asType,
+		)
+	}
+
+	var optionables []ap.PollOptionable
+	var statusables []ap.Statusable
+	if creatable, ok := asType.(vocab.ActivityStreamsCreate); ok {
+		// Extract object(s) from Create activity.
+		objects := ap.ExtractObjects(creatable)
+
+		// Extract PollOptionables (votes!) from objects slice.
+		optionables, objects = ap.ExtractPollOptionables(objects)
+
+		// Extract Statusables from objects slice (this must be
+		// done AFTER poll options due to how AS typing works).
+		statusables, objects = ap.ExtractStatusables(objects)
+
+		// Log any unhandled objects after
+		// filtering for debug purposes.
+		if len(objects) > 0 {
+			log.Debugf(ctx, "unhandled CREATE types: %v", typeNames(objects))
+		}
+
+	} else if optionable, ok := ap.ToPollOptionable(asType); ok {
+		// Single poll optionable.
+		optionables = []ap.PollOptionable{optionable}
+
+	} else if statusable, ok := ap.ToStatusable(asType); ok {
+		// Single statusable.
+		statusables = []ap.Statusable{statusable}
+	}
+
+	var errs gtserror.MultiError
 
 	if len(optionables) > 0 {
 		// Handle provided poll vote(s) creation, this can
 		// be for single or multiple votes in the same poll.
 		err := f.createPollOptionables(ctx,
-			receiving,
 			requesting,
+			receiving,
 			optionables,
 		)
 		if err != nil {
 			errs.Appendf("error creating poll vote(s): %w", err)
 		}
 	}
-
-	// Extract Statusables from objects slice (this must be
-	// done AFTER poll options due to how AS typing works).
-	statusables, objects := ap.ExtractStatusables(objects)
 
 	for _, statusable := range statusables {
 		// Check if this is a forwarded object, i.e. did
@@ -117,18 +140,13 @@ func (f *DB) Create(ctx context.Context, asType vocab.Type) error {
 
 		// Handle create event for this statusable.
 		if err := f.createStatusable(ctx,
-			receiving,
 			requesting,
+			receiving,
 			statusable,
 			forwarded,
 		); err != nil {
 			errs.Appendf("error creating statusable: %w", err)
 		}
-	}
-
-	if len(objects) > 0 {
-		// Log any unhandled objects after filtering for debug purposes.
-		log.Debugf(ctx, "unhandled CREATE types: %v", typeNames(objects))
 	}
 
 	return errs.Combine()
@@ -138,7 +156,7 @@ func (f *DB) createViaInstanceAccount(
 	ctx context.Context,
 	requesting *gtsmodel.Account,
 	instanceAcct *gtsmodel.Account,
-	objects []ap.TypeOrIRI,
+	asType vocab.Type,
 ) error {
 	// Via our instance account's inbox we should
 	// only process a Create if it originates from
@@ -146,12 +164,12 @@ func (f *DB) createViaInstanceAccount(
 
 	// First check subscriptions, we need
 	// at least one targeting this actor.
-	subscriptions, err := f.state.DB.GetRelaySubscriptionsByActorURI(ctx, requesting.URI)
-	if err != nil && !errors.Is(err, db.ErrNoEntries) {
-		return gtserror.Newf("db error getting relay subscriptions for actor URI %s: %w", requesting.URI, err)
+	relaySubscribed, err := f.relaySubscribedToActor(ctx, requesting.URI)
+	if err != nil {
+		return err
 	}
-	if len(subscriptions) == 0 {
-		// No relay subscriptions means we're not interested.
+	if !relaySubscribed {
+		// No relay subscription means we're not interested.
 		log.Debugf(ctx, "dropping delivery from %s (no relay subscription targeting this actor)", requesting.URI)
 		return nil
 	}
@@ -168,48 +186,34 @@ func (f *DB) createViaInstanceAccount(
 		return nil
 	}
 
-	// We subscribe to + follow this relay
-	// actor, so continue processing the create.
+	// We subscribe to + follow this
+	// relay actor, so process the Create.
+	f.createStatusablesAsForwards(ctx, requesting, instanceAcct, asType)
+	return nil
+}
 
-	// Skim off any poll votes as we don't
-	// care about them from relay actors.
-	_, objects = ap.ExtractPollOptionables(objects)
-
-	// Extract Statusables from objects slice (this must be
-	// done AFTER poll options due to how AS typing works).
-	statusables, objects := ap.ExtractStatusables(objects)
-
-	for _, statusable := range statusables {
-		uri := ap.GetJSONLDId(statusable)
-		if uri.Host == config.GetHost() ||
-			uri.Host == config.GetAccountDomain() {
-			// Can't relay our own
-			// status to us, silly.
-			continue
-		}
-
-		// Pass just the remote statusable URI into the processor
-		// worker and do the rest of the processing asynchronously.
-		//
-		// The fact that it's our instance account receiving the message
-		// will indicate to the processor that this is from a relay,
-		// and that appropriateness checks should be done on the status
-		f.state.Workers.Federator.Queue.Push(&messages.FromFediAPI{
-			APObjectType:   ap.ObjectNote,
-			APActivityType: ap.ActivityCreate,
-			APIRI:          uri,
-			APObject:       nil,
-			GTSModel:       nil,
-			Receiving:      instanceAcct,
-			Requesting:     requesting,
-		})
+func (f *DB) createViaRelayActor(
+	ctx context.Context,
+	requesting *gtsmodel.Account,
+	relayActorAcct *gtsmodel.Account,
+	asType vocab.Type,
+) error {
+	// Via a relay actor account's inbox we should
+	// only process a Create if it originates from
+	// a "connected" account, ie., one that follows us.
+	following, err := f.state.DB.IsFollowing(ctx, requesting.ID, relayActorAcct.ID)
+	if err != nil {
+		return gtserror.Newf("db error checking follow of actor URI %s: %w", requesting.URI, err)
+	}
+	if !following {
+		// No follow means we're not interested.
+		log.Debugf(ctx, "dropping delivery from %s (relay not connected to this actor)", requesting.URI)
+		return nil
 	}
 
-	if len(objects) > 0 {
-		// Log any unhandled objects after filtering for debug purposes.
-		log.Debugf(ctx, "unhandled CREATE types: %v", typeNames(objects))
-	}
-
+	// We're connected to the
+	// sender, so process the Create.
+	f.createStatusablesAsForwards(ctx, requesting, relayActorAcct, asType)
 	return nil
 }
 
@@ -218,8 +222,8 @@ func (f *DB) createViaInstanceAccount(
 // before passing off to a worker for asynchronous processing.
 func (f *DB) createPollOptionables(
 	ctx context.Context,
-	receiver *gtsmodel.Account,
-	requester *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	options []ap.PollOptionable,
 ) error {
 	var (
@@ -240,6 +244,10 @@ func (f *DB) createPollOptionables(
 	)
 
 	for _, option := range options {
+		// Cache entry for this type's ID for later checks
+		// in the Exists() function if we see it again.
+		f.activityIDs.Set(ap.GetJSONLDId(option).String(), struct{}{})
+
 		// Extract the "inReplyTo" property.
 		inReplyToURIs := ap.GetInReplyTo(option)
 		if len(inReplyToURIs) != 1 {
@@ -269,15 +277,15 @@ func (f *DB) createPollOptionables(
 				return gtserror.Newf("poll vote in closed poll %s", statusURI)
 
 			// Ensure receiver actually owns poll.
-			case inReplyTo.AccountID != receiver.ID:
-				return gtserror.Newf("receiving account %s does not own poll %s", receiver.URI, statusURI)
+			case inReplyTo.AccountID != receiving.ID:
+				return gtserror.Newf("receiving account %s does not own poll %s", receiving.URI, statusURI)
 			}
 
 			// Try load any existing vote(s) by user.
 			vote, err = f.state.DB.GetPollVoteBy(
 				gtscontext.SetBarebones(ctx),
 				inReplyTo.PollID,
-				requester.ID,
+				requesting.ID,
 			)
 			if err != nil && !errors.Is(err, db.ErrNoEntries) {
 				return gtserror.Newf("error getting status %s poll votes from database: %w", statusURI, err)
@@ -312,7 +320,7 @@ func (f *DB) createPollOptionables(
 		// Ensure this isn't a multiple vote
 		// by same account in the same poll.
 		if !*poll.Multiple {
-			log.Warnf(ctx, "%s has already voted in single-choice poll %s", requester.URI, inReplyTo.URI)
+			log.Warnf(ctx, "%s has already voted in single-choice poll %s", requesting.URI, inReplyTo.URI)
 			return nil // this is a useful warning for admins to report to us from logs
 		}
 
@@ -331,7 +339,7 @@ func (f *DB) createPollOptionables(
 
 		// Populate the poll vote,
 		// later used in fedi worker.
-		vote.Account = requester
+		vote.Account = requesting
 		vote.Poll = poll
 
 		// Enqueue an update event for poll vote to fedi API worker.
@@ -339,8 +347,8 @@ func (f *DB) createPollOptionables(
 			APActivityType: ap.ActivityUpdate,
 			APObjectType:   ap.ActivityQuestion,
 			GTSModel:       vote,
-			Receiving:      receiver,
-			Requesting:     requester,
+			Requesting:     requesting,
+			Receiving:      receiving,
 		})
 	} else {
 		// Create new poll vote and enqueue create to fedi API worker.
@@ -350,13 +358,13 @@ func (f *DB) createPollOptionables(
 			GTSModel: &gtsmodel.PollVote{
 				ID:        id.NewULID(),
 				Choices:   choices,
-				AccountID: requester.ID,
-				Account:   requester,
+				AccountID: requesting.ID,
+				Account:   requesting,
 				PollID:    poll.ID,
 				Poll:      poll,
 			},
-			Receiving:  receiver,
-			Requesting: requester,
+			Requesting: requesting,
+			Receiving:  receiving,
 		})
 	}
 
@@ -369,15 +377,19 @@ func (f *DB) createPollOptionables(
 // the processor for further asynchronous processing.
 func (f *DB) createStatusable(
 	ctx context.Context,
-	receiver *gtsmodel.Account,
-	requester *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	statusable ap.Statusable,
 	forwarded bool,
 ) error {
+	// Cache entry for this type's ID for later checks
+	// in the Exists() function if we see it again.
+	f.activityIDs.Set(ap.GetJSONLDId(statusable).String(), struct{}{})
+
 	// Check for spam / relevance.
 	ok, err := f.statusableOK(ctx,
-		receiver,
-		requester,
+		requesting,
+		receiving,
 		statusable,
 	)
 	if err != nil {
@@ -408,8 +420,8 @@ func (f *DB) createStatusable(
 			APIRI:          ap.GetJSONLDId(statusable),
 			APObject:       nil,
 			GTSModel:       nil,
-			Receiving:      receiver,
-			Requesting:     requester,
+			Requesting:     requesting,
+			Receiving:      receiving,
 		})
 		return nil
 	}
@@ -422,9 +434,65 @@ func (f *DB) createStatusable(
 		APIRI:          nil,
 		GTSModel:       nil,
 		APObject:       statusable,
-		Receiving:      receiver,
-		Requesting:     requester,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
+}
+
+func (f *DB) createStatusablesAsForwards(
+	ctx context.Context,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
+	asType vocab.Type,
+) {
+	// Extract statusable(s) from asType.
+	var statusables []ap.Statusable
+	if create, ok := asType.(vocab.ActivityStreamsCreate); ok {
+		// Create activity that may contain
+		// multiple statusables in object field.
+		objects := ap.ExtractObjects(create)
+		// Skim any poll optionables.
+		_, objects = ap.ExtractPollOptionables(objects)
+		// Extract just statusable types.
+		statusables, _ = ap.ExtractStatusables(objects)
+
+	} else if statusable, ok := ap.ToStatusable(asType); ok {
+		// Single statusable (Note, Article etc).
+		statusables = []ap.Statusable{statusable}
+
+	} else {
+		// Not something we can or should handle.
+		log.Tracef(ctx, "not handling type %T", asType)
+	}
+
+	for _, statusable := range statusables {
+		uri := ap.GetJSONLDId(statusable)
+		if uri.Host == config.GetHost() ||
+			uri.Host == config.GetAccountDomain() {
+			// Can't relay our own status, silly.
+			log.Debugf(ctx, "dropping relay of our own status: %s", uri)
+			continue
+		}
+
+		// Cache entry for this type's ID for later checks
+		// in the Exists() function if we see it again.
+		f.activityIDs.Set(uri.String(), struct{}{})
+
+		// Pass just the remote statusable URI into the processor
+		// worker and do the rest of the processing asynchronously.
+		//
+		// The fact that it's either a relay actor account or our
+		// instance account receiving the message will indicate to
+		// the processor that this is a relayed status, and that
+		// appropriateness checks should be done on it.
+		f.state.Workers.Federator.Queue.Push(&messages.FromFediAPI{
+			APObjectType:   ap.ObjectNote,
+			APActivityType: ap.ActivityCreate,
+			APIRI:          uri,
+			Requesting:     requesting,
+			Receiving:      receiving,
+		})
+	}
 }

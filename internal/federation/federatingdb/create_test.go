@@ -18,15 +18,16 @@
 package federatingdb_test
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
+	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -35,37 +36,53 @@ type CreateTestSuite struct {
 }
 
 func (suite *CreateTestSuite) TestCreateNote() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	receivingAccount := suite.testAccounts["local_account_1"]
 	requestingAccount := suite.testAccounts["remote_account_1"]
 
-	ctx := createTestContext(suite.T(), receivingAccount, requestingAccount)
+	ctx = createTestContext(ctx, requestingAccount, receivingAccount)
 
 	create := suite.testActivities["dm_for_zork"].Activity
 	objProp := create.GetActivityStreamsObject()
 	note := objProp.At(0).GetType().(ap.Statusable)
 
-	err := suite.federatingDB.Create(ctx, create)
+	err := testStructs.Federator.FederatingDB().Create(ctx, create)
 	suite.NoError(err)
 
 	// should be a message heading to the processor now, which we can intercept here
-	msg, _ := suite.getFederatorMsg(5 * time.Second)
+	msg, _ := suite.getFederatorMsg(ctx, testStructs)
 	suite.Equal(ap.ObjectNote, msg.APObjectType)
 	suite.Equal(ap.ActivityCreate, msg.APActivityType)
 	suite.Equal(note, msg.APObject)
 }
 
 func (suite *CreateTestSuite) TestCreateNoteForward() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	receivingAccount := suite.testAccounts["local_account_1"]
 	requestingAccount := suite.testAccounts["remote_account_1"]
 
-	ctx := createTestContext(suite.T(), receivingAccount, requestingAccount)
+	ctx = createTestContext(ctx, requestingAccount, receivingAccount)
 
 	create := suite.testActivities["forwarded_message"].Activity
 
 	// ensure a follow exists between requesting
 	// and receiving account, this ensures the forward
 	// will be seen as "relevant" and not get dropped.
-	err := suite.db.PutFollow(ctx, &gtsmodel.Follow{
+	err := testStructs.State.DB.PutFollow(ctx, &gtsmodel.Follow{
 		ID:              id.NewULID(),
 		URI:             "https://this.is.a.url",
 		AccountID:       receivingAccount.ID,
@@ -73,11 +90,11 @@ func (suite *CreateTestSuite) TestCreateNoteForward() {
 	})
 	suite.NoError(err)
 
-	err = suite.federatingDB.Create(ctx, create)
+	err = testStructs.Federator.FederatingDB().Create(ctx, create)
 	suite.NoError(err)
 
 	// should be a message heading to the processor now, which we can intercept here
-	msg, _ := suite.getFederatorMsg(5 * time.Second)
+	msg, _ := suite.getFederatorMsg(ctx, testStructs)
 	suite.Equal(ap.ObjectNote, msg.APObjectType)
 	suite.Equal(ap.ActivityCreate, msg.APActivityType)
 
@@ -89,6 +106,14 @@ func (suite *CreateTestSuite) TestCreateNoteForward() {
 }
 
 func (suite *CreateTestSuite) TestCreateFlag1() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	reportedAccount := suite.testAccounts["local_account_1"]
 	reportingAccount := suite.testAccounts["remote_account_1"]
 	reportedStatus := suite.testStatuses["local_account_1_status_1"]
@@ -114,13 +139,13 @@ func (suite *CreateTestSuite) TestCreateFlag1() {
 
 	flag := t.(vocab.ActivityStreamsFlag)
 
-	ctx := createTestContext(suite.T(), reportedAccount, reportingAccount)
-	if err := suite.federatingDB.Flag(ctx, flag); err != nil {
+	ctx = createTestContext(ctx, reportingAccount, reportedAccount)
+	if err := testStructs.Federator.FederatingDB().Flag(ctx, flag); err != nil {
 		suite.FailNow(err.Error())
 	}
 
 	// should be a message heading to the processor now, which we can intercept here
-	msg, _ := suite.getFederatorMsg(5 * time.Second)
+	msg, _ := suite.getFederatorMsg(ctx, testStructs)
 	suite.Equal(ap.ActivityFlag, msg.APObjectType)
 	suite.Equal(ap.ActivityCreate, msg.APActivityType)
 
@@ -129,7 +154,7 @@ func (suite *CreateTestSuite) TestCreateFlag1() {
 	report := msg.GTSModel.(*gtsmodel.Report)
 
 	// report should be in the database
-	if _, err := suite.db.GetReportByID(suite.T().Context(), report.ID); err != nil {
+	if _, err := testStructs.State.DB.GetReportByID(suite.T().Context(), report.ID); err != nil {
 		suite.FailNow(err.Error())
 	}
 }

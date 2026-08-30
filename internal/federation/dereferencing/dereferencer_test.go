@@ -19,32 +19,18 @@ package dereferencing_test
 
 import (
 	"code.superseriousbusiness.org/activity/streams/vocab"
-	"code.superseriousbusiness.org/gotosocial/internal/admin"
-	"code.superseriousbusiness.org/gotosocial/internal/db"
-	"code.superseriousbusiness.org/gotosocial/internal/federation/dereferencing"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/interaction"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/relay"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/media"
-	"code.superseriousbusiness.org/gotosocial/internal/state"
-	"code.superseriousbusiness.org/gotosocial/internal/storage"
-	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
 
-type DereferencerStandardTestSuite struct {
+const (
+	rMediaPath    = "../../../testrig/media"
+	rTemplatePath = "../../../web/template/"
+)
+
+type DereferencerTestSuite struct {
 	suite.Suite
-	db          db.DB
-	storage     *storage.Driver
-	state       state.State
-	client      *testrig.MockHTTPClient
-	converter   *typeutils.Converter
-	visFilter   *visibility.Filter
-	intFilter   *interaction.Filter
-	relayFilter *relay.Filter
-	media       *media.Manager
 
 	testRemoteStatuses    map[string]vocab.ActivityStreamsNote
 	testRemotePeople      map[string]vocab.ActivityStreamsPerson
@@ -52,12 +38,11 @@ type DereferencerStandardTestSuite struct {
 	testRemoteServices    map[string]vocab.ActivityStreamsService
 	testRemoteAttachments map[string]testrig.RemoteAttachmentFile
 	testAccounts          map[string]*gtsmodel.Account
+	testStatuses          map[string]*gtsmodel.Status
 	testEmojis            map[string]*gtsmodel.Emoji
-
-	dereferencer dereferencing.Dereferencer
 }
 
-func (suite *DereferencerStandardTestSuite) SetupTest() {
+func (suite *DereferencerTestSuite) SetupTest() {
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
@@ -66,42 +51,6 @@ func (suite *DereferencerStandardTestSuite) SetupTest() {
 	suite.testRemotePeople = testrig.NewTestFediPeople()
 	suite.testRemoteGroups = testrig.NewTestFediGroups()
 	suite.testRemoteServices = testrig.NewTestFediServices()
-	suite.testRemoteAttachments = testrig.NewTestFediAttachments("../../../testrig/media")
+	suite.testRemoteAttachments = testrig.NewTestFediAttachments(rMediaPath)
 	suite.testEmojis = testrig.NewTestEmojis()
-
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
-
-	suite.db = testrig.NewTestDB(&suite.state)
-
-	suite.converter = typeutils.NewConverter(&suite.state)
-	suite.visFilter = visibility.NewFilter(&suite.state)
-	suite.intFilter = interaction.NewFilter(&suite.state)
-	suite.relayFilter = relay.NewFilter(&suite.state)
-	suite.media = testrig.NewTestMediaManager(&suite.state)
-
-	suite.client = testrig.NewMockHTTPClient(nil, "../../../testrig/media")
-	suite.storage = testrig.NewInMemoryStorage()
-	suite.state.DB = suite.db
-	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
-	suite.state.Storage = suite.storage
-
-	suite.dereferencer = dereferencing.NewDereferencer(
-		&suite.state,
-		suite.converter,
-		testrig.NewTestTransportController(
-			&suite.state,
-			suite.client,
-		),
-		suite.visFilter,
-		suite.intFilter,
-		suite.relayFilter,
-		suite.media,
-	)
-	testrig.StandardDBSetup(suite.db, nil)
-}
-
-func (suite *DereferencerStandardTestSuite) TearDownTest() {
-	testrig.StandardDBTeardown(suite.db)
-	testrig.StopWorkers(&suite.state)
 }

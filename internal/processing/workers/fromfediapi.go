@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"slices"
 	"time"
 
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
@@ -246,6 +247,12 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		return p.createStatusFromRelay(ctx, fMsg)
 	}
 
+	// If we received this status via a relay actor, it
+	// must originate from an account connected to the relay.
+	if fMsg.Receiving.IsRelayActor() {
+		return p.createStatusToRelay(ctx, fMsg)
+	}
+
 	// Non-relay status,
 	// process normally.
 	var (
@@ -401,49 +408,168 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 	return nil
 }
 
+func relayableErrCheck(
+	ctx context.Context,
+	status *gtsmodel.Status,
+	err error,
+) error {
+	// Check for semi-expected errors
+	// encountered during dereferencing.
+	switch {
+	case err == nil && status != nil:
+		// No problem.
+		return nil
+
+	case gtserror.IsUnretrievable(err):
+		// Remote domain probably blocked.
+		log.Debugf(ctx, "not retrievable: %v", err)
+		return nil
+
+	case gtserror.IsNotPermitted(err):
+		// Status probably replies to a
+		// status it's not allowed to reply to.
+		log.Debugf(ctx, "not permitted: %v", err)
+		return nil
+
+	case gtserror.IsNotRelevant(err):
+		// Status probably doesn't match
+		// relay subscription or has funky
+		// visibility we don't care about.
+		log.Debugf(ctx, "not relevant: %v", err)
+		return nil
+
+	case gtserror.IsMalformed(err):
+		// Final URI probably borked.
+		log.Debugf(ctx, "malformed: %v", err)
+		return nil
+
+	case gtserror.IsWrongType(err):
+		// Probably Announce of Announce
+		// or something, we ignore these.
+		log.Debugf(ctx, "wrong type: %v", err)
+		return nil
+
+	case err == nil && status == nil:
+		// If status is nil that means it probably
+		// didn't match a relay subscription, or it
+		// wasn't permitted by interaction policy.
+		log.Debug(ctx, "status dropped as not relayable")
+		return nil
+
+	default:
+		// Some other actual error (db error, transport error, etc).
+		return gtserror.Newf("%w", err)
+	}
+}
+
 func (p *fediAPI) createStatusFromRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
-	// Retrieve the relayed status, and store it
-	// if it's matched by a relay subscription.
+	// Retrieve the relayed status, and store it in
+	// the db if it's matched by a relay subscription.
 	//
-	// NOTE: dereferencer hook handles surfacing logic.
-	status, err := p.federate.GetRelayedStatus(ctx,
+	// Surfacing, timelining etc will be done by deref hook.
+	status, err := p.federate.GetStatusFromRelaySubscription(ctx,
 		fMsg.Receiving,  // Our instance account.
 		fMsg.Requesting, // Relaying account.
 		fMsg.APIRI,      // Relayed status ID/URI.
 	)
 
-	uriStr := fMsg.APIRI.String()
-	l := log.
-		WithContext(ctx).
-		WithField("uri", uriStr)
+	// Check returned status and possible error.
+	return relayableErrCheck(ctx, status, err)
+}
 
-	// Check for semi-expected errors
-	// encountered during dereferencing.
-	switch {
-	case err == nil:
-		// No problem.
+func (p *fediAPI) createStatusToRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
+	// Retrieve the relayed status, possibly storing and timelining
+	// it if we have a matching subscription to our own relay actor.
+	status, statusable, err := p.federate.GetStatusForRelayActor(ctx,
+		fMsg.Receiving,  // Our relay actor account.
+		fMsg.Requesting, // Relaying account.
+		fMsg.APIRI,      // Relayed status ID/URI.
+	)
 
-	case gtserror.IsUnretrievable(err):
-		// Remote domain probably blocked.
-		l.Debugf("status not retrievable: %v", err)
-		return nil
-
-	case gtserror.IsMalformed(err):
-		// Final URI probably borked.
-		l.Debugf("status malformed: %v", err)
-		return nil
-
-	default:
-		// Actual error (db error, transport error, etc).
-		return gtserror.Newf("error dereferencing %s: %w", uriStr, err)
+	// Check returned status and possible error.
+	if err := relayableErrCheck(ctx, status, err); err != nil {
+		return err
 	}
 
-	// If status is nil that means it probably
-	// didn't match a relay subscription, or it
-	// wasn't permitted by interaction policy checks.
 	if status == nil {
-		l.Debug("status dropped as not relayable")
+		// Nothing to do.
 		return nil
+	}
+
+	// Wrap target status in boost wrapper to send it out.
+	boostOut, err := p.utils.converter.StatusToBoost(ctx,
+		status,
+		fMsg.Receiving,
+		"", // No app ID.
+	)
+	if err != nil {
+		return gtserror.Newf("error converting status to boost: %w", err)
+	}
+
+	// Announce to relay subscribers.
+	if err := p.federate.PushFromRelay(ctx, boostOut); err != nil {
+		return gtserror.Newf("error pushing from relay: %w", err)
+	}
+
+	// Handle boost for any local followers of the relay actor.
+	if err := p.storeOutgoingRelayActorBoostForLocalFollowers(ctx,
+		fMsg.Receiving, boostOut, statusable,
+	); err != nil {
+		return gtserror.Newf("error handling outgoing boost for local followers: %w", err)
+	}
+
+	return nil
+}
+
+func (p *fediAPI) storeOutgoingRelayActorBoostForLocalFollowers(
+	ctx context.Context,
+	relayActorAcct *gtsmodel.Account,
+	boostOut *gtsmodel.Status,
+	statusable ap.Statusable,
+) error {
+	// If any local accounts follow the relay apart
+	// from the instance account, store + timeline
+	// the boost locally so it will show in timelines.
+	localFollows, err := p.state.DB.GetAccountLocalFollowers(ctx, relayActorAcct.ID)
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		return gtserror.Newf("db error getting followers: %w", err)
+	}
+	localFollows = slices.DeleteFunc(
+		localFollows,
+		func(f *gtsmodel.Follow) bool {
+			return f.Account.IsInstance()
+		},
+	)
+
+	if len(localFollows) == 0 {
+		// Nothing
+		// to do.
+		return nil
+	}
+
+	// If we haven't fully dereffed and stored
+	// the relayed status yet, do so now.
+	if boostOut.BoostOf.ID == "" {
+		boostOut.BoostOf, _, err = p.federate.Dereferencer.RefreshStatus(ctx,
+			relayActorAcct.Username,
+			boostOut.BoostOf,
+			statusable,
+			&dereferencing.Fresh,
+		)
+		if err != nil {
+			return gtserror.Newf("error enriching boosted status: %w", err)
+		}
+		boostOut.BoostOfID = boostOut.BoostOf.ID
+	}
+
+	// Store the boost wrapper itself in the db.
+	if err := p.state.DB.PutStatus(ctx, boostOut); err != nil {
+		return gtserror.Newf("db error storing boost: %w", err)
+	}
+
+	// Timeline and notify the boost wrapper status.
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, boostOut); err != nil {
+		return gtserror.Newf("error timelining and notifying status: %w", err)
 	}
 
 	return nil
@@ -972,6 +1098,12 @@ func (p *fediAPI) CreateAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 		return p.createAnnounceFromRelay(ctx, fMsg)
 	}
 
+	// If we received the announce via a relay actor,
+	// it must originate from an account connected to the relay.
+	if fMsg.Receiving.IsRelayActor() {
+		return p.createAnnounceToRelay(ctx, fMsg)
+	}
+
 	// Non-relay announce, process normally.
 	boost, ok := fMsg.GTSModel.(*gtsmodel.Status)
 	if !ok {
@@ -1099,53 +1231,65 @@ func (p *fediAPI) createAnnounceFromRelay(ctx context.Context, fMsg *messages.Fr
 
 	// Retrieve the relayed status wrapped in the boost,
 	// and store it if it's matched by a relay subscription.
+	// Surfacing, timelining etc will be done by deref hook.
 	//
 	// Note that this doesn't store the boost wrapper status
 	// itself as we don't really care about it that much.
-	status, err := p.federate.GetRelayedAnnounce(ctx,
+	status, err := p.federate.GetBoostedStatusFromRelaySubscription(ctx,
 		fMsg.Receiving,  // Our instance account.
 		fMsg.Requesting, // Relaying account.
 		boost,           // Boost wrapper status.
 	)
 
-	uriStr := boost.BoostOfURIStr
-	l := log.
-		WithContext(ctx).
-		WithField("uri", uriStr)
+	// Check returned status and possible error.
+	return relayableErrCheck(ctx, status, err)
+}
 
-	// Check for semi-expected errors
-	// encountered during dereferencing.
-	switch {
-	case err == nil:
-		// No problem.
-
-	case gtserror.IsUnretrievable(err):
-		// Remote domain probably blocked.
-		l.Debugf("status not retrievable: %v", err)
-		return nil
-
-	case gtserror.IsMalformed(err):
-		// Final URI probably borked.
-		l.Debugf("status malformed: %v", err)
-		return nil
-
-	case gtserror.IsWrongType(err):
-		// Probably Announce of Announce
-		// or something, we ignore these.
-		l.Debugf("wrong type: %v", err)
-		return nil
-
-	default:
-		// Actual error (db error, transport error, etc).
-		return gtserror.Newf("error dereferencing %s: %w", uriStr, err)
+func (p *fediAPI) createAnnounceToRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
+	// Unpack the boost wrapper.
+	boost, ok := fMsg.GTSModel.(*gtsmodel.Status)
+	if !ok {
+		return gtserror.Newf("%T not parseable as *gtsmodel.Status", fMsg.GTSModel)
 	}
 
-	// If status is nil that means it probably
-	// didn't match a relay subscription, or it
-	// wasn't permitted by interaction policy checks.
+	// Retrieve the relayed status, possibly storing and timelining
+	// it if we have a matching subscription to our own relay actor.
+	status, statusable, err := p.federate.GetBoostedStatusForRelayActor(ctx,
+		fMsg.Receiving,  // Our relay actor account.
+		fMsg.Requesting, // Relaying account.
+		boost,           // Boost wrapper status.
+	)
+
+	// Check returned status and possible error.
+	if err := relayableErrCheck(ctx, status, err); err != nil {
+		return err
+	}
+
 	if status == nil {
-		l.Debug("status dropped as not relayable")
+		// Nothing to do.
 		return nil
+	}
+
+	// Wrap target status in boost wrapper to send it out.
+	boostOut, err := p.utils.converter.StatusToBoost(ctx,
+		status,
+		fMsg.Receiving,
+		"", // No app ID.
+	)
+	if err != nil {
+		return gtserror.Newf("error converting status to boost: %w", err)
+	}
+
+	// Announce to relay subscribers.
+	if err := p.federate.PushFromRelay(ctx, boostOut); err != nil {
+		return gtserror.Newf("error pushing from relay: %w", err)
+	}
+
+	// Handle boost for any local followers of the relay actor.
+	if err := p.storeOutgoingRelayActorBoostForLocalFollowers(ctx,
+		fMsg.Receiving, boostOut, statusable,
+	); err != nil {
+		return gtserror.Newf("error handling outgoing boost for local followers: %w", err)
 	}
 
 	return nil

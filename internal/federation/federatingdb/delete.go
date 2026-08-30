@@ -45,8 +45,8 @@ func (f *DB) Delete(ctx context.Context, id *url.URL) error {
 	}
 
 	// Extract receiving / requesting accounts.
-	requesting := activityContext.requestingAcct
-	receiving := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	// Serialize deleted ID URI.
 	// (may be status OR account)
@@ -116,8 +116,8 @@ func (f *DB) deleteAccount(
 			APObjectType:   ap.ActorPerson,
 			APActivityType: ap.ActivityDelete,
 			GTSModel:       account,
-			Receiving:      receiving,
 			Requesting:     requesting,
+			Receiving:      receiving,
 		})
 
 		return true, nil
@@ -155,8 +155,8 @@ func (f *DB) deleteStatus(
 			APObjectType:   ap.ObjectNote,
 			APActivityType: ap.ActivityDelete,
 			GTSModel:       status,
-			Receiving:      receiving,
 			Requesting:     requesting,
+			Receiving:      receiving,
 		})
 
 		return true, nil

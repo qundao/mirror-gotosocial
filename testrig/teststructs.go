@@ -21,6 +21,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/admin"
 	"code.superseriousbusiness.org/gotosocial/internal/cleaner"
 	"code.superseriousbusiness.org/gotosocial/internal/email"
+	"code.superseriousbusiness.org/gotosocial/internal/federation"
 	"code.superseriousbusiness.org/gotosocial/internal/filter/interaction"
 	"code.superseriousbusiness.org/gotosocial/internal/filter/mutes"
 	"code.superseriousbusiness.org/gotosocial/internal/filter/status"
@@ -51,6 +52,7 @@ type TestStructs struct {
 	Templates           *templates.Templates
 	HTTPClient          *MockHTTPClient
 	TypeConverter       *typeutils.Converter
+	Federator           *federation.Federator
 	EmailSender         email.Sender
 	WebPushSender       *WebPushMockSender
 	TransportController transport.Controller
@@ -131,6 +133,7 @@ func SetupTestStructs(
 		Processor:           processor,
 		HTTPClient:          httpClient,
 		TypeConverter:       typeconverter,
+		Federator:           federator,
 		EmailSender:         emailSender,
 		WebPushSender:       webPushSender,
 		TransportController: transport,

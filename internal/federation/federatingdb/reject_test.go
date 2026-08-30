@@ -18,6 +18,8 @@
 package federatingdb_test
 
 import (
+	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -36,11 +38,18 @@ type RejectTestSuite struct {
 }
 
 func (suite *RejectTestSuite) TestRejectFollowRequest() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	// local_account_1 sent a follow request to remote_account_2;
 	// remote_account_2 rejects the follow request
 	followingAccount := suite.testAccounts["local_account_1"]
 	followedAccount := suite.testAccounts["remote_account_2"]
-	ctx := createTestContext(suite.T(), followingAccount, followedAccount)
 
 	// put the follow request in the database
 	fr := &gtsmodel.FollowRequest{
@@ -55,11 +64,14 @@ func (suite *RejectTestSuite) TestRejectFollowRequest() {
 		AccountID:       followingAccount.ID,
 		TargetAccountID: followedAccount.ID,
 	}
-	err := suite.db.Put(ctx, fr)
-	suite.NoError(err)
+	if err := testStructs.State.DB.PutFollowRequest(ctx, fr); err != nil {
+		suite.FailNow(err.Error())
+	}
 
-	asFollow, err := suite.tc.FollowToAS(ctx, typeutils.FollowRequestToFollow(fr))
-	suite.NoError(err)
+	asFollow, err := testStructs.TypeConverter.FollowToAS(ctx, typeutils.FollowRequestToFollow(fr))
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
 
 	rejectingAccountURI := testrig.URLMustParse(followedAccount.URI)
 	requestingAccountURI := testrig.URLMustParse(followingAccount.URI)
@@ -74,24 +86,30 @@ func (suite *RejectTestSuite) TestRejectFollowRequest() {
 	ap.AppendActorIRIs(reject, rejectingAccountURI)
 
 	// Set the recreated follow as the 'object' property.
-	acceptObject := streams.NewActivityStreamsObjectProperty()
-	acceptObject.AppendActivityStreamsFollow(asFollow)
-	reject.SetActivityStreamsObject(acceptObject)
+	rejectObj := streams.NewActivityStreamsObjectProperty()
+	rejectObj.AppendActivityStreamsFollow(asFollow)
+	reject.SetActivityStreamsObject(rejectObj)
 
 	// Set the To of the reject as the originator of the follow
 	ap.AppendTo(reject, requestingAccountURI)
 
 	// process the reject in the federating database
-	err = suite.federatingDB.Reject(ctx, reject)
-	suite.NoError(err)
+	ctx = createTestContext(ctx,
+		followedAccount,
+		followingAccount,
+	)
+	if err := testStructs.Federator.FederatingDB().Reject(ctx, reject); err != nil {
+		suite.FailNow(err.Error())
+	}
 
-	// there should be nothing in the federator channel since nothing needs to be passed
-	_, ok := suite.getFederatorMsg(time.Second)
-	suite.False(ok)
-
-	// the follow request should not be in the database anymore -- it's been rejected
-	err = suite.db.GetByID(ctx, fr.ID, &gtsmodel.FollowRequest{})
-	suite.ErrorIs(err, db.ErrNoEntries)
+	// Wait for the follow request to not be in
+	// the database anymore -- it's been rejected.
+	if !testrig.WaitFor(func() bool {
+		fr, err := testStructs.State.DB.GetFollowRequestByID(ctx, fr.ID)
+		return fr == nil && errors.Is(err, db.ErrNoEntries)
+	}) {
+		suite.FailNow("waiting for rejection")
+	}
 }
 
 func TestRejectTestSuite(t *testing.T) {

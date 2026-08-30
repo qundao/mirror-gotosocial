@@ -251,6 +251,12 @@ func StandardDBSetup(db db.DB, accounts map[string]*gtsmodel.Account) {
 		}
 	}
 
+	for _, v := range NewTestRelayActors() {
+		if err := db.Put(ctx, v); err != nil {
+			log.Panic(ctx, err)
+		}
+	}
+
 	for _, v := range NewTestBookmarks() {
 		if err := db.Put(ctx, v); err != nil {
 			log.Panic(ctx, err)

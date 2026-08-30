@@ -18,20 +18,27 @@
 package workers
 
 import (
+	"cmp"
 	"context"
+	"errors"
 	"net/url"
 
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gopkg/xslices"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
+	"code.superseriousbusiness.org/gotosocial/internal/config"
+	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/federation"
 	"code.superseriousbusiness.org/gotosocial/internal/filter/relay"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/id"
+	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
+	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // federate wraps functions for federating
@@ -72,48 +79,27 @@ func parseURI(s string) (*url.URL, error) {
 	return uri, err
 }
 
-// RelayForwarding checks the given status to see if the author
+// PushToRelays checks the given status to see if the author
 // has configured any relay push connections that the status
 // should be pushed to. If so, it will use the instance account
-// to forward the activity to relevant relay actors' inboxes.
-func (f *federate) RelayForwarding(
+// to deliver the activity to relevant relay actors' inboxes.
+func (f *federate) PushToRelays(
 	ctx context.Context,
 	status *gtsmodel.Status,
 	activity ap.Activityable,
 ) error {
 	// Check if we need to forward the status to any relay pushes.
-	pushActorURIs, err := f.relayFilter.FilteredPushActorURIs(ctx, status)
+	pushToIRIS, err := f.relayFilter.FilteredPushActorURIs(ctx, status)
 	if err != nil {
 		return gtserror.Newf("error filtering relay push actor URIs: %w", err)
 	}
 
 	// If there's no push actor URIs we
 	// don't need to forward anywhere.
-	l := len(pushActorURIs)
+	l := len(pushToIRIS)
 	if l == 0 {
 		return nil
 	}
-
-	// Prepare list of (shared) inboxes
-	// to forward this status to using
-	// our instance service account.
-	inboxes := make([]*url.URL, 0, l)
-	for _, pushActorURI := range pushActorURIs {
-		// Use the federatingDB to derive the
-		// inbox URI for this push actor ID/URI.
-		fdb := f.FederatingDB()
-		inbox, err := fdb.InboxesForIRI(ctx, pushActorURI)
-		if err != nil {
-			log.Errorf(ctx, "error getting inbox for %s: %v", pushActorURI, err)
-			continue
-		}
-		inboxes = append(inboxes, inbox...)
-	}
-
-	// Deduplicate inboxes to account for
-	// any shared inboxes (multiple actors
-	// on the same instance for example).
-	inboxes = xslices.Deduplicate(inboxes)
 
 	// Forwarding to relays is done using the instance account,
 	// which is also the account we use to subscribe to relays.
@@ -123,6 +109,44 @@ func (f *federate) RelayForwarding(
 	if err != nil {
 		return gtserror.Newf("db error getting instance account: %w", err)
 	}
+
+	// For each push actor URI, either handle
+	// creation locally (if this is a local relay
+	// actor) or derive the inbox we need to deliver to.
+	remoteInboxes := make([]*url.URL, 0, l)
+	fdb := f.FederatingDB()
+	for _, pushToIRI := range pushToIRIS {
+		if pushToIRI.Host == config.GetHost() ||
+			pushToIRI.Host == config.GetAccountDomain() {
+			// This is a *local* relay actor, which
+			// means we can short circuit delivery
+			// and handle the creation locally.
+			if err := f.pushToLocalRelayActor(ctx,
+				instanceAcct,
+				pushToIRI.String(),
+				status,
+			); err != nil {
+				log.Errorf(ctx, "error pushing to local relay actor: %v", err)
+			}
+			continue
+		}
+
+		// This is a remote relay actor. Get the inbox.
+		inbox, err := fdb.InboxesForIRI(ctx, pushToIRI)
+		if err != nil {
+			log.Errorf(ctx, "error getting inbox for %s: %v", pushToIRI, err)
+			continue
+		}
+		remoteInboxes = append(remoteInboxes, inbox...)
+	}
+
+	// Deduplicate inboxes to account for
+	// any shared inboxes (multiple actors
+	// on the same instance for example).
+	remoteInboxes = xslices.DeduplicateFunc(
+		remoteInboxes,
+		func(v *url.URL) string { return v.String() },
+	)
 
 	// Fetch transport to do deliveries.
 	tsport, err := f.TransportController().NewTransport(
@@ -140,11 +164,186 @@ func (f *federate) RelayForwarding(
 	}
 
 	// Prepare requests and add them to delivery queues.
-	if err := tsport.BatchDeliver(ctx, m, inboxes); err != nil {
+	if err := tsport.BatchDeliver(ctx, m, remoteInboxes); err != nil {
 		return gtserror.Newf("error preparing delivery: %w", err)
 	}
 
 	return nil
+}
+
+func (f *federate) pushToLocalRelayActor(
+	ctx context.Context,
+	instanceAcct *gtsmodel.Account,
+	relayActorURI string,
+	status *gtsmodel.Status,
+) error {
+	relayActorAcct, err := f.state.DB.GetAccountByURI(ctx, relayActorURI)
+	if err != nil {
+		err := gtserror.Newf(
+			"db error getting relay actor %s: %w",
+			relayActorURI, err,
+		)
+		return err
+	}
+
+	// Only forward to our own push actor if the
+	// push connection is "accepted", ie., our
+	// instance account follows our own push actor.
+	following, err := f.state.DB.IsFollowing(ctx, instanceAcct.ID, relayActorAcct.ID)
+	if err != nil {
+		return gtserror.Newf("db error checking if instance actor follows %s: %w", relayActorAcct.URI, err)
+	}
+	if !following {
+		// No follow,
+		// don't push.
+		return nil
+	}
+
+	APIRI, err := url.Parse(status.URI)
+	if err != nil {
+		return gtserror.Newf("error parsing status URI: %w", err)
+	}
+
+	// Queue up a message to relay the status.
+	f.state.Workers.Federator.Queue.Push(&messages.FromFediAPI{
+		APObjectType:   ap.ObjectNote,
+		APActivityType: ap.ActivityCreate,
+		APIRI:          APIRI,
+		Requesting:     instanceAcct,
+		Receiving:      relayActorAcct,
+	})
+	return nil
+}
+
+// PushFromRelay federates the given boost on behalf
+// of local relay actor correspnding to boost.Account.
+//
+// This function locks on the target status URI and checks
+// the relayed_uris table to make sure we're not relaying
+// this status more than once on behalf of the relay actor,
+// to avoid unnecessary outgoing traffic.
+//
+// If the status hasn't been relayed yet by this actor,
+// a new relayed_uris entry will be stored within the lock.
+func (f *federate) PushFromRelay(ctx context.Context, boost *gtsmodel.Status) error {
+	relayActorAcct := boost.Account
+	if !relayActorAcct.IsRelayActor() {
+		// Should never happen.
+		panic("trying to relay from non-relay actor")
+	}
+
+	// Some variables we need.
+	relayURI := relayActorAcct.URI
+	statusURI := boost.BoostOf.URI
+
+	// Lock on the target status URI.
+	unlock := f.state.ProcessingLocks.Lock(statusURI)
+	defer unlock()
+
+	// Populate model.
+	if err := f.state.DB.PopulateStatus(ctx, boost); err != nil {
+		return gtserror.Newf("error populating status: %w", err)
+	}
+
+	// Make sure we haven't already relayed this status with this actor.
+	relayedURI, err := f.state.DB.GetRelayedURI(ctx, relayURI, statusURI)
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		return gtserror.Newf("db error getting relayedURI: %w", err)
+	}
+
+	if relayedURI != nil {
+		// We've already relayed this! Nothing to do.
+		log.Tracef(ctx, "already relayed %s with %s", statusURI, relayURI)
+		return nil
+	}
+
+	// Get all followers of this relay.
+	followers, err := f.state.DB.GetAccountFollowers(ctx,
+		relayActorAcct.ID,
+		nil, // paging
+	)
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		return gtserror.Newf("db error getting followers: %w", err)
+	}
+
+	// Gather message destination inboxes.
+	inboxes := make([]*url.URL, 0, len(followers))
+	for _, follow := range followers {
+		followAcct := follow.Account
+		if follow.Account.IsLocal() {
+			// Don't add to
+			// inboxes list.
+			continue
+		}
+
+		if followAcct.Domain == boost.BoostOfAccount.Domain {
+			// Don't relay status
+			// back to own host.
+			continue
+		}
+
+		// For inbox, prefer shared
+		// inbox URI, fall back to
+		// individual inbox URI.
+		inboxStr := cmp.Or(
+			util.PtrOrZero(followAcct.SharedInboxURI),
+			followAcct.InboxURI,
+		)
+		inbox, err := url.Parse(inboxStr)
+		if err != nil {
+			log.Errorf(ctx, "invalid inbox for %s: %v", followAcct.URI, err)
+			continue
+		}
+		inboxes = append(inboxes, inbox)
+	}
+
+	// Deduplicate inboxes to account for
+	// any shared inboxes (multiple actors
+	// on the same instance for example).
+	inboxes = xslices.DeduplicateFunc(
+		inboxes,
+		func(v *url.URL) string { return v.String() },
+	)
+
+	// Create the ActivityStreams Announce.
+	announce, err := f.converter.BoostToAS(ctx, boost)
+	if err != nil {
+		return gtserror.Newf("error converting boost to AS: %w", err)
+	}
+
+	// Serialize the activity once.
+	m, err := ap.Serialize(announce)
+	if err != nil {
+		return gtserror.Newf("error serializing %T: %w", announce, err)
+	}
+
+	// Fetch transport to do deliveries.
+	tsport, err := f.TransportController().NewTransport(
+		relayActorAcct.PublicKeyURI,
+		relayActorAcct.PrivateKey,
+	)
+	if err != nil {
+		return gtserror.Newf("couldn't create transport: %w", err)
+	}
+
+	// Prepare requests and add them to delivery queues.
+	//
+	// TODO: we might want to create a separate tuneable queue
+	// for relay deliveries, as lots of connections means lots of
+	// relaying, and that might clog up the normal queue for others.
+	if err := tsport.BatchDeliver(ctx, m, inboxes); err != nil {
+		return gtserror.Newf("error preparing delivery: %w", err)
+	}
+
+	// Store the relayedURI.
+	// ID reflects when we relayed it.
+	relayedURI = &gtsmodel.RelayedURI{
+		ID:        id.NewULID(),
+		RelayURI:  relayURI,
+		StatusURI: statusURI,
+		BoostURI:  boost.URI,
+	}
+	return f.state.DB.PutRelayedURI(ctx, relayedURI)
 }
 
 func (f *federate) DeleteAccount(ctx context.Context, account *gtsmodel.Account) error {
@@ -258,7 +457,7 @@ func (f *federate) CreateStatus(ctx context.Context, status *gtsmodel.Status) er
 	// (ie., public or unlisted), forward Create to
 	// push relays configured by the status author.
 	if status.ToOrCcPublic() {
-		if err := f.RelayForwarding(
+		if err := f.PushToRelays(
 			ctx, status, create,
 		); err != nil {
 			return gtserror.Newf(
@@ -359,7 +558,7 @@ func (f *federate) DeleteStatus(ctx context.Context, status *gtsmodel.Status) er
 	// (ie., public or unlisted), forward Delete to
 	// push relays configured by the status author.
 	if status.ToOrCcPublic() {
-		if err := f.RelayForwarding(
+		if err := f.PushToRelays(
 			ctx, status, delete,
 		); err != nil {
 			return gtserror.Newf(
@@ -419,7 +618,7 @@ func (f *federate) UpdateStatus(ctx context.Context, status *gtsmodel.Status) er
 	// (ie., public or unlisted), forward Update to
 	// push relays configured by the status author.
 	if status.ToOrCcPublic() {
-		if err := f.RelayForwarding(
+		if err := f.PushToRelays(
 			ctx, status, update,
 		); err != nil {
 			return gtserror.Newf(
@@ -700,13 +899,10 @@ func (f *federate) AcceptFollow(ctx context.Context, follow *gtsmodel.Follow) er
 	}
 
 	// Create a new Accept.
-	// todo: tc.FollowToASAccept
 	accept := streams.NewActivityStreamsAccept()
 
 	// Set the requestee as Actor of the Accept.
-	acceptActorProp := streams.NewActivityStreamsActorProperty()
-	acceptActorProp.AppendIRI(acceptingAccountIRI)
-	accept.SetActivityStreamsActor(acceptActorProp)
+	ap.AppendActorIRIs(accept, acceptingAccountIRI)
 
 	// Set recreated Follow as the 'object' property.
 	//
@@ -718,9 +914,7 @@ func (f *federate) AcceptFollow(ctx context.Context, follow *gtsmodel.Follow) er
 	accept.SetActivityStreamsObject(acceptObject)
 
 	// Address the Accept To the Follow requester.
-	acceptTo := streams.NewActivityStreamsToProperty()
-	acceptTo.AppendIRI(requestingAccountIRI)
-	accept.SetActivityStreamsTo(acceptTo)
+	ap.AppendTo(accept, requestingAccountIRI)
 
 	// Send the Accept via the Actor's outbox.
 	if _, err := f.FederatingActor().Send(
@@ -778,13 +972,10 @@ func (f *federate) RejectFollow(ctx context.Context, follow *gtsmodel.Follow) er
 	}
 
 	// Create a new Reject.
-	// todo: tc.FollowRequestToASReject
 	reject := streams.NewActivityStreamsReject()
 
 	// Set the requestee as Actor of the Reject.
-	rejectActorProp := streams.NewActivityStreamsActorProperty()
-	rejectActorProp.AppendIRI(rejectingAccountIRI)
-	reject.SetActivityStreamsActor(rejectActorProp)
+	ap.AppendActorIRIs(reject, rejectingAccountIRI)
 
 	// Set recreated Follow as the 'object' property.
 	//
@@ -796,9 +987,7 @@ func (f *federate) RejectFollow(ctx context.Context, follow *gtsmodel.Follow) er
 	reject.SetActivityStreamsObject(rejectObject)
 
 	// Address the Reject To the Follow requester.
-	rejectTo := streams.NewActivityStreamsToProperty()
-	rejectTo.AppendIRI(requestingAccountIRI)
-	reject.SetActivityStreamsTo(rejectTo)
+	ap.AppendTo(reject, requestingAccountIRI)
 
 	// Send the Reject via the Actor's outbox.
 	if _, err := f.FederatingActor().Send(

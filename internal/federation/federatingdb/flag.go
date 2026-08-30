@@ -42,8 +42,8 @@ func (f *DB) Flag(ctx context.Context, flaggable vocab.ActivityStreamsFlag) erro
 		return nil // Already processed.
 	}
 
-	requesting := activityContext.requestingAcct
-	receiving := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	// Convert received AS flag type to internal report model.
 	report, err := f.converter.ASFlagToReport(ctx, flaggable)
@@ -83,8 +83,8 @@ func (f *DB) Flag(ctx context.Context, flaggable vocab.ActivityStreamsFlag) erro
 		APObjectType:   ap.ActivityFlag,
 		APActivityType: ap.ActivityCreate,
 		GTSModel:       report,
-		Receiving:      receiving,
 		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil

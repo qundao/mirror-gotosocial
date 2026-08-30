@@ -19,27 +19,22 @@ package federatingdb_test
 
 import (
 	"context"
-	"testing"
 	"time"
 
-	"code.superseriousbusiness.org/gotosocial/internal/admin"
-	"code.superseriousbusiness.org/gotosocial/internal/db"
-	"code.superseriousbusiness.org/gotosocial/internal/federation/federatingdb"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
-	"code.superseriousbusiness.org/gotosocial/internal/state"
-	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
 
+const (
+	rMediaPath    = "../../../testrig/media"
+	rTemplatePath = "../../../web/template"
+)
+
 type FederatingDBTestSuite struct {
 	suite.Suite
-	db           db.DB
-	tc           *typeutils.Converter
-	federatingDB *federatingdb.DB
-	state        state.State
 
 	testTokens       map[string]*gtsmodel.Token
 	testApplications map[string]*gtsmodel.Application
@@ -48,14 +43,8 @@ type FederatingDBTestSuite struct {
 	testAttachments  map[string]*gtsmodel.MediaAttachment
 	testStatuses     map[string]*gtsmodel.Status
 	testBlocks       map[string]*gtsmodel.Block
+	testRelayActors  map[string]*gtsmodel.RelayActor
 	testActivities   map[string]testrig.ActivityWithSignature
-}
-
-func (suite *FederatingDBTestSuite) getFederatorMsg(timeout time.Duration) (*messages.FromFediAPI, bool) {
-	ctx := suite.T().Context()
-	ctx, cncl := context.WithTimeout(ctx, timeout)
-	defer cncl()
-	return suite.state.Workers.Federator.Queue.PopCtx(ctx)
 }
 
 func (suite *FederatingDBTestSuite) SetupSuite() {
@@ -66,34 +55,21 @@ func (suite *FederatingDBTestSuite) SetupSuite() {
 	suite.testAttachments = testrig.NewTestAttachments()
 	suite.testStatuses = testrig.NewTestStatuses()
 	suite.testBlocks = testrig.NewTestBlocks()
+	suite.testRelayActors = testrig.NewTestRelayActors()
 }
 
 func (suite *FederatingDBTestSuite) SetupTest() {
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
-
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
-
-	suite.db = testrig.NewTestDB(&suite.state)
-
 	suite.testActivities = testrig.NewTestActivities(suite.testAccounts)
-	suite.tc = typeutils.NewConverter(&suite.state)
-
-	suite.federatingDB = testrig.NewTestFederatingDB(&suite.state)
-	testrig.StandardDBSetup(suite.db, suite.testAccounts)
-
-	suite.state.DB = suite.db
-	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 }
 
-func (suite *FederatingDBTestSuite) TearDownTest() {
-	testrig.StandardDBTeardown(suite.db)
-	testrig.StopWorkers(&suite.state)
-}
-
-func createTestContext(t *testing.T, receivingAccount *gtsmodel.Account, requestingAccount *gtsmodel.Account) context.Context {
-	ctx := gtscontext.SetReceivingAccount(t.Context(), receivingAccount)
-	ctx = gtscontext.SetRequestingAccount(ctx, requestingAccount)
+func createTestContext(
+	ctx context.Context,
+	requester *gtsmodel.Account,
+	receiver *gtsmodel.Account,
+) context.Context {
+	ctx = gtscontext.SetRequestingAccount(ctx, requester)
+	ctx = gtscontext.SetReceivingAccount(ctx, receiver)
 	return ctx
 }

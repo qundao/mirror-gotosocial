@@ -41,9 +41,6 @@ import (
 //   - status passes visibility checks
 //   - status passes interaction policy checks
 //
-// If status is not permitted to be stored, the function
-// will clean up after itself by removing the status.
-//
 // If status is a reply or a boost, and the author of
 // the given status is only permitted to reply or boost
 // pending approval, then "PendingApproval" will be set
@@ -60,9 +57,7 @@ import (
 func (d *Dereferencer) isPermittedStatus(
 	ctx context.Context,
 	requestUser string,
-	existing *gtsmodel.Status,
 	status *gtsmodel.Status,
-	isNew bool,
 ) (
 	permitted bool, // is permitted?
 	err error,
@@ -97,15 +92,6 @@ func (d *Dereferencer) isPermittedStatus(
 		// In all other cases
 		// permit this status.
 		permitted = true
-	}
-
-	if !permitted && !isNew {
-		log.Infof(ctx, "deleting unpermitted: %s", existing.URI)
-
-		// Delete existing status from database as is no longer permitted.
-		if err := d.state.DB.DeleteStatus(ctx, existing, true); err != nil {
-			log.Errorf(ctx, "error deleting %s after permissivity fail: %v", existing.URI, err)
-		}
 	}
 
 	return
@@ -192,7 +178,7 @@ func (d *Dereferencer) isPermittedReply(
 
 	// We have the replied-to status; ensure it's fully populated.
 	if err := d.state.DB.PopulateStatus(ctx, parent); err != nil {
-		return false, gtserror.Newf("error populating status %s: %w", reply.ID, err)
+		return false, gtserror.Newf("error populating status %s: %w", parent.ID, err)
 	}
 
 	// Boost wrapper statuses

@@ -720,3 +720,21 @@ func (r *relayDB) DeleteRelayMatcher(ctx context.Context, id string) error {
 	r.state.Caches.DB.RelayMatcher.Invalidate("ID", id)
 	return nil
 }
+
+func (r *relayDB) PutRelayedURI(ctx context.Context, relayedURI *gtsmodel.RelayedURI) error {
+	_, err := r.db.NewInsert().Model(relayedURI).Exec(ctx)
+	return err
+}
+
+func (r *relayDB) GetRelayedURI(ctx context.Context, relayURI string, statusURI string) (*gtsmodel.RelayedURI, error) {
+	relayedURI := new(gtsmodel.RelayedURI)
+	if err := r.db.
+		NewSelect().
+		Model(relayedURI).
+		Where("? = ?", bun.Ident("relay_uri"), relayURI).
+		Where("? = ?", bun.Ident("status_uri"), statusURI).
+		Scan(ctx); err != nil {
+		return nil, err
+	}
+	return relayedURI, nil
+}

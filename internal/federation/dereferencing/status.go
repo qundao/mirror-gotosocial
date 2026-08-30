@@ -515,14 +515,27 @@ func (d *Dereferencer) enrichAndStoreStatus(
 	}
 
 	// Check if this is a permitted status we should accept.
-	// Function also sets "PendingApproval" bool as necessary,
-	// and handles removal of existing statuses no longer permitted.
-	permit, err := d.isPermittedStatus(ctx, requestUser, status, latestStatus, isNew)
+	// Function also sets "PendingApproval" bool as necessary.
+	permit, err := d.isPermittedStatus(ctx, requestUser, latestStatus)
 	if err != nil {
 		return nil, nil, isNew, gtserror.Newf("error checking permissibility for status %s: %w", uri, err)
 	}
 
-	if !permit {
+	switch {
+	case permit:
+		// No problem.
+
+	case !permit && !isNew:
+		// Delete existing status from database
+		// as it no longer permitted after update.
+		log.Infof(ctx, "deleting unpermitted: %s", status.URI)
+		if err := d.state.DB.DeleteStatus(ctx, status, true); err != nil {
+			log.Errorf(ctx, "error deleting %s after permissivity fail: %v", status.URI, err)
+		}
+
+		fallthrough // to return error.
+
+	case !permit:
 		// Return a checkable error type that can be ignored.
 		err := gtserror.Newf("dropping unpermitted status: %s", uri)
 		return nil, nil, isNew, gtserror.SetNotPermitted(err)

@@ -18,6 +18,7 @@
 package dereferencing_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -36,14 +37,23 @@ import (
 var instantFreshness = util.Ptr(dereferencing.FreshnessWindow(0))
 
 type StatusTestSuite struct {
-	DereferencerStandardTestSuite
+	DereferencerTestSuite
 }
 
 func (suite *StatusTestSuite) TestDereferenceSimpleStatus() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// Account to dereference on behalf of.
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	statusURL := testrig.URLMustParse("https://unknown-instance.com/users/brand_new_person/statuses/01FE4NTHKWW7THT67EF10EB839")
-	status, _, err := suite.dereferencer.GetStatusByURI(suite.T().Context(), fetchingAccount.Username, statusURL)
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount.Username, statusURL)
 	suite.NoError(err)
 	suite.NotNil(status)
 
@@ -58,13 +68,13 @@ func (suite *StatusTestSuite) TestDereferenceSimpleStatus() {
 	suite.Equal(ap.ObjectNote, status.ActivityStreamsType)
 
 	// status should be in the database
-	dbStatus, err := suite.db.GetStatusByURI(suite.T().Context(), status.URI)
+	dbStatus, err := testStructs.State.DB.GetStatusByURI(ctx, status.URI)
 	suite.NoError(err)
 	suite.Equal(status.ID, dbStatus.ID)
 	suite.True(dbStatus.Flags.Federated())
 
 	// account should be in the database now too
-	account, err := suite.db.GetAccountByURI(suite.T().Context(), status.AccountURI)
+	account, err := testStructs.State.DB.GetAccountByURI(ctx, status.AccountURI)
 	suite.NoError(err)
 	suite.NotNil(account)
 	suite.True(*account.Discoverable)
@@ -78,10 +88,19 @@ func (suite *StatusTestSuite) TestDereferenceSimpleStatus() {
 }
 
 func (suite *StatusTestSuite) TestDereferenceStatusWithMention() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// Account to dereference on behalf of.
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	statusURL := testrig.URLMustParse("https://unknown-instance.com/users/brand_new_person/statuses/01FE5Y30E3W4P7TRE0R98KAYQV")
-	status, _, err := suite.dereferencer.GetStatusByURI(suite.T().Context(), fetchingAccount.Username, statusURL)
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount.Username, statusURL)
 	suite.NoError(err)
 	suite.NotNil(status)
 
@@ -96,13 +115,13 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithMention() {
 	suite.Equal(ap.ObjectNote, status.ActivityStreamsType)
 
 	// status should be in the database
-	dbStatus, err := suite.db.GetStatusByURI(suite.T().Context(), status.URI)
+	dbStatus, err := testStructs.State.DB.GetStatusByURI(ctx, status.URI)
 	suite.NoError(err)
 	suite.Equal(status.ID, dbStatus.ID)
 	suite.True(dbStatus.Flags.Federated())
 
 	// account should be in the database now too
-	account, err := suite.db.GetAccountByURI(suite.T().Context(), status.AccountURI)
+	account, err := testStructs.State.DB.GetAccountByURI(ctx, status.AccountURI)
 	suite.NoError(err)
 	suite.NotNil(account)
 	suite.True(*account.Discoverable)
@@ -116,7 +135,7 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithMention() {
 
 	// we should have a mention in the database
 	m := &gtsmodel.Mention{}
-	err = suite.db.GetWhere(suite.T().Context(), []db.Where{{Key: "status_id", Value: status.ID}}, m)
+	err = testStructs.State.DB.GetWhere(ctx, []db.Where{{Key: "status_id", Value: status.ID}}, m)
 	suite.NoError(err)
 	suite.NotNil(m)
 	suite.Equal(status.ID, m.StatusID)
@@ -127,10 +146,19 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithMention() {
 }
 
 func (suite *StatusTestSuite) TestDereferenceStatusWithTag() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// Account to dereference on behalf of.
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	statusURL := testrig.URLMustParse("https://unknown-instance.com/users/brand_new_person/statuses/01H641QSRS3TCXSVC10X4GPKW7")
-	status, _, err := suite.dereferencer.GetStatusByURI(suite.T().Context(), fetchingAccount.Username, statusURL)
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount.Username, statusURL)
 	suite.NoError(err)
 	suite.NotNil(status)
 
@@ -149,13 +177,13 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithTag() {
 	suite.Len(status.TagIDs, 1)
 
 	// status should be in the database
-	dbStatus, err := suite.db.GetStatusByURI(suite.T().Context(), status.URI)
+	dbStatus, err := testStructs.State.DB.GetStatusByURI(ctx, status.URI)
 	suite.NoError(err)
 	suite.Equal(status.ID, dbStatus.ID)
 	suite.True(dbStatus.Flags.Federated())
 
 	// account should be in the database now too
-	account, err := suite.db.GetAccountByURI(suite.T().Context(), status.AccountURI)
+	account, err := testStructs.State.DB.GetAccountByURI(ctx, status.AccountURI)
 	suite.NoError(err)
 	suite.NotNil(account)
 	suite.True(*account.Discoverable)
@@ -169,16 +197,25 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithTag() {
 
 	// we should have a tag in the database
 	t := &gtsmodel.Tag{}
-	err = suite.db.GetWhere(suite.T().Context(), []db.Where{{Key: "name", Value: "piss"}}, t)
+	err = testStructs.State.DB.GetWhere(ctx, []db.Where{{Key: "name", Value: "piss"}}, t)
 	suite.NoError(err)
 	suite.NotNil(t)
 }
 
 func (suite *StatusTestSuite) TestDereferenceStatusWithImageAndNoContent() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// Account to dereference on behalf of.
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	statusURL := testrig.URLMustParse("https://turnip.farm/users/turniplover6969/statuses/70c53e54-3146-42d5-a630-83c8b6c7c042")
-	status, _, err := suite.dereferencer.GetStatusByURI(suite.T().Context(), fetchingAccount.Username, statusURL)
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount.Username, statusURL)
 	suite.NoError(err)
 	suite.NotNil(status)
 
@@ -193,13 +230,13 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithImageAndNoContent() {
 	suite.Equal(ap.ObjectNote, status.ActivityStreamsType)
 
 	// status should be in the database
-	dbStatus, err := suite.db.GetStatusByURI(suite.T().Context(), status.URI)
+	dbStatus, err := testStructs.State.DB.GetStatusByURI(ctx, status.URI)
 	suite.NoError(err)
 	suite.Equal(status.ID, dbStatus.ID)
 	suite.True(dbStatus.Flags.Federated())
 
 	// account should be in the database now too
-	account, err := suite.db.GetAccountByURI(suite.T().Context(), status.AccountURI)
+	account, err := testStructs.State.DB.GetAccountByURI(ctx, status.AccountURI)
 	suite.NoError(err)
 	suite.NotNil(account)
 	suite.True(*account.Discoverable)
@@ -213,11 +250,20 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithImageAndNoContent() {
 
 	// we should have an attachment in the database
 	a := &gtsmodel.MediaAttachment{}
-	err = suite.db.GetWhere(suite.T().Context(), []db.Where{{Key: "status_id", Value: status.ID}}, a)
+	err = testStructs.State.DB.GetWhere(ctx, []db.Where{{Key: "status_id", Value: status.ID}}, a)
 	suite.NoError(err)
 }
 
 func (suite *StatusTestSuite) TestDereferenceStatusWithNonMatchingURI() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// Account to dereference on behalf of.
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	const (
@@ -227,12 +273,12 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithNonMatchingURI() {
 	)
 
 	// Create a copy of this remote account at alternative URI.
-	remoteStatus := suite.client.TestRemoteStatuses[remoteURI]
-	suite.client.TestRemoteStatuses[remoteAltURI] = remoteStatus
+	remoteStatus := testStructs.HTTPClient.TestRemoteStatuses[remoteURI]
+	testStructs.HTTPClient.TestRemoteStatuses[remoteAltURI] = remoteStatus
 
 	// Attempt to fetch account at alternative URI, it should fail!
-	fetchedStatus, _, err := suite.dereferencer.GetStatusByURI(
-		suite.T().Context(),
+	fetchedStatus, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(
+		ctx,
 		fetchingAccount.Username,
 		testrig.URLMustParse(remoteAltURI),
 	)
@@ -245,18 +291,24 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithNonMatchingURI() {
 }
 
 func (suite *StatusTestSuite) TestDereferencerRefreshStatusUpdated() {
-	ctx := suite.T().Context()
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
 
-	// The local account we will be fetching statuses as.
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// The local account we will be fetching statuses as.	// Account to dereference on behalf of.
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	// The test status in question that we will be dereferencing from "remote".
 	testURIStr := "https://unknown-instance.com/users/brand_new_person/statuses/01FE4NTHKWW7THT67EF10EB839"
 	testURI := testrig.URLMustParse(testURIStr)
-	testStatusable := suite.client.TestRemoteStatuses[testURIStr]
+	testStatusable := testStructs.HTTPClient.TestRemoteStatuses[testURIStr]
 
 	// Fetch the remote status first to load it into instance.
-	testStatus, statusable, err := suite.dereferencer.GetStatusByURI(ctx,
+	testStatus, statusable, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx,
 		fetchingAccount.Username,
 		testURI,
 	)
@@ -302,7 +354,7 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusUpdated() {
 		)
 
 		// Refresh with a given statusable to updated to edited copy.
-		latest, statusable, err := suite.dereferencer.RefreshStatus(ctx,
+		latest, statusable, err := testStructs.Federator.Dereferencer.RefreshStatus(ctx,
 			fetchingAccount.Username,
 			testStatus,
 			nil, // NOTE: can provide testStatusable here to test as being received (not deref'd)
@@ -350,18 +402,24 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusUpdated() {
 }
 
 func (suite *StatusTestSuite) TestDereferencerRefreshStatusRace() {
-	ctx := suite.T().Context()
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
 
-	// The local account we will be fetching statuses as.
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// The local account we will be fetching statuses as.	// Account to dereference on behalf of.
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	// The test status in question that we will be dereferencing from "remote".
 	testURIStr := "https://unknown-instance.com/users/brand_new_person/statuses/01FE4NTHKWW7THT67EF10EB839"
 	testURI := testrig.URLMustParse(testURIStr)
-	testStatusable := suite.client.TestRemoteStatuses[testURIStr]
+	testStatusable := testStructs.HTTPClient.TestRemoteStatuses[testURIStr]
 
 	// Fetch the remote status first to load it into instance.
-	testStatus, statusable, err := suite.dereferencer.GetStatusByURI(ctx,
+	testStatus, statusable, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx,
 		fetchingAccount.Username,
 		testURI,
 	)
@@ -385,7 +443,7 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusRace() {
 	)
 
 	// Refresh with a given statusable to updated to edited copy.
-	afterEdit, statusable, err := suite.dereferencer.RefreshStatus(ctx,
+	afterEdit, statusable, err := testStructs.Federator.Dereferencer.RefreshStatus(ctx,
 		fetchingAccount.Username,
 		testStatus,
 		testStatusable,
@@ -434,7 +492,7 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusRace() {
 	// status. This should still successfully update based on our passed
 	// freshness window, but it *should* refetch the provided status to
 	// check for race shenanigans and realize that no edit has occurred.
-	afterBodge, statusable, err := suite.dereferencer.RefreshStatus(ctx,
+	afterBodge, statusable, err := testStructs.Federator.Dereferencer.RefreshStatus(ctx,
 		fetchingAccount.Username,
 		beforeEdit,
 		testStatusable,

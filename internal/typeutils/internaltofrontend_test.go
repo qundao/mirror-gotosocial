@@ -1743,7 +1743,7 @@ func (suite *InternalToFrontendTestSuite) TestInstanceV1ToFrontend() {
   "stats": {
     "domain_count": 4,
     "status_count": 24,
-    "user_count": 5
+    "user_count": 6
   },
   "thumbnail": "http://localhost:8080/assets/logo.webp",
   "contact_account": {

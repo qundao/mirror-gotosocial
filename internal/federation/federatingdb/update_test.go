@@ -18,11 +18,10 @@
 package federatingdb_test
 
 import (
+	"context"
 	"testing"
-	"time"
 
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
-	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
@@ -32,15 +31,21 @@ type UpdateTestSuite struct {
 }
 
 func (suite *UpdateTestSuite) TestUpdateNewMention() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	var (
-		ctx            = suite.T().Context()
 		update         = suite.testActivities["remote_account_2_status_1_update"]
 		receivingAcct  = suite.testAccounts["local_account_1"]
 		requestingAcct = suite.testAccounts["remote_account_2"]
 	)
 
-	ctx = gtscontext.SetReceivingAccount(ctx, receivingAcct)
-	ctx = gtscontext.SetRequestingAccount(ctx, requestingAcct)
+	ctx = createTestContext(ctx, requestingAcct, receivingAcct)
 
 	m, err := ap.Serialize(update.Activity)
 	if err != nil {
@@ -51,19 +56,16 @@ func (suite *UpdateTestSuite) TestUpdateNewMention() {
 	suite.T().Logf("Update:\n%s\n", out)
 
 	note := update.Activity.GetActivityStreamsObject().At(0).GetActivityStreamsNote()
-	if err := suite.federatingDB.Update(ctx, note); err != nil {
+	if err := testStructs.Federator.FederatingDB().Update(ctx, note); err != nil {
 		suite.FailNow(err.Error())
 	}
 
-	// Should be a message heading to the processor.
-	msg, ok := suite.getFederatorMsg(5 * time.Second)
-	if !ok {
-		suite.FailNow("no federator message after 5s")
+	// Wait for the update.
+	if !testrig.WaitFor(func() bool {
+		
+	}) {
+		suite.FailNow("waiting for update")
 	}
-
-	suite.Equal(ap.ObjectNote, msg.APObjectType)
-	suite.Equal(ap.ActivityUpdate, msg.APActivityType)
-	suite.NotNil(msg.APObject)
 }
 
 func TestUpdateTestSuite(t *testing.T) {

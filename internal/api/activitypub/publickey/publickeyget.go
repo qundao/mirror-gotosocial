@@ -18,29 +18,33 @@
 package publickey
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
 	"code.superseriousbusiness.org/gopkg/httputil"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
+	"code.superseriousbusiness.org/gotosocial/internal/uris"
 )
 
-// PublicKeyGETHandler should be served at eg https://example.org/users/:username/main-key.
+// PublicKeyGETHandler should be served at eg https://example.org/{users|relays}/:username/main-key.
 //
 // The goal here is to return a MINIMAL activitypub representation of an account
 // in the form of a vocab.ActivityStreamsPerson. The account will only contain the id,
 // public key, username, and type of the account.
 func (m *Module) PublicKeyGETHandler(c *httputil.Context) {
 
-	// usernames on our instance are always lowercase
-	username := c.PathValue(apiutil.UsernameKey)
-	username = strings.ToLower(username)
-	if username == "" {
-		err := errors.New("no username specified in request")
-		apiutil.ErrorHandler(c, m.templates, gtserror.NewErrorBadRequest(err, err.Error()))
+	// Get username from request params.
+	username, errWithCode := apiutil.ParseUsername(c.PathValue(apiutil.UsernameKey))
+	if errWithCode != nil {
 		return
+	}
+
+	// If this is a relay path, prefix the username with
+	// `relay.` to differentiate it from an ordinary user.
+	pathTrimmed := strings.TrimPrefix(c.R.URL.Path, "/")
+	if strings.HasPrefix(pathTrimmed, uris.RelaysPath) {
+		username = uris.RelayUsernamePrefix + username
 	}
 
 	contentType, err := apiutil.NegotiateAccept(c, apiutil.ActivityPubOrHTMLHeaders...)

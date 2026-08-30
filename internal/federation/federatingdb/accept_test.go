@@ -19,6 +19,7 @@ package federatingdb_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"testing"
 
@@ -30,16 +31,19 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const (
-	rMediaPath    = "../../../testrig/media"
-	rTemplatePath = "../../../web/template"
-)
-
 type AcceptTestSuite struct {
 	FederatingDBTestSuite
 }
 
 func (suite *AcceptTestSuite) TestAcceptRemoteReplyRequest() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	// Accept of a reply by
 	// brand_new_person to foss_satan.
 	const acceptJSON = `{
@@ -63,10 +67,10 @@ func (suite *AcceptTestSuite) TestAcceptRemoteReplyRequest() {
 }`
 
 	// The accept will be delivered by foss_satan to zork.
-	ctx := createTestContext(
-		suite.T(),
-		suite.testAccounts["local_account_1"],
+	ctx = createTestContext(
+		ctx,
 		suite.testAccounts["remote_account_1"],
+		suite.testAccounts["local_account_1"],
 	)
 
 	// Have zork follow foss_satan for this test,
@@ -79,7 +83,7 @@ func (suite *AcceptTestSuite) TestAcceptRemoteReplyRequest() {
 		TargetAccountID: "01F8MH5ZK5VRH73AKHQM6Y9VNX",
 		URI:             "http://localhost:8080/users/the_mighty_zork/follow/01G1TK3PQKFW1BQZ9WVYRTFECK",
 	}
-	if err := suite.state.DB.PutFollow(ctx, follow); err != nil {
+	if err := testStructs.State.DB.PutFollow(ctx, follow); err != nil {
 		suite.FailNow(err.Error())
 	}
 
@@ -91,13 +95,12 @@ func (suite *AcceptTestSuite) TestAcceptRemoteReplyRequest() {
 	accept := t.(vocab.ActivityStreamsAccept)
 
 	// Process the accept.
-	if err := suite.federatingDB.Accept(ctx, accept); err != nil {
+	if err := testStructs.Federator.FederatingDB().Accept(ctx, accept); err != nil {
 		suite.FailNow(err.Error())
 	}
 
-	// There should be an accept msg
-	// heading to the processor now.
-	msg, ok := suite.state.Workers.Federator.Queue.PopCtx(ctx)
+	// There should be an accept msg heading to the processor now.
+	msg, ok := testStructs.State.Workers.Federator.Queue.PopCtx(ctx)
 	if !ok {
 		suite.FailNow("no message in queue")
 	}

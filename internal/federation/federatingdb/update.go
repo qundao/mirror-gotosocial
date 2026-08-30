@@ -52,15 +52,15 @@ func (f *DB) Update(ctx context.Context, asType vocab.Type) error {
 		return nil // Already processed.
 	}
 
-	requesting := activityContext.requestingAcct
-	receiving := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	if accountable, ok := ap.ToAccountable(asType); ok {
-		return f.updateAccountable(ctx, receiving, requesting, accountable)
+		return f.updateAccountable(ctx, requesting, receiving, accountable)
 	}
 
 	if statusable, ok := ap.ToStatusable(asType); ok {
-		return f.updateStatusable(ctx, receiving, requesting, statusable)
+		return f.updateStatusable(ctx, requesting, receiving, statusable)
 	}
 
 	log.Debugf(ctx, "unhandled object type: %T", asType)
@@ -69,8 +69,8 @@ func (f *DB) Update(ctx context.Context, asType vocab.Type) error {
 
 func (f *DB) updateAccountable(
 	ctx context.Context,
-	receiving *gtsmodel.Account,
 	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	accountable ap.Accountable,
 ) error {
 	// Extract AP URI of the updated Accountable model.
@@ -119,8 +119,8 @@ func (f *DB) updateAccountable(
 		APActivityType: ap.ActivityUpdate,
 		GTSModel:       requesting,
 		APObject:       accountable,
-		Receiving:      receiving,
 		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -128,8 +128,8 @@ func (f *DB) updateAccountable(
 
 func (f *DB) updateStatusable(
 	ctx context.Context,
-	receiving *gtsmodel.Account,
 	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	statusable ap.Statusable,
 ) error {
 	// Extract AP URI of the updated model.
@@ -161,8 +161,8 @@ func (f *DB) updateStatusable(
 		// We haven't seen this status before, be
 		// lenient and handle as a CREATE event.
 		return f.createStatusable(ctx,
-			receiving,
 			requesting,
+			receiving,
 			statusable,
 			forwarded,
 		)
@@ -181,8 +181,8 @@ func (f *DB) updateStatusable(
 		APActivityType: ap.ActivityUpdate,
 		GTSModel:       status, // original status
 		APObject:       (ap.Statusable)(statusable),
-		Receiving:      receiving,
 		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil

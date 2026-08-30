@@ -20,14 +20,18 @@ package federatingdb
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 
+	"code.superseriousbusiness.org/activity/pub"
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
 	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
+	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
@@ -149,14 +153,13 @@ func (f *DB) collectIRIs(_ context.Context, iris []*url.URL) (vocab.ActivityStre
 // to an inbox, and the account who received
 // the request in their inbox.
 type activityContext struct {
+	// The account whose keyId was used
+	// to POST a request to the inbox.
+	requesting *gtsmodel.Account
 
 	// The account that owns the inbox
 	// or URI being interacted with.
-	receivingAcct *gtsmodel.Account
-
-	// The account whose keyId was used
-	// to POST a request to the inbox.
-	requestingAcct *gtsmodel.Account
+	receiving *gtsmodel.Account
 
 	// Whether this is an internal request,
 	// ie., one originating not from the
@@ -174,20 +177,20 @@ type activityContext struct {
 // context.Context passed in to one of the
 // federatingdb functions.
 func getActivityContext(ctx context.Context) activityContext {
-	receivingAcct := gtscontext.ReceivingAccount(ctx)
-	requestingAcct := gtscontext.RequestingAccount(ctx)
+	receiving := gtscontext.ReceivingAccount(ctx)
+	requesting := gtscontext.RequestingAccount(ctx)
 
 	// If the receiving account wasn't set on
 	// the context, that means this request
 	// didn't pass through the fedi API, but
 	// came from inside the instance as the
 	// result of a local activity.
-	internal := receivingAcct == nil
+	internal := receiving == nil
 
 	return activityContext{
-		receivingAcct:  receivingAcct,
-		requestingAcct: requestingAcct,
-		internal:       internal,
+		requesting: requesting,
+		receiving:  receiving,
+		internal:   internal,
 	}
 }
 
@@ -222,15 +225,15 @@ func (s Serialize) String() string {
 // relevant to the receiver, and passing spam checks.
 func (f *DB) statusableOK(
 	ctx context.Context,
-	receiver *gtsmodel.Account,
-	requester *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	statusable ap.Statusable,
 ) (bool, error) {
 	// Check whether this status is both
 	// relevant, and doesn't look like spam.
 	err := f.spamFilter.StatusableOK(ctx,
-		receiver,
-		requester,
+		requesting,
+		receiving,
 		statusable,
 	)
 
@@ -265,4 +268,66 @@ func (f *DB) statusableOK(
 		// A real error has occurred.
 		return false, gtserror.Newf("error checking relevancy/spam: %w", err)
 	}
+}
+
+// Returns true if at least one relay subscription
+// on this instance targets the given actor URI.
+func (f *DB) relaySubscribedToActor(
+	ctx context.Context,
+	actorURI string,
+) (bool, error) {
+	subscriptions, err := f.state.DB.GetRelaySubscriptionsByActorURI(ctx, actorURI)
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		return false, gtserror.Newf("db error getting relay subscriptions for actor URI %s: %w", actorURI, err)
+	}
+	return len(subscriptions) > 0, nil
+}
+
+// redirectObjectToActorURI checks if the object of the
+// given withObject is the ActivityPub Public URI. If so,
+// it replaces the object IRI with the AP URI of the relay
+// actor instead, to better reflect the intended object
+// of the activity, and returns true.
+//
+// This is needed because Mastodon and Misskey send Follows
+// to relays targeting the Public URI, instead of the actor.
+func (f *DB) redirectObjectToActorURI(
+	withObject ap.WithObject,
+	relayActorAcct *gtsmodel.Account,
+) (
+	redirected bool,
+	err error,
+) {
+	objectIRI, err := ap.GetOneObjectIRI(withObject)
+	if err != nil {
+		// No valid object URI set.
+		err = gtserror.SetMalformed(err)
+		err = gtserror.WrapWithCode(http.StatusBadRequest, err)
+		return
+	}
+
+	if objectIRI.String() != pub.PublicActivityPubIRI {
+		// Nothing to do.
+		return
+	}
+
+	relayActorURI, err := url.Parse(relayActorAcct.URI)
+	if err != nil {
+		err = gtserror.Newf("error parsing relay actor URI: %w", err)
+		return
+	}
+
+	// Replace the object IRI
+	// with the relay actor URI.
+	withObject.SetActivityStreamsObject(
+		func() vocab.ActivityStreamsObjectProperty {
+			objectProp := streams.NewActivityStreamsObjectProperty()
+			objectProp.AppendIRI(relayActorURI)
+			return objectProp
+		}(),
+	)
+
+	// Indicate we redirected.
+	redirected = true
+	return
 }
