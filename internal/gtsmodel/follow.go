@@ -164,6 +164,7 @@ type Follow struct {
 	TargetAccount *Account `bun:"-"`
 
 	// Flags controlling Follow behavior.
+	// Default value of 2 = show reblogs.
 	Flags FollowFlags `bun:",notnull,default:2"`
 }
 
@@ -194,5 +195,6 @@ type FollowRequest struct {
 	TargetAccount *Account `bun:"-"`
 
 	// Flags controlling Follow behavior.
+	// Default value of 2 = show reblogs.
 	Flags FollowFlags `bun:",notnull,default:2"`
 }
