@@ -168,8 +168,6 @@ func (suite *RelationshipTestSuite) TestGetFollowBy() {
 		// Clear database-set fields.
 		f1.CreatedAt = time.Time{}
 		f2.CreatedAt = time.Time{}
-		f1.UpdatedAt = time.Time{}
-		f2.UpdatedAt = time.Time{}
 
 		return reflect.DeepEqual(f1, f2)
 	}
@@ -280,8 +278,6 @@ func (suite *RelationshipTestSuite) TestGetFollowRequestBy() {
 		// Clear database-set fields.
 		f1.CreatedAt = time.Time{}
 		f2.CreatedAt = time.Time{}
-		f1.UpdatedAt = time.Time{}
-		f2.UpdatedAt = time.Time{}
 
 		return reflect.DeepEqual(f1, f2)
 	}

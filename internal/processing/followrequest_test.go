@@ -46,7 +46,6 @@ func (suite *FollowRequestTestSuite) TestFollowRequestAccept() {
 	fr := &gtsmodel.FollowRequest{
 		ID:              "01FJ1S8DX3STJJ6CEYPMZ1M0R3",
 		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
 		URI:             fmt.Sprintf("%s/follow/01FJ1S8DX3STJJ6CEYPMZ1M0R3", targetAccount.URI),
 		AccountID:       targetAccount.ID,
 		TargetAccountID: requestingAccount.ID,
@@ -132,7 +131,6 @@ func (suite *FollowRequestTestSuite) TestFollowRequestReject() {
 	fr := &gtsmodel.FollowRequest{
 		ID:              "01FJ1S8DX3STJJ6CEYPMZ1M0R3",
 		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
 		URI:             fmt.Sprintf("%s/follow/01FJ1S8DX3STJJ6CEYPMZ1M0R3", targetAccount.URI),
 		AccountID:       targetAccount.ID,
 		TargetAccountID: requestingAccount.ID,

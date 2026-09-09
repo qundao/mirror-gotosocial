@@ -312,7 +312,6 @@ func (suite *StatusMuteTestSuite) TestMutedByDomainLimit() {
 	follow := &gtsmodel.Follow{
 		ID:              "01K4STEH5NWAXBZ4TFNGQQQ984",
 		CreatedAt:       testrig.TimeMustParse("2022-05-14T13:21:09+02:00"),
-		UpdatedAt:       testrig.TimeMustParse("2022-05-14T13:21:09+02:00"),
 		AccountID:       requester.ID,
 		TargetAccountID: status.AccountID,
 		URI:             "http://localhost:8080/users/the_mighty_zork/follow/01G1TK3PQKFW1BQZ9WVYRTFECK",

@@ -46,7 +46,6 @@ func (suite *RejectTestSuite) TestRejectFollowRequest() {
 	fr := &gtsmodel.FollowRequest{
 		ID:        "01FJ1S8DX3STJJ6CEYPMZ1M0R3",
 		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
 		URI: uris.GenerateURIForFollow(
 			uris.UsersPath,
 			followingAccount.Username,

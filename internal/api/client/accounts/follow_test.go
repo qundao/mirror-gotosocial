@@ -124,7 +124,6 @@ func (suite *FollowTestSuite) testGetFollowersPage(limit int, direction string) 
 		err := suite.db.PutFollow(ctx, &gtsmodel.Follow{
 			ID:              id,
 			CreatedAt:       now,
-			UpdatedAt:       now,
 			URI:             fmt.Sprintf("%s/follow/%s", account.URI, id),
 			AccountID:       account.ID,
 			TargetAccountID: targetAccount.ID,
@@ -326,7 +325,6 @@ func (suite *FollowTestSuite) testGetFollowingPage(limit int, direction string) 
 		err := suite.db.PutFollow(ctx, &gtsmodel.Follow{
 			ID:              id,
 			CreatedAt:       now,
-			UpdatedAt:       now,
 			URI:             fmt.Sprintf("%s/follow/%s", account.URI, id),
 			AccountID:       account.ID,
 			TargetAccountID: targetAccount.ID,

@@ -83,7 +83,6 @@ func (suite *FederatingActorTestSuite) TestSendRemoteFollower() {
 	err := suite.state.DB.Put(ctx, &gtsmodel.Follow{
 		ID:              "01G1TRWV4AYCDBX5HRWT2EVBCV",
 		CreatedAt:       testrig.TimeMustParse("2022-06-02T12:22:21+02:00"),
-		UpdatedAt:       testrig.TimeMustParse("2022-06-02T12:22:21+02:00"),
 		AccountID:       testRemoteAccount.ID,
 		TargetAccountID: testAccount.ID,
 		URI:             "http://fossbros-anonymous.io/users/foss_satan/follows/01G1TRWV4AYCDBX5HRWT2EVBCV",

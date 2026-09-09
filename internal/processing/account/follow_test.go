@@ -107,7 +107,6 @@ func (suite *FollowTestSuite) TestUpdateExistingFollowReqChangeNotify() {
 	followReq := &gtsmodel.FollowRequest{
 		ID:              "01F8PY8RHWRQZV038T4E8T9YK8",
 		CreatedAt:       testrig.TimeMustParse("2022-05-14T16:21:09+02:00"),
-		UpdatedAt:       testrig.TimeMustParse("2022-05-14T16:21:09+02:00"),
 		AccountID:       requestingAcct.ID,
 		Account:         requestingAcct,
 		TargetAccountID: targetAcct.ID,

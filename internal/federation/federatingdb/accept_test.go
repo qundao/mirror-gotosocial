@@ -74,7 +74,6 @@ func (suite *AcceptTestSuite) TestAcceptRemoteReplyRequest() {
 	follow := &gtsmodel.Follow{
 		ID:              "01K4STEH5NWAXBZ4TFNGQQQ984",
 		CreatedAt:       testrig.TimeMustParse("2022-05-14T13:21:09+02:00"),
-		UpdatedAt:       testrig.TimeMustParse("2022-05-14T13:21:09+02:00"),
 		AccountID:       "01F8MH1H7YV1Z7D2C8K2730QBF",
 		TargetAccountID: "01F8MH5ZK5VRH73AKHQM6Y9VNX",
 		URI:             "http://localhost:8080/users/the_mighty_zork/follow/01G1TK3PQKFW1BQZ9WVYRTFECK",

@@ -47,7 +47,6 @@ func (suite *GetOutgoingTestSuite) TestGetOutgoing() {
 	fr := &gtsmodel.FollowRequest{
 		ID:              "01JWKX18JFKWXKXK5FSKVM4HDP",
 		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
 		URI:             fmt.Sprintf("%s/follow/01JWKX18JFKWXKXK5FSKVM4HDP", requestingAccount.URI),
 		AccountID:       requestingAccount.ID,
 		TargetAccountID: targetAccount.ID,
@@ -158,7 +157,6 @@ func (suite *GetOutgoingTestSuite) testGetOutgoingPage(limit int, direction stri
 		err := suite.db.PutFollowRequest(ctx, &gtsmodel.FollowRequest{
 			ID:              id,
 			CreatedAt:       now,
-			UpdatedAt:       now,
 			URI:             fmt.Sprintf("%s/follow/%s", requestingAccount.URI, id),
 			AccountID:       requestingAccount.ID,
 			TargetAccountID: targetAccount.ID,
