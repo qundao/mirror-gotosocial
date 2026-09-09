@@ -81,7 +81,7 @@ func get(t xunsafe.TypeIter) (fn Mangler) {
 
 		// Wrap the mangler func to prepend type pointer.
 		fn = func(buf []byte, ptr unsafe.Pointer) []byte {
-			buf = append_uint64(buf, uint64(uptr))
+			buf = append_uint(buf, uint64(uptr))
 			return mng(buf, ptr)
 		}
 	}()
@@ -108,7 +108,7 @@ func get(t xunsafe.TypeIter) (fn Mangler) {
 		return mangle_int
 	}
 
-	// Get func for type kind.
+	// Get func for kind.
 	switch t.Type.Kind() {
 	case reflect.Pointer:
 		return derefPointerType(t)
@@ -118,15 +118,14 @@ func get(t xunsafe.TypeIter) (fn Mangler) {
 		return iterArrayType(t)
 	case reflect.Slice:
 		return iterSliceType(t)
-	case reflect.Map:
-		return iterMapType(t)
 	case reflect.String:
 		return mangle_string
 	case reflect.Bool:
 		return mangle_bool
 	case reflect.Int,
 		reflect.Uint,
-		reflect.Uintptr:
+		reflect.Uintptr,
+		reflect.UnsafePointer:
 		return mangle_int
 	case reflect.Int8, reflect.Uint8:
 		return mangle_8bit

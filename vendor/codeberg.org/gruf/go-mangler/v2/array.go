@@ -40,12 +40,8 @@ func iterArrayType(t xunsafe.TypeIter) Mangler {
 				buf = append(buf, ',')
 			}
 
-			if n > 0 {
-				// Drop final comma.
-				buf = buf[:len(buf)-1]
-			}
-
-			return buf
+			// Drop final comma.
+			return buf[:len(buf)-1]
 		}
 	}
 }

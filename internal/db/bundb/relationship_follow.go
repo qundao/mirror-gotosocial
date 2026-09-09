@@ -21,7 +21,6 @@ import (
 	"context"
 	"errors"
 	"slices"
-	"time"
 
 	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gopkg/xslices"
@@ -227,12 +226,6 @@ func (r *relationshipDB) PutFollow(ctx context.Context, follow *gtsmodel.Follow)
 }
 
 func (r *relationshipDB) UpdateFollow(ctx context.Context, follow *gtsmodel.Follow, columns ...string) error {
-	follow.UpdatedAt = time.Now()
-	if len(columns) > 0 {
-		// If we're updating by column, ensure "updated_at" is included.
-		columns = append(columns, "updated_at")
-	}
-
 	return r.state.Caches.DB.Follow.Store(follow, func() error {
 		if _, err := r.db.NewUpdate().
 			Model(follow).

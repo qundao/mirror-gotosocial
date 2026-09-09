@@ -42,32 +42,31 @@ func derefPointerType(t xunsafe.TypeIter) Mangler {
 	}
 
 	return func(buf []byte, ptr unsafe.Pointer) []byte {
-		for i := int8(0); i < derefs; i++ {
+		var i int8
+
+		for ; i < derefs; i++ {
 			switch {
 			case indirects&(1<<i) == 0:
-				// No dereference needed.
-				buf = append(buf, '1')
 
 			case ptr == nil:
 				// Nil value, return here.
-				buf = append(buf, '0')
+				buf = append(buf, uint8(i))
 				return buf
 
 			default:
-				// Further deref ptr.
-				buf = append(buf, '1')
+				// Further dereference ptr.
 				ptr = *(*unsafe.Pointer)(ptr)
 			}
 		}
 
 		if ptr == nil {
-			// Final nil val check.
-			buf = append(buf, '0')
+			// Final nil value check.
+			buf = append(buf, uint8(i))
 			return buf
 		}
 
-		// Mangle fully deref'd.
-		buf = append(buf, '1')
+		// Mangle fully dereferenced.
+		buf = append(buf, uint8(i))
 		buf = fn(buf, ptr)
 		return buf
 	}

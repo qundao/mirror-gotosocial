@@ -59,12 +59,8 @@ func iterStructType(t xunsafe.TypeIter) Mangler {
 				buf = append(buf, ',')
 			}
 
-			if len(fields) > 0 {
-				// Drop final comma.
-				buf = buf[:len(buf)-1]
-			}
-
-			return buf
+			// Drop final comma.
+			return buf[:len(buf)-1]
 		}
 	}
 }

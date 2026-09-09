@@ -37,8 +37,11 @@ func iterSliceType(t xunsafe.TypeIter) Mangler {
 			return buf
 		}
 
-		// Append not-nil flag.
+		// Append not-nil and
+		// current slice length.
 		buf = append(buf, '1')
+		buf = append_uint(buf,
+			uint(hdr.Len))
 
 		for i := 0; i < hdr.Len; i++ {
 			// Mangle at array index.

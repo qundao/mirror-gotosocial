@@ -89,5 +89,6 @@ slow:
 // data types, and interfaces implementing Mangleable{}.
 func String(a any) string {
 	b := Append(make([]byte, 0, 32), a)
-	return *(*string)(unsafe.Pointer(&b))
+	d := unsafe.SliceData(b)
+	return unsafe.String(d, len(b))
 }

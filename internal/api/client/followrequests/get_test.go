@@ -51,7 +51,6 @@ func (suite *GetTestSuite) TestGet() {
 	fr := &gtsmodel.FollowRequest{
 		ID:              "01FJ1S8DX3STJJ6CEYPMZ1M0R3",
 		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
 		URI:             fmt.Sprintf("%s/follow/01FJ1S8DX3STJJ6CEYPMZ1M0R3", requestingAccount.URI),
 		AccountID:       requestingAccount.ID,
 		TargetAccountID: targetAccount.ID,
@@ -163,7 +162,6 @@ func (suite *GetTestSuite) testGetPage(limit int, direction string) {
 		err := suite.db.PutFollowRequest(ctx, &gtsmodel.FollowRequest{
 			ID:              id,
 			CreatedAt:       now,
-			UpdatedAt:       now,
 			URI:             fmt.Sprintf("%s/follow/%s", account.URI, id),
 			AccountID:       account.ID,
 			TargetAccountID: targetAccount.ID,

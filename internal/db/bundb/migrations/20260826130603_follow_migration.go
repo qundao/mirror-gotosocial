@@ -45,24 +45,12 @@ func init() {
 		}
 
 		// Migrate follows.
-		totalFollows, err := db.NewSelect().Table("follows").Count(ctx)
-		if err != nil {
-			return gtserror.Newf("error getting follow table count: %w", err)
-		}
-
-		log.Warnf(ctx, "migrating %d follow flags to new column", totalFollows)
-		if err := migrateFollowlike(ctx, totalFollows, db, "follows"); err != nil {
+		if err := migrateFollowlike(ctx, db, "follows"); err != nil {
 			return err
 		}
 
 		// Migrate follows requests.
-		totalFollowReqs, err := db.NewSelect().Table("follow_requests").Count(ctx)
-		if err != nil {
-			return gtserror.Newf("error getting follow table count: %w", err)
-		}
-
-		log.Warnf(ctx, "migrating %d follow request flags to new column", totalFollowReqs)
-		if err := migrateFollowlike(ctx, totalFollowReqs, db, "follow_requests"); err != nil {
+		if err := migrateFollowlike(ctx, db, "follow_requests"); err != nil {
 			return err
 		}
 
@@ -103,10 +91,11 @@ func init() {
 
 func migrateFollowlike(
 	ctx context.Context,
-	total int,
 	db *bun.DB,
 	table string,
 ) error {
+	log.Infof(ctx, "migrating %s flags to new column", table)
+
 	// Open initial transaction.
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -118,7 +107,7 @@ func migrateFollowlike(
 	maxID := id.Highest
 
 	var ids []string
-	for i := 1; ; i++ {
+	for {
 
 		// Reset IDs.
 		clear(ids)

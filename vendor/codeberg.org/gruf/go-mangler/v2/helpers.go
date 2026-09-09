@@ -4,37 +4,26 @@ import (
 	"unsafe"
 )
 
-func append_uint16(b []byte, u uint16) []byte {
-	return append(b, // LE
-		byte(u),
-		byte(u>>8),
-	)
-}
-
-func append_uint32(b []byte, u uint32) []byte {
-	return append(b, // LE
-		byte(u),
-		byte(u>>8),
-		byte(u>>16),
-		byte(u>>24),
-	)
-}
-
-func append_uint64(b []byte, u uint64) []byte {
-	return append(b, // LE
-		byte(u),
-		byte(u>>8),
-		byte(u>>16),
-		byte(u>>24),
-		byte(u>>32),
-		byte(u>>40),
-		byte(u>>48),
-		byte(u>>56),
-	)
-}
-
 func empty_mangler(buf []byte, _ unsafe.Pointer) []byte {
 	return buf
+}
+
+// unsigned integer leb128 variable length encoding, much
+// less character output at little processing regression.
+func append_uint[Uint uint | uintptr | uint16 | uint32 | uint64](b []byte, v Uint) []byte {
+	var c uint8
+	for {
+		c = uint8(v & 0x7f)
+		v >>= 7
+		if v != 0 {
+			c |= 0x80
+		}
+		b = append(b, c)
+		if c&0x80 == 0 {
+			break
+		}
+	}
+	return b
 }
 
 // add returns the ptr addition of starting ptr and a delta.

@@ -35,11 +35,14 @@ func (p *SimplePool[T]) Get() *T {
 }
 
 func (p *SimplePool[T]) Put(t *T) {
+	if t == nil {
+		return
+	}
 	if p.Reset != nil && !p.Reset(t) {
 		return
 	}
 	ptr := unsafe.Pointer(t)
-	p.UnsafeSimplePool.Put(ptr)
+	p.UnsafeSimplePool.put(ptr)
 }
 
 // UnsafeSimplePool provides an incredibly
@@ -85,6 +88,12 @@ func (p *UnsafeSimplePool) Get() unsafe.Pointer {
 }
 
 func (p *UnsafeSimplePool) Put(ptr unsafe.Pointer) {
+	if ptr != nil {
+		p.put(ptr)
+	}
+}
+
+func (p *UnsafeSimplePool) put(ptr unsafe.Pointer) {
 	p.current = append(p.current, ptr)
 
 	// Get GC check func.

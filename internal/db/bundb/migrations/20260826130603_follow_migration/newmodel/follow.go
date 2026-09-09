@@ -156,9 +156,6 @@ type Follow struct {
 	// Time when the item was created.
 	CreatedAt time.Time `bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"`
 
-	// Time when the item was last updated.
-	UpdatedAt time.Time `bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"`
-
 	// URI of the ActivityPub Follow.
 	URI string `bun:",notnull,nullzero,unique"`
 
@@ -169,6 +166,7 @@ type Follow struct {
 	TargetAccountID string `bun:"type:CHAR(26),unique:srctarget,notnull,nullzero"`
 
 	// Flags controlling Follow behavior.
+	// Default value of 2 = show reblogs.
 	Flags FollowFlags `bun:",notnull,default:2"`
 }
 
@@ -181,9 +179,6 @@ type FollowRequest struct {
 	// Time when the item was created.
 	CreatedAt time.Time `bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"`
 
-	// Time when the item was last updated.
-	UpdatedAt time.Time `bun:"type:timestamptz,nullzero,notnull,default:current_timestamp"`
-
 	// URI of the ActivityPub Follow.
 	URI string `bun:",notnull,nullzero,unique"`
 
@@ -194,5 +189,6 @@ type FollowRequest struct {
 	TargetAccountID string `bun:"type:CHAR(26),unique:frsrctarget,notnull,nullzero"`
 
 	// Flags controlling Follow behavior.
+	// Default value of 2 = show reblogs.
 	Flags FollowFlags `bun:",notnull,default:2"`
 }

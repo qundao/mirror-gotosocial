@@ -12,6 +12,9 @@ import (
 // Pool provides a form of SimplePool with the
 // addition of concurrency safety, and a fast-access
 // ring buffer to reduce main mutex contention.
+//
+// NOTE: the design inherits the
+// same caveats as UnsafePool{}.
 type Pool[T any] struct {
 	UnsafePool
 
@@ -65,6 +68,11 @@ func (p *Pool[T]) Shard() PoolShard[T] {
 // UnsafePool provides a form of UnsafeSimplePool with
 // the addition of concurrency safety, and a fast-access
 // ring buffer to reduce main mutex contention.
+//
+// IMPORTANT NOTE:
+// this pool is LOSSY, you cannot guarantee that
+// entries entered into the pool will always be
+// returned, they may be dropped for GC.
 type UnsafePool struct {
 	pool_internal
 	_ [cache_line_bytes - unsafe.Sizeof(pool_internal{})%cache_line_bytes]byte
@@ -117,6 +125,8 @@ func (p *pool_internal) Check(fn func(current, victim int) bool) func(current, v
 }
 
 func (p *pool_internal) Get() unsafe.Pointer {
+	_ = p.ring // nil check before procPin()
+
 	pid := procPin()
 	elem, _ := p.ring.local(pid)
 	ptr := elem.Swap(nil)
@@ -133,6 +143,17 @@ func (p *pool_internal) Get() unsafe.Pointer {
 }
 
 func (p *pool_internal) Put(ptr unsafe.Pointer) {
+	if ptr != nil {
+		// nil check
+		// before procPin()
+		_ = p.ring
+
+		// put ptr.
+		p.put(ptr)
+	}
+}
+
+func (p *pool_internal) put(ptr unsafe.Pointer) {
 	pid := procPin()
 	elem, _ := p.ring.local(pid)
 	ptr = elem.Swap(ptr)
@@ -143,7 +164,7 @@ func (p *pool_internal) Put(ptr unsafe.Pointer) {
 	}
 
 	p.mutex.Lock()
-	p.pool.Put(ptr)
+	p.pool.put(ptr)
 	p.mutex.Unlock()
 }
 
@@ -155,7 +176,6 @@ func (p *pool_internal) GC() {
 }
 
 func (p *pool_internal) Size() (sz int) {
-	sz += p.ring.len()
 	p.mutex.Lock()
 	sz += p.pool.Size()
 	p.mutex.Unlock()
@@ -216,26 +236,17 @@ func (r *locals_ring) local(pid uint) (*pointer_elem, uint) {
 	}
 }
 
-// len returns ring buffer length.
-func (r *locals_ring) len() int {
-	if ptr := atomic.LoadPointer(&r.p); ptr != nil {
-		return len(*(*[]pointer_elem)(ptr))
-	}
-	return 0
-}
-
 // clear will drop the current pointer to ring buffer.
 func (r *locals_ring) clear() { atomic.StorePointer(&r.p, nil) }
 
 // pointer_elem wraps an unsafe.Pointer to make
 // swapping of a slice element nicer on the eyes.
-//
-// THIS IS THE TRUE VIBE CODING, NONE OF THAT LLM
-// DOG-ARSE BULLSHIT. WRITE CODE WITH *NICE VIBES*.
 type pointer_elem struct{ p unsafe.Pointer }
 
 func (e *pointer_elem) Swap(p unsafe.Pointer) unsafe.Pointer {
-	return atomic.SwapPointer(&e.p, p)
+	o := e.p
+	e.p = p
+	return o
 }
 
 // note is int in runtime, but should never be negative.

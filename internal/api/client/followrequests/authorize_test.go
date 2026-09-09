@@ -43,7 +43,6 @@ func (suite *AuthorizeTestSuite) TestAuthorize() {
 	fr := &gtsmodel.FollowRequest{
 		ID:              "01FJ1S8DX3STJJ6CEYPMZ1M0R3",
 		CreatedAt:       time.Now(),
-		UpdatedAt:       time.Now(),
 		URI:             fmt.Sprintf("%s/follow/01FJ1S8DX3STJJ6CEYPMZ1M0R3", requestingAccount.URI),
 		AccountID:       requestingAccount.ID,
 		TargetAccountID: targetAccount.ID,

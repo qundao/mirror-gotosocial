@@ -5,6 +5,7 @@ import (
 )
 
 const (
+	Maximum     = ^Duration(0)
 	YearApprox  = Duration(year)
 	MonthApprox = Duration(month)
 	Week        = Duration(week)

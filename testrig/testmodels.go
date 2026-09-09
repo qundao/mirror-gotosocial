@@ -3248,34 +3248,34 @@ func NewTestFollows() map[string]*gtsmodel.Follow {
 		"local_account_1_admin_account": {
 			ID:              "01F8PY8RHWRQZV038T4E8T9YK8",
 			CreatedAt:       TimeMustParse("2022-05-14T16:21:09+02:00"),
-			UpdatedAt:       TimeMustParse("2022-05-14T16:21:09+02:00"),
 			AccountID:       "01F8MH1H7YV1Z7D2C8K2730QBF",
 			TargetAccountID: "01F8MH17FWEB39HZJ76B6VXSKF",
 			URI:             "http://localhost:8080/users/the_mighty_zork/follow/01F8PY8RHWRQZV038T4E8T9YK8",
+			Flags:           func() (flags gtsmodel.FollowFlags) { flags.SetShowReblogs(true); return }(),
 		},
 		"local_account_1_local_account_2": {
 			ID:              "01F8PYDCE8XE23GRE5DPZJDZDP",
 			CreatedAt:       TimeMustParse("2022-05-14T15:21:09+02:00"),
-			UpdatedAt:       TimeMustParse("2022-05-14T15:21:09+02:00"),
 			AccountID:       "01F8MH1H7YV1Z7D2C8K2730QBF",
 			TargetAccountID: "01F8MH5NBDF2MV7CTC4Q5128HF",
 			URI:             "http://localhost:8080/users/the_mighty_zork/follow/01F8PYDCE8XE23GRE5DPZJDZDP",
+			Flags:           func() (flags gtsmodel.FollowFlags) { flags.SetShowReblogs(true); return }(),
 		},
 		"local_account_2_local_account_1": {
 			ID:              "01G1TK1RS4K3E0MSFTXBFWAH9Q",
 			CreatedAt:       TimeMustParse("2022-05-14T14:21:09+02:00"),
-			UpdatedAt:       TimeMustParse("2022-05-14T14:21:09+02:00"),
 			AccountID:       "01F8MH5NBDF2MV7CTC4Q5128HF",
 			TargetAccountID: "01F8MH1H7YV1Z7D2C8K2730QBF",
 			URI:             "http://localhost:8080/users/1happyturtle/follow/01F8PYDCE8XE23GRE5DPZJDZDP",
+			Flags:           func() (flags gtsmodel.FollowFlags) { flags.SetShowReblogs(true); return }(),
 		},
 		"admin_account_local_account_1": {
 			ID:              "01G1TK3PQKFW1BQZ9WVYRTFECK",
 			CreatedAt:       TimeMustParse("2022-05-14T13:21:09+02:00"),
-			UpdatedAt:       TimeMustParse("2022-05-14T13:21:09+02:00"),
 			AccountID:       "01F8MH17FWEB39HZJ76B6VXSKF",
 			TargetAccountID: "01F8MH1H7YV1Z7D2C8K2730QBF",
 			URI:             "http://localhost:8080/users/admin/follow/01G1TK3PQKFW1BQZ9WVYRTFECK",
+			Flags:           func() (flags gtsmodel.FollowFlags) { flags.SetShowReblogs(true); return }(),
 		},
 	}
 }
