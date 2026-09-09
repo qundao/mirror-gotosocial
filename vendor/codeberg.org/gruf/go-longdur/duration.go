@@ -15,9 +15,6 @@ var ErrInvalidUnit = errors.New("invalid unit")
 // ErrOverflow is returned on math causing Duration integer overflow.
 var ErrOverflow = errors.New("integer overflow")
 
-// ErrUnderflow is returned on math causing Duration integer underflow.
-var ErrUnderflow = errors.New("integer underflow")
-
 // Duration define a duration stored in nanoseconds,
 // much like the time.Duration type, with the exception
 // that this is an unsigned integer and the helper methods
@@ -42,14 +39,14 @@ type Duration uint64
 // NOTE: unlike the time.ParseDuration() function, this
 // does not accept floating point values or fractions.
 func Parse(in string) (l Duration, err error) {
-	var d, u uint64
+	var d uint64
 	for len(in) > 0 {
-		in, d, u, err = parse(in)
+		in, d, err = parse(in)
 		if err != nil {
 			return
 		}
 		old := l
-		l += Duration(d * u)
+		l += Duration(d)
 		if l < old {
 			err = ErrOverflow
 			return
@@ -76,17 +73,17 @@ func (l Duration) AppendFormat(b []byte, approx bool) []byte {
 
 	var y, mo uint64
 	if approx {
-		x, y = div(x, year)
-		x, mo = div(x, month)
+		x, y = divif(x, year)
+		x, mo = divif(x, month)
 	}
 
-	x, w := div(x, week)
-	x, d := div(x, day)
-	x, h := div(x, hour)
-	x, m := div(x, minute)
-	x, s := div(x, second)
-	x, ms := div(x, millisecond)
-	x, us := div(x, microsecond)
+	x, w := divif(x, week)
+	x, d := divif(x, day)
+	x, h := divif(x, hour)
+	x, m := divif(x, minute)
+	x, s := divif(x, second)
+	x, ms := divif(x, millisecond)
+	x, us := divif(x, microsecond)
 	ns := x
 
 	if y > 0 {
@@ -146,7 +143,7 @@ func (l Duration) AppendFormat(b []byte, approx bool) []byte {
 // Add adds given Duration to receiving Duration.
 // NOTE: this method will panic on integer overflow.
 func (l Duration) Add(d Duration) Duration {
-	old, l := l, l+d
+	old, l := l, (l + d)
 	if l < old {
 		panic(ErrOverflow)
 	}
@@ -154,11 +151,11 @@ func (l Duration) Add(d Duration) Duration {
 }
 
 // Sub subs given Duration from receiving Duration.
-// NOTE: this method will panic on integer underflow.
+// NOTE: this method will panic on integer overflow.
 func (l Duration) Sub(d Duration) Duration {
-	old, l := l, l-d
+	old, l := l, (l - d)
 	if l > old {
-		panic(ErrUnderflow)
+		panic(ErrOverflow)
 	}
 	return l
 }
@@ -166,8 +163,8 @@ func (l Duration) Sub(d Duration) Duration {
 // Mul multiplies given Duration by receiving Duration.
 // NOTE: this method will panic on integer overflow.
 func (l Duration) Mul(d Duration) Duration {
-	old, l := l, l*d
-	if l < old {
+	old, l := l, (l * d)
+	if l/d != old {
 		panic(ErrOverflow)
 	}
 	return l
@@ -190,7 +187,7 @@ func (l Duration) SubDuration(d time.Duration) Duration {
 	if d < 0 {
 		return l.Add(Duration(d.Abs()))
 	} else if d > 0 {
-		return l.Add(Duration(d))
+		return l.Sub(Duration(d))
 	}
 	return l
 }
@@ -198,13 +195,27 @@ func (l Duration) SubDuration(d time.Duration) Duration {
 // Duration converts the receiving Duration into a time.Duration 'dur',
 // and if greater than max possible int64 time.Duration, a multiplier.
 func (l Duration) Duration() (mul time.Duration, dur time.Duration) {
-	if l > maxTimeDuration {
-		mul = time.Duration(l / maxTimeDuration)
-		dur = time.Duration(l % maxTimeDuration)
-	} else {
-		dur = time.Duration(l)
-	}
+	mul = time.Duration(l / maxTimeDuration)
+	dur = time.Duration(l % maxTimeDuration)
 	return
+}
+
+// AddTime adds receiving Duration to given time.Time{}, returning result.
+func (l Duration) AddTime(t time.Time) time.Time {
+	for l > maxTimeDuration {
+		t = t.Add(maxTimeDuration)
+		l -= maxTimeDuration
+	}
+	return t.Add(time.Duration(l))
+}
+
+// SubTime subs receiving Duration from given time.Time{}, returning result.
+func (l Duration) SubTime(t time.Time) time.Time {
+	for l > maxTimeDuration {
+		t = t.Add(-maxTimeDuration)
+		l -= maxTimeDuration
+	}
+	return t.Add(-time.Duration(l))
 }
 
 // EqualDuration returns whether receiving Duration is equal to int64 time.Duration.
@@ -251,33 +262,46 @@ func (l Duration) StringApprox() string {
 
 // parse attempts to parse next duration number and units from
 // string. this returns remaining string, number and its units.
-func parse(in string) (string, uint64, uint64, error) {
+func parse(in string) (string, uint64, error) {
 
 	// Trim any space.
-	in = trimlspace(in)
+	in = ltrim(in, ' ')
 	if len(in) == 0 {
-		return "", 0, 0, nil
+		return "", 0, nil
 	}
 
 	var i int
 	var dur uint64
 
-	// Inlined atoi() implementation.
+	// Trim useless
+	// leading zeros.
+	in = ltrim(in, '0')
+
+	// Inlined atoi() function.
 	for i = 0; i < len(in); i++ {
-		if i > 19 {
-			// max uint64 strlen is 20
-			return "", 0, 0, ErrOverflow
+		switch c := in[i]; {
+		case c >= '0' && c <= '9':
+			if i >= 19 {
+				// max uint64 len is 20.
+				return "", 0, ErrOverflow
+			}
+
+			// Update duration w/ next.
+			dur = 10*dur + uint64(c-'0')
+			continue
+
+		case c == ' ':
+			// Skip space
+			// before break
+			i++
 		}
 
-		if c := in[i]; c >= '0' && c <= '9' {
-			dur = 10*dur + uint64(c-'0')
-		} else {
-			break
-		}
+		// Done.
+		break
 	}
 
 	// Trim number + space.
-	in = trimlspace(in[i:])
+	in = ltrim(in[i:], ' ')
 
 	// Parse unit.
 	var unit uint64
@@ -307,26 +331,35 @@ func parse(in string) (string, uint64, uint64, error) {
 		}
 	}
 
+	// Ensure unit.
 	if unit == 0 {
-		return "", 0, 0, ErrInvalidUnit
+		return "", 0, ErrInvalidUnit
 	}
 
-	return in[l:], dur, unit, nil
+	// Set unit and check overflow.
+	old, dur := dur, (dur * unit)
+	if dur/unit != old {
+		return "", 0, ErrOverflow
+	}
+
+	return in[l:], dur, nil
 }
 
-// div divides x by d ONLY if greater than.
+// divif divides x by y ONLY if greater than.
 // this returns the result and remainder.
 //
 //go:nosplit
-func div(x, d uint64) (uint64, uint64) {
-	if x >= d {
-		return x % d, x / d
+func divif(x, y uint64) (uint64, uint64) {
+	if x >= y {
+		return x % y, x / y
 	} else {
 		return x, 0
 	}
 }
 
 // itoa appends string formatted 'i' to 'dst'.
+//
+//go:nosplit
 func itoa(dst []byte, i uint64) []byte {
 	var arr [20]byte // max uint strlen
 	bp := len(arr) - 1
@@ -341,7 +374,9 @@ func itoa(dst []byte, i uint64) []byte {
 }
 
 // wordlen returns the number of
-// consecitive non-space chars in string.
+// consecutive non-space chars in string.
+//
+//go:nosplit
 func wordlen(in string) int {
 	for i := 0; i < len(in); i++ {
 		if in[i] != ' ' {
@@ -352,11 +387,13 @@ func wordlen(in string) int {
 	return len(in)
 }
 
-// trimlspace trims specifically ASCII
-// space chars from left of string.
-func trimlspace(in string) string {
+// ltrim trims any leading
+// chars c and returns result.
+//
+//go:nosplit
+func ltrim(in string, c byte) string {
 	for i := 0; i < len(in); i++ {
-		if in[i] == ' ' {
+		if in[i] == c {
 			continue
 		}
 		return in[i:]

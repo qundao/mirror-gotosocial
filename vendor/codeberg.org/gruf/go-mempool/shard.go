@@ -28,13 +28,16 @@ func (p *PoolShard[T]) Get() *T {
 }
 
 func (p *PoolShard[T]) Put(t *T) {
+	if t == nil {
+		return
+	}
 	if p.original != nil &&
 		p.original.Reset != nil &&
 		!p.original.Reset(t) {
 		return
 	}
 	ptr := unsafe.Pointer(t)
-	p.UnsafePoolShard.Put(ptr)
+	p.UnsafePoolShard.put(ptr)
 }
 
 // Original returns a reference to the shard's origin pool.
@@ -59,11 +62,13 @@ type shard_internal struct {
 }
 
 func (s *UnsafePoolShard) Get() unsafe.Pointer {
+	_, _ = s.ring, s.pool.ring // nil checks before procPin()
+
 	pid := procPin()
 	elem, pid := s.ring.local(pid)
 	ptr := elem.Swap(nil)
 
-	if s.pool == nil || ptr != nil {
+	if ptr != nil {
 		procUnpin()
 		return ptr
 	}
@@ -84,11 +89,21 @@ func (s *UnsafePoolShard) Get() unsafe.Pointer {
 }
 
 func (s *UnsafePoolShard) Put(ptr unsafe.Pointer) {
+	if ptr != nil {
+		// nil checks before procPin()
+		_, _ = s.ring, s.pool.ring
+
+		// put ptr.
+		s.put(ptr)
+	}
+}
+
+func (s *UnsafePoolShard) put(ptr unsafe.Pointer) {
 	pid := procPin()
 	elem, pid := s.ring.local(pid)
 	ptr = elem.Swap(ptr)
 
-	if s.pool == nil || ptr == nil {
+	if ptr == nil {
 		procUnpin()
 		return
 	}
@@ -102,7 +117,7 @@ func (s *UnsafePoolShard) Put(ptr unsafe.Pointer) {
 	}
 
 	s.pool.mutex.Lock()
-	s.pool.pool.Put(ptr)
+	s.pool.pool.put(ptr)
 	s.pool.mutex.Unlock()
 }
 

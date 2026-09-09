@@ -644,7 +644,7 @@ func setLimits(ctx context.Context) {
 		log.Warnf(ctx, "could not set CPU limits from cgroup: %s", err)
 	}
 
-	if _, err := memlimit.SetGoMemLimitWithOpts(); err != nil {
+	if _, err := memlimit.Set(); err != nil {
 		if !strings.Contains(err.Error(), "cgroup mountpoint does not exist") {
 			log.Warnf(ctx, "could not set Memory limits from cgroup: %s", err)
 		}

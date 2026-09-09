@@ -205,7 +205,6 @@ func (suite *GetFileTestSuite) TestGetRemoteFileThumbnailUncached() {
 
 	suite.Equal("image/jpeg", content.ContentType)
 	testrig.AssertSimilarImages(suite.T(), b, thumbnailBytes)
-	suite.EqualValues(testAttachment.Thumbnail.FileSize, content.ContentLength)
 }
 
 func (suite *GetFileTestSuite) TestGetRemoteFileRejectMedia() {

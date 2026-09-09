@@ -55,13 +55,13 @@ steps:
         from_secret: gts_s3_secret_access_key
       S3_HOSTNAME: "https://s3.superseriousbusiness.org"
       S3_BUCKET_NAME: "gotosocial-snapshots"
-    
+
     # https://woodpecker-ci.org/docs/usage/workflow-syntax#commands
     commands:
       # Create a snapshot build with GoReleaser.
       - git fetch --tags
       - goreleaser release --clean --snapshot
-      
+
       # Login to Docker, push Docker image snapshots + manifests.
       - /go/dockerlogin.sh
       - docker push superseriousbusiness/gotosocial:snapshot-arm64v8
@@ -71,6 +71,6 @@ steps:
           superseriousbusiness/gotosocial:snapshot-amd64 \
           superseriousbusiness/gotosocial:snapshot-arm64v8
       - docker manifest push superseriousbusiness/gotosocial:snapshot
-      
+
       # Publish binary .tar.gz snapshots to S3.
       - /go/snapshot_publish.sh

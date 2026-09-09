@@ -12,11 +12,14 @@ import (
 //   types. e.g. `time.Duration` directly as int64.
 
 func mangle_string(buf []byte, ptr unsafe.Pointer) []byte {
-	return append(buf, *(*string)(ptr)...)
+	s := *(*string)(ptr)
+	buf = append_uint(buf, uint(len(s)))
+	return append(buf, s...)
 }
 
 func mangle_string_slice(buf []byte, ptr unsafe.Pointer) []byte {
 	s := *(*[]string)(ptr)
+	buf = append_uint(buf, uint(len(s)))
 	for _, s := range s {
 		buf = append(buf, s...)
 		buf = append(buf, ',')
@@ -35,7 +38,9 @@ func mangle_bool(buf []byte, ptr unsafe.Pointer) []byte {
 }
 
 func mangle_bool_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	for _, b := range *(*[]bool)(ptr) {
+	s := *(*[]bool)(ptr)
+	buf = append_uint(buf, uint(len(s)))
+	for _, b := range s {
 		if b {
 			buf = append(buf, '1')
 		} else {
@@ -50,64 +55,74 @@ func mangle_8bit(buf []byte, ptr unsafe.Pointer) []byte {
 }
 
 func mangle_8bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	return append(buf, *(*[]uint8)(ptr)...)
+	s := *(*[]uint8)(ptr)
+	buf = append_uint(buf, uint(len(s)))
+	return append(buf, s...)
 }
 
 func mangle_16bit(buf []byte, ptr unsafe.Pointer) []byte {
-	return append_uint16(buf, *(*uint16)(ptr))
+	return append_uint(buf, *(*uint16)(ptr))
 }
 
 func mangle_16bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	for _, u := range *(*[]uint16)(ptr) {
-		buf = append_uint16(buf, u)
+	s := *(*[]uint16)(ptr)
+	buf = append_uint(buf, uint(len(s)))
+	for _, u := range s {
+		buf = append_uint(buf, u)
 	}
 	return buf
 }
 
 func mangle_32bit(buf []byte, ptr unsafe.Pointer) []byte {
-	return append_uint32(buf, *(*uint32)(ptr))
+	return append_uint(buf, *(*uint32)(ptr))
 }
 
 func mangle_32bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	for _, u := range *(*[]uint32)(ptr) {
-		buf = append_uint32(buf, u)
+	s := *(*[]uint32)(ptr)
+	buf = append_uint(buf, uint(len(s)))
+	for _, u := range s {
+		buf = append_uint(buf, u)
 	}
 	return buf
 }
 
 func mangle_64bit(buf []byte, ptr unsafe.Pointer) []byte {
-	return append_uint64(buf, *(*uint64)(ptr))
+	return append_uint(buf, *(*uint64)(ptr))
 }
 
 func mangle_64bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	for _, u := range *(*[]uint64)(ptr) {
-		buf = append_uint64(buf, u)
+	s := *(*[]uint64)(ptr)
+	buf = append_uint(buf, uint(len(s)))
+	for _, u := range s {
+		buf = append_uint(buf, u)
 	}
 	return buf
 }
 
 func mangle_int(buf []byte, ptr unsafe.Pointer) []byte {
-	return append_uint64(buf, uint64(*(*uint)(ptr)))
+	return append_uint(buf, *(*uint)(ptr))
 }
 
 func mangle_int_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	for _, u := range *(*[]uint)(ptr) {
-		buf = append_uint64(buf, uint64(u))
+	s := *(*[]uint)(ptr)
+	buf = append_uint(buf, uint(len(s)))
+	for _, u := range s {
+		buf = append_uint(buf, u)
 	}
 	return buf
 }
 
 func mangle_128bit(buf []byte, ptr unsafe.Pointer) []byte {
 	u2 := *(*[2]uint64)(ptr)
-	buf = append_uint64(buf, u2[0])
-	buf = append_uint64(buf, u2[1])
+	buf = append_uint(buf, u2[0])
+	buf = append_uint(buf, u2[1])
 	return buf
 }
 
 func mangle_128bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
 	for _, u2 := range *(*[][2]uint64)(ptr) {
-		buf = append_uint64(buf, u2[0])
-		buf = append_uint64(buf, u2[1])
+		buf = append_uint(buf, u2[0])
+		buf = append_uint(buf, u2[1])
 	}
 	return buf
 }
