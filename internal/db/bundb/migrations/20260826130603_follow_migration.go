@@ -54,30 +54,99 @@ func init() {
 			return err
 		}
 
-		// Drop unused columns from database.
-		for _, field := range []string{
-			"ShowReblogs",
-			"Notify",
-		} {
-			for _, model := range []any{
-				(*oldmodel.Follow)(nil),
-				(*oldmodel.FollowRequest)(nil),
-			} {
-				if err := dropColumn(ctx, db,
-					model,
-					field,
-				); err != nil {
-					return err
-				}
+		return db.RunInTx(ctx, nil, func(ctx context.Context, tx bun.Tx) error {
+			// Drop incorrect indexes for follow (requests) tables;
+			// they were using updated_at instead of created_at.
+			if err := dropIndex(ctx, tx, "follows_account_id_idx"); err != nil {
+				return err
+			}
 
-				// WAL merge after each drop to minimize WAL size.
-				if err := doWALCheckpoint(ctx, db); err != nil {
-					return err
+			if err := dropIndex(ctx, tx, "follows_target_account_id_idx"); err != nil {
+				return err
+			}
+
+			if err := dropIndex(ctx, tx, "follow_requests_account_id_idx"); err != nil {
+				return err
+			}
+
+			if err := dropIndex(ctx, tx, "follow_requests_target_account_id_idx"); err != nil {
+				return err
+			}
+
+			// Now re-create them.
+			if err := createIndex(ctx, tx,
+				"follows_account_id_idx",
+				"follows",
+				dbpkg.BunExpr{
+					"?, ? DESC",
+					dbpkg.Idents(
+						"account_id",
+						"created_at",
+					)},
+			); err != nil {
+				return err
+			}
+
+			if err := createIndex(ctx, tx,
+				"follows_target_account_id_idx",
+				"follows",
+				dbpkg.BunExpr{
+					"?, ? DESC",
+					dbpkg.Idents(
+						"target_account_id",
+						"created_at",
+					)},
+			); err != nil {
+				return err
+			}
+
+			if err := createIndex(ctx, tx,
+				"follow_requests_account_id_idx",
+				"follow_requests",
+				dbpkg.BunExpr{
+					"?, ? DESC",
+					dbpkg.Idents(
+						"account_id",
+						"created_at",
+					)},
+			); err != nil {
+				return err
+			}
+
+			if err := createIndex(ctx, tx,
+				"follow_requests_target_account_id_idx",
+				"follow_requests",
+				dbpkg.BunExpr{
+					"?, ? DESC",
+					dbpkg.Idents(
+						"target_account_id",
+						"created_at",
+					)},
+			); err != nil {
+				return err
+			}
+
+			// Drop unused columns from database.
+			for _, field := range []string{
+				"ShowReblogs",
+				"Notify",
+				"UpdatedAt",
+			} {
+				for _, model := range []any{
+					(*oldmodel.Follow)(nil),
+					(*oldmodel.FollowRequest)(nil),
+				} {
+					if err := dropColumn(ctx, tx,
+						model,
+						field,
+					); err != nil {
+						return err
+					}
 				}
 			}
-		}
 
-		return nil
+			return nil
+		})
 	}
 
 	down := func(ctx context.Context, db *bun.DB) error {
