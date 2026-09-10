@@ -24,7 +24,6 @@ import (
 
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
-	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
@@ -73,13 +72,16 @@ func (suite *MoveTestSuite) TestMove() {
 	var (
 		receivingAcct  = suite.testAccounts["local_account_1"]
 		requestingAcct = suite.testAccounts["remote_account_1"]
+		moveURI        = "http://fossbros-anonymous.io/users/foss_satan/moves/01HR9FDFCAGM7JYPMWNTFRDQE9"
+		moveActor      = requestingAcct.URI
+		moveTarget     = "https://turnip.farm/users/turniplover6969"
 		moveStr1       = `{
   "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "http://fossbros-anonymous.io/users/foss_satan/moves/01HR9FDFCAGM7JYPMWNTFRDQE9",
-  "actor": "http://fossbros-anonymous.io/users/foss_satan",
+  "id": "` + moveURI + `",
+  "actor": "` + moveActor + `",
   "type": "Move",
-  "object": "http://fossbros-anonymous.io/users/foss_satan",
-  "target": "https://turnip.farm/users/turniplover6969",
+  "object": "` + moveActor + `",
+  "target": "` + moveTarget + `",
   "to": "http://fossbros-anonymous.io/users/foss_satan/followers"
 }`
 	)
@@ -92,66 +94,20 @@ func (suite *MoveTestSuite) TestMove() {
 		moveStr1,
 	)
 
-	// Should be a message heading to the processor.
-	msg, ok := suite.getFederatorMsg(ctx, testStructs)
-	if !ok {
-		suite.FailNow("no federator message after 5s")
+	// Wait for the move attempt to be put in the db. We only care
+	// here about the move passing initial checks and being inserted,
+	// not whether it succeeds or not, as that part is tested in
+	// internal/processing/workers/fromfediapi_test.go.
+	var move *gtsmodel.Move
+	if !testrig.WaitFor(func() bool {
+		var err error
+		move, err = testStructs.State.DB.GetMoveByURI(ctx, moveURI)
+		return err == nil && move != nil
+	}) {
+		suite.FailNow("waiting for move")
 	}
-	suite.Equal(ap.ActorPerson, msg.APObjectType)
-	suite.Equal(ap.ActivityMove, msg.APActivityType)
-
-	// Stub Move should be on the message.
-	move, ok := msg.GTSModel.(*gtsmodel.Move)
-	if !ok {
-		suite.FailNow("", "could not cast %T to *gtsmodel.Move", msg.GTSModel)
-	}
-	suite.Equal("http://fossbros-anonymous.io/users/foss_satan", move.OriginURI)
-	suite.Equal("https://turnip.farm/users/turniplover6969", move.TargetURI)
-
-	// Trigger the same move again.
-	suite.move(ctx,
-		testStructs,
-		receivingAcct,
-		requestingAcct,
-		moveStr1,
-	)
-
-	// Should be a message heading to the processor
-	// since this is just a straight up retry.
-	msg, ok = suite.getFederatorMsg(ctx, testStructs)
-	if !ok {
-		suite.FailNow("no federator message after 5s")
-	}
-	suite.Equal(ap.ActorPerson, msg.APObjectType)
-	suite.Equal(ap.ActivityMove, msg.APActivityType)
-
-	// Same as the first Move, but with a different ID.
-	moveStr2 := `{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "id": "http://fossbros-anonymous.io/users/foss_satan/moves/01HR9XWDD25CKXHW82MYD1GDAR",
-  "actor": "http://fossbros-anonymous.io/users/foss_satan",
-  "type": "Move",
-  "object": "http://fossbros-anonymous.io/users/foss_satan",
-  "target": "https://turnip.farm/users/turniplover6969",
-  "to": "http://fossbros-anonymous.io/users/foss_satan/followers"
-}`
-
-	// Trigger the move.
-	suite.move(ctx,
-		testStructs,
-		receivingAcct,
-		requestingAcct,
-		moveStr2,
-	)
-
-	// Should be a message heading to the processor
-	// since this is just a retry with a different ID.
-	msg, ok = suite.getFederatorMsg(ctx, testStructs)
-	if !ok {
-		suite.FailNow("no federator message after 5s")
-	}
-	suite.Equal(ap.ActorPerson, msg.APObjectType)
-	suite.Equal(ap.ActivityMove, msg.APActivityType)
+	suite.Equal(moveTarget, move.TargetURI)
+	suite.Equal(moveActor, move.OriginURI)
 }
 
 func (suite *MoveTestSuite) TestBadMoves() {

@@ -19,14 +19,10 @@ package federatingdb_test
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
-	"code.superseriousbusiness.org/activity/streams"
-	"code.superseriousbusiness.org/activity/streams/vocab"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
@@ -47,20 +43,76 @@ func (suite *CreateTestSuite) TestCreateNote() {
 	receivingAccount := suite.testAccounts["local_account_1"]
 	requestingAccount := suite.testAccounts["remote_account_1"]
 
-	ctx = createTestContext(ctx, requestingAccount, receivingAccount)
-
+	// Call the Create function with
+	// a Create activity for a note.
 	create := suite.testActivities["dm_for_zork"].Activity
 	objProp := create.GetActivityStreamsObject()
 	note := objProp.At(0).GetType().(ap.Statusable)
+	noteURI := ap.GetJSONLDId(note)
+	err := testStructs.Federator.FederatingDB().Create(
+		createTestContext(
+			ctx,
+			requestingAccount,
+			receivingAccount,
+		),
+		create,
+	)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
 
-	err := testStructs.Federator.FederatingDB().Create(ctx, create)
-	suite.NoError(err)
+	// Wait for the status to
+	// be created in the database.
+	var status *gtsmodel.Status
+	if !testrig.WaitFor(func() bool {
+		var err error
+		status, err = testStructs.State.DB.GetStatusByURI(ctx, noteURI.String())
+		return err == nil && status != nil
+	}) {
+		suite.FailNow("timed out waiting for status")
+	}
+}
 
-	// should be a message heading to the processor now, which we can intercept here
-	msg, _ := suite.getFederatorMsg(ctx, testStructs)
-	suite.Equal(ap.ObjectNote, msg.APObjectType)
-	suite.Equal(ap.ActivityCreate, msg.APActivityType)
-	suite.Equal(note, msg.APObject)
+func (suite *CreateTestSuite) TestCreateBareNote() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	receivingAccount := suite.testAccounts["local_account_1"]
+	requestingAccount := suite.testAccounts["remote_account_1"]
+
+	// Call the Create function with
+	// the bare Note object as param.
+	create := suite.testActivities["dm_for_zork"].Activity
+	objProp := create.GetActivityStreamsObject()
+	note := objProp.At(0).GetType().(ap.Statusable)
+	noteURI := ap.GetJSONLDId(note)
+	err := testStructs.Federator.FederatingDB().Create(
+		createTestContext(
+			ctx,
+			requestingAccount,
+			receivingAccount,
+		),
+		note,
+	)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Wait for the status to
+	// be created in the database.
+	var status *gtsmodel.Status
+	if !testrig.WaitFor(func() bool {
+		var err error
+		status, err = testStructs.State.DB.GetStatusByURI(ctx, noteURI.String())
+		return err == nil && status != nil
+	}) {
+		suite.FailNow("timed out waiting for status")
+	}
 }
 
 func (suite *CreateTestSuite) TestCreateNoteForward() {
@@ -75,87 +127,46 @@ func (suite *CreateTestSuite) TestCreateNoteForward() {
 	receivingAccount := suite.testAccounts["local_account_1"]
 	requestingAccount := suite.testAccounts["remote_account_1"]
 
-	ctx = createTestContext(ctx, requestingAccount, receivingAccount)
-
-	create := suite.testActivities["forwarded_message"].Activity
-
-	// ensure a follow exists between requesting
+	// Ensure a follow exists between requesting
 	// and receiving account, this ensures the forward
 	// will be seen as "relevant" and not get dropped.
 	err := testStructs.State.DB.PutFollow(ctx, &gtsmodel.Follow{
-		ID:              id.NewULID(),
+		ID:              "01M2588ZDD5NV2G3GVR811MREB",
 		URI:             "https://this.is.a.url",
 		AccountID:       receivingAccount.ID,
 		TargetAccountID: requestingAccount.ID,
 	})
-	suite.NoError(err)
-
-	err = testStructs.Federator.FederatingDB().Create(ctx, create)
-	suite.NoError(err)
-
-	// should be a message heading to the processor now, which we can intercept here
-	msg, _ := suite.getFederatorMsg(ctx, testStructs)
-	suite.Equal(ap.ObjectNote, msg.APObjectType)
-	suite.Equal(ap.ActivityCreate, msg.APActivityType)
-
-	// nothing should be set as the model since this is a forward
-	suite.Nil(msg.APObject)
-
-	// but we should have a uri set
-	suite.Equal("http://example.org/users/Some_User/statuses/afaba698-5740-4e32-a702-af61aa543bc1", msg.APIRI.String())
-}
-
-func (suite *CreateTestSuite) TestCreateFlag1() {
-	// Set up our test structs + tear down on finish.
-	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
-	defer testrig.TearDownTestStructs(testStructs)
-
-	// Clean up test context when done.
-	ctx, cncl := context.WithCancel(suite.T().Context())
-	defer cncl()
-
-	reportedAccount := suite.testAccounts["local_account_1"]
-	reportingAccount := suite.testAccounts["remote_account_1"]
-	reportedStatus := suite.testStatuses["local_account_1_status_1"]
-
-	raw := `{
-  "@context": "https://www.w3.org/ns/activitystreams",
-  "actor": "` + reportingAccount.URI + `",
-  "content": "Note: ` + reportedStatus.URL + `\n-----\nban this sick filth ⛔",
-  "id": "http://fossbros-anonymous.io/db22128d-884e-4358-9935-6a7c3940535d",
-  "object": "` + reportedAccount.URI + `",
-  "type": "Flag"
-}`
-
-	m := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		suite.FailNow(err.Error())
-	}
-
-	t, err := streams.ToType(suite.T().Context(), m)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
 
-	flag := t.(vocab.ActivityStreamsFlag)
-
-	ctx = createTestContext(ctx, reportingAccount, reportedAccount)
-	if err := testStructs.Federator.FederatingDB().Flag(ctx, flag); err != nil {
+	// Call the Create function with
+	// Create of the forwarded Note.
+	create := suite.testActivities["forwarded_message"].Activity
+	objProp := create.GetActivityStreamsObject()
+	note := objProp.At(0).GetType().(ap.Statusable)
+	noteURI := ap.GetJSONLDId(note)
+	err = testStructs.Federator.FederatingDB().Create(
+		createTestContext(
+			ctx,
+			requestingAccount,
+			receivingAccount,
+		),
+		create,
+	)
+	if err != nil {
 		suite.FailNow(err.Error())
 	}
 
-	// should be a message heading to the processor now, which we can intercept here
-	msg, _ := suite.getFederatorMsg(ctx, testStructs)
-	suite.Equal(ap.ActivityFlag, msg.APObjectType)
-	suite.Equal(ap.ActivityCreate, msg.APActivityType)
-
-	// shiny new report should be defined on the message
-	suite.NotNil(msg.GTSModel)
-	report := msg.GTSModel.(*gtsmodel.Report)
-
-	// report should be in the database
-	if _, err := testStructs.State.DB.GetReportByID(suite.T().Context(), report.ID); err != nil {
-		suite.FailNow(err.Error())
+	// Wait for the status to
+	// be created in the database.
+	var status *gtsmodel.Status
+	if !testrig.WaitFor(func() bool {
+		var err error
+		status, err = testStructs.State.DB.GetStatusByURI(ctx, noteURI.String())
+		return err == nil && status != nil
+	}) {
+		suite.FailNow("timed out waiting for status")
 	}
 }
 

@@ -20,8 +20,10 @@ package federatingdb_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
@@ -45,27 +47,61 @@ func (suite *UpdateTestSuite) TestUpdateNewMention() {
 		requestingAcct = suite.testAccounts["remote_account_2"]
 	)
 
-	ctx = createTestContext(ctx, requestingAcct, receivingAcct)
-
-	m, err := ap.Serialize(update.Activity)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
-
-	out := testrig.MustJSONString(m)
-	suite.T().Logf("Update:\n%s\n", out)
-
+	// Process Update of a note that adds an extra mention.
 	note := update.Activity.GetActivityStreamsObject().At(0).GetActivityStreamsNote()
-	if err := testStructs.Federator.FederatingDB().Update(ctx, note); err != nil {
+	if err := testStructs.Federator.FederatingDB().Update(
+		createTestContext(
+			ctx,
+			requestingAcct,
+			receivingAcct,
+		),
+		note,
+	); err != nil {
 		suite.FailNow(err.Error())
 	}
 
 	// Wait for the update.
+	noteURI := ap.GetJSONLDId(note).String()
+	var status *gtsmodel.Status
+	var statusEdit *gtsmodel.StatusEdit
 	if !testrig.WaitFor(func() bool {
-		
+		var err error
+		status, err = testStructs.State.DB.GetStatusByURI(ctx, noteURI)
+		if err != nil {
+			suite.FailNow(err.Error())
+		}
+		if len(status.EditIDs) != 1 {
+			return false
+		}
+
+		if err := testStructs.State.DB.PopulateStatusEdits(ctx, status); err != nil {
+			suite.FailNow(err.Error())
+		}
+
+		statusEdit = status.Edits[0]
+		return true
 	}) {
 		suite.FailNow("waiting for update")
 	}
+
+	// Time of the status edit should be set to the snapshot
+	// of the OG version of the status, counter-intuitively.
+	//
+	// It would be more appropriate to think of a status edit
+	// as a status REVISION, ie., a snapshot of the status
+	// before the point in time it was edited.
+	suite.Equal(status.CreatedAt.UTC(), statusEdit.CreatedAt.UTC())
+
+	// The status editedAt time should be time of the
+	// `updated` field on the latest version of the note.
+	suite.EqualValues(status.EditedAt, ap.GetUpdated(note))
+
+	// Status fetchedAt time should be now.
+	suite.WithinDuration(time.Now(), status.FetchedAt, 5*time.Second)
+
+	// Status should have
+	// an extra mention now.
+	suite.Len(status.Mentions, 2)
 }
 
 func TestUpdateTestSuite(t *testing.T) {
