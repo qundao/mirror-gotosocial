@@ -1,3 +1,20 @@
+// GoToSocial
+// Copyright (C) GoToSocial Authors admin@gotosocial.org
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 package bundb
 
 import (
@@ -10,12 +27,12 @@ import (
 	"github.com/uptrace/bun"
 )
 
-type configDB struct {
+type runtimeConfigDB struct {
 	db    *bun.DB
 	state *state.State
 }
 
-func (c *configDB) RuntimeConfig(ctx context.Context) *gtsmodel.RuntimeConfig {
+func (c *runtimeConfigDB) RuntimeConfig(ctx context.Context) *gtsmodel.RuntimeConfig {
 	// Check if config stored in
 	// the cache. Load it if not.
 	config := c.state.Caches.DB.RuntimeConfig.Load()
@@ -54,7 +71,7 @@ func (c *configDB) RuntimeConfig(ctx context.Context) *gtsmodel.RuntimeConfig {
 	return config
 }
 
-func (c *configDB) newConfig(ctx context.Context) *gtsmodel.RuntimeConfig {
+func (c *runtimeConfigDB) newConfig(ctx context.Context) *gtsmodel.RuntimeConfig {
 	// Config doesn't exist yet,
 	// store new one with defaults.
 	config := new(gtsmodel.RuntimeConfig)
@@ -82,7 +99,7 @@ func (c *configDB) newConfig(ctx context.Context) *gtsmodel.RuntimeConfig {
 	return config
 }
 
-func (c *configDB) UpdateRuntimeConfig(ctx context.Context, runtimeConfig *gtsmodel.RuntimeConfig, columns ...string) error {
+func (c *runtimeConfigDB) UpdateRuntimeConfig(ctx context.Context, runtimeConfig *gtsmodel.RuntimeConfig, columns ...string) error {
 	// Update config in the db.
 	if _, err := c.db.
 		NewUpdate().

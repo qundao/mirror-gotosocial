@@ -18,6 +18,9 @@
 package gtsmodel
 
 import (
+	"database/sql"
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"codeberg.org/gruf/go-longdur"
@@ -26,20 +29,13 @@ import (
 )
 
 // CronExpression is a wrapper for cronexpr.Expression
-// to allow parsing by CLI "flag"-like utilities.
+// to allow insertion into and selection from the db.
 type CronExpression struct {
 	*cronexpr.Expression
 	Expr string
 }
 
-func MustParseCron(expr string) (cron CronExpression) {
-	if err := cron.Set(expr); err != nil {
-		panic(err)
-	}
-	return
-}
-
-func (expr *CronExpression) Set(in string) (err error) {
+func (expr *CronExpression) set(in string) (err error) {
 	if in == "" {
 		return
 	}
@@ -48,16 +44,35 @@ func (expr *CronExpression) Set(in string) (err error) {
 	return
 }
 
-func (expr *CronExpression) MarshalText() ([]byte, error) {
-	return []byte(expr.Expr), nil
-}
-
-func (expr *CronExpression) UnmarshalText(text []byte) error {
-	return expr.Set(string(text))
-}
-
 func (expr *CronExpression) String() string {
 	return expr.Expr
+}
+
+var _ sql.Scanner = (*CronExpression)(nil)
+
+// Scan implements sql.Scanner.
+func (expr *CronExpression) Scan(src any) error {
+	switch src := src.(type) {
+	case string:
+		return expr.set(src)
+	case []byte:
+		return expr.set(string(src))
+	case nil:
+		expr = nil
+		return nil
+	default:
+		return fmt.Errorf("unsupported data type: %T", src)
+	}
+}
+
+var _ driver.Valuer = (*CronExpression)(nil)
+
+// Value implements driver.Valuer.
+func (expr *CronExpression) Value() (driver.Value, error) {
+	if expr == nil {
+		return nil, nil
+	}
+	return expr.Expr, nil
 }
 
 // RuntimeConfig represents RUNTIME configuration of the GtS
@@ -82,7 +97,7 @@ type RuntimeConfig struct {
 	MediaRemoteCacheDuration longdur.Duration `bun:",notnull,default:6.048e+14"`
 
 	// Default every night at midnight.
-	MediaCleanupCron CronExpression `bun:",nullzero,notnull,default:0 0 * * *"`
+	MediaCleanupCron CronExpression `bun:",nullzero,notnull,default:'0 0 * * *'"`
 
 	// Duration defining status
 	// age beyond which to clean
@@ -91,10 +106,10 @@ type RuntimeConfig struct {
 	StatusesCleanupRemoteOlderThan longdur.Duration `bun:",notnull,default:0"`
 
 	// Default every Sunday at 1am.
-	StatusesCleanupCron CronExpression `bun:",nullzero,notnull,default:0 1 * * 0"`
+	StatusesCleanupCron CronExpression `bun:",nullzero,notnull,default:'0 1 * * 0'"`
 
 	// Default every night at 11pm.
-	InstanceSubscriptionsProcessCron CronExpression `bun:",nullzero,notnull,default:0 23 * * *"`
+	InstanceSubscriptionsProcessCron CronExpression `bun:",nullzero,notnull,default:'0 23 * * *'"`
 }
 
 func (rc *RuntimeConfig) GetMediaRemoteCacheOlderThanTime(now time.Time) time.Time {

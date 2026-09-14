@@ -15,57 +15,33 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package db
+package bundb_test
 
-const (
-	// DBTypePostgres represents an underlying POSTGRES database type.
-	DBTypePostgres string = "POSTGRES"
+import (
+	"testing"
+
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"github.com/stretchr/testify/suite"
 )
 
-// DB provides methods for interacting with an underlying database or other storage mechanism.
-type DB interface {
-	Account
-	Admin
-	AdvancedMigration
-	Application
-	Basic
-	Conversation
-	Directory
-	Domain
-	Emoji
-	HeaderFilter
-	Instance
-	Interaction
-	Filter
-	List
-	Marker
-	Media
-	Mention
-	Move
-	Notification
-	Poll
-	Relationship
-	Relay
-	Report
-	Rule
-	// RuntimeConfigDB has a function
-	// called RuntimeConfig so we have
-	// to fudge the naming a bit here.
-	RuntimeConfigDB
-	ScheduledStatus
-	Search
-	Session
-	SinBinStatus
-	Status
-	StatusBookmark
-	StatusEdit
-	StatusFave
-	StatusPin
-	Tag
-	Thread
-	Timeline
-	User
-	Tombstone
-	WebPush
-	WorkerTask
+type RuntimeConfigTestSuite struct {
+	BunDBStandardTestSuite
+}
+
+func (suite *RuntimeConfigTestSuite) TestCreateGetUpdateRuntimeConfig() {
+	ctx := suite.T().Context()
+
+	// Make sure this doesn't panic.
+	var runtimeConfig *gtsmodel.RuntimeConfig
+	suite.NotPanics(func() {
+		runtimeConfig = suite.state.DB.RuntimeConfig(ctx)
+	}, "panicked!")
+
+	// Check database defaults are set.
+	suite.EqualValues(0, int(runtimeConfig.ID))
+	suite.Equal("1 week", runtimeConfig.MediaRemoteCacheDuration.String())
+}
+
+func TestRuntimeConfigTestSuite(t *testing.T) {
+	suite.Run(t, new(RuntimeConfigTestSuite))
 }

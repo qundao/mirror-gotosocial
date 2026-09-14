@@ -17,55 +17,17 @@
 
 package db
 
-const (
-	// DBTypePostgres represents an underlying POSTGRES database type.
-	DBTypePostgres string = "POSTGRES"
+import (
+	"context"
+
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 )
 
-// DB provides methods for interacting with an underlying database or other storage mechanism.
-type DB interface {
-	Account
-	Admin
-	AdvancedMigration
-	Application
-	Basic
-	Conversation
-	Directory
-	Domain
-	Emoji
-	HeaderFilter
-	Instance
-	Interaction
-	Filter
-	List
-	Marker
-	Media
-	Mention
-	Move
-	Notification
-	Poll
-	Relationship
-	Relay
-	Report
-	Rule
-	// RuntimeConfigDB has a function
-	// called RuntimeConfig so we have
-	// to fudge the naming a bit here.
-	RuntimeConfigDB
-	ScheduledStatus
-	Search
-	Session
-	SinBinStatus
-	Status
-	StatusBookmark
-	StatusEdit
-	StatusFave
-	StatusPin
-	Tag
-	Thread
-	Timeline
-	User
-	Tombstone
-	WebPush
-	WorkerTask
+type RuntimeConfigDB interface {
+	// RuntimeConfig gets/creates and gets the
+	// runtime config for this instance, or panics.
+	RuntimeConfig(ctx context.Context) *gtsmodel.RuntimeConfig
+
+	// UpdateRuntimeConfig updates the runtime config for this instance, using the given columns.
+	UpdateRuntimeConfig(ctx context.Context, runtimeConfig *gtsmodel.RuntimeConfig, columns ...string) error
 }
