@@ -33,12 +33,14 @@ func (suite *RuntimeConfigTestSuite) TestCreateGetUpdateRuntimeConfig() {
 
 	// Make sure this doesn't panic.
 	var runtimeConfig *gtsmodel.RuntimeConfig
-	suite.NotPanics(func() {
+	if !suite.NotPanics(func() {
 		runtimeConfig = suite.state.DB.RuntimeConfig(ctx)
-	}, "panicked!")
+	}, "panicked!") {
+		return
+	}
 
 	// Check database defaults are set.
-	suite.EqualValues(0, int(runtimeConfig.ID))
+	suite.EqualValues(1, runtimeConfig.ID)
 	suite.Equal("1 week", runtimeConfig.MediaRemoteCacheDuration.String())
 }
 

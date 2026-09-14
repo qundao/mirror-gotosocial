@@ -69,7 +69,7 @@ var _ driver.Valuer = (*CronExpression)(nil)
 
 // Value implements driver.Valuer.
 func (expr *CronExpression) Value() (driver.Value, error) {
-	if expr == nil {
+	if expr == nil || expr.Expr == "" {
 		return nil, nil
 	}
 	return expr.Expr, nil
@@ -86,8 +86,8 @@ type RuntimeConfig struct {
 	bun.BaseModel `bun:"table:runtime_config"`
 
 	// DB ID of the runtime config, always
-	// set to 0 to ensure only 1 ever stored.
-	ID uint8 `bun:",pk,notnull,default:0"`
+	// set to 1 to ensure only 1 ever stored.
+	ID int8 `bun:",pk,nullzero,notnull,default:1"`
 
 	// Duration defining how long to
 	// locally cache media from remote
