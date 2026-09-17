@@ -3518,3 +3518,13 @@ func (c *Converter) RelayActorToAPIRelayActor(
 		},
 	}, nil
 }
+
+func (c *Converter) RuntimeConfigToAPIRuntimeConfig(rtConf *gtsmodel.RuntimeConfig) *apimodel.AdminRuntimeConfig {
+	return &apimodel.AdminRuntimeConfig{
+		InstanceSubscriptionsProcessCron: &rtConf.InstanceSubscriptionsProcessCron.Expr,
+		MediaCleanupCron:                 &rtConf.MediaCleanupCron.Expr,
+		MediaRemoteCacheDuration:         &apimodel.HumanReadableDuration{rtConf.MediaRemoteCacheDuration},
+		StatusesCleanupCron:              &rtConf.StatusesCleanupCron.Expr,
+		StatusesCleanupRemoteOlderThan:   &apimodel.HumanReadableDuration{rtConf.StatusesCleanupRemoteOlderThan},
+	}
+}

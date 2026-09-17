@@ -52,10 +52,10 @@ import (
 //		- admin:write
 //
 //	responses:
-//		'200':
+//		'202':
 //			description: >-
-//				Echos the number of days requested.
-//				The cleanup is performed asynchronously after the request completes.
+//				Request accepted and will be processed.
+//				Check the logs for progress / errors.
 //		'400':
 //			schema:
 //				"$ref": "#/definitions/error"
@@ -110,17 +110,13 @@ func (m *Module) MediaCleanupPOSTHandler(c *httputil.Context) {
 		return
 	}
 
-	if form.RemoteCacheDays.Duration == 0 {
-		form.RemoteCacheDays.Duration = config.GetMediaRemoteCacheDuration()
-	}
-
 	if errWithCode := m.processor.Admin().MediaPrune(
 		c,
-		form.RemoteCacheDays.Duration,
+		form.MediaRemoteCacheDuration.Duration,
 	); errWithCode != nil {
 		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return
 	}
 
-	httputil.JSON(c, http.StatusOK, form.RemoteCacheDays)
+	httputil.Data(c, http.StatusAccepted, apiutil.AppJSON, apiutil.StatusAcceptedJSON)
 }

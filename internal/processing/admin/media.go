@@ -51,16 +51,27 @@ func (p *Processor) MediaRefetch(ctx context.Context, requestingAccount *gtsmode
 	return nil
 }
 
-// MediaPrune triggers a non-blocking prune of unused media, orphaned, uncaching remote and fixing cache states.
-func (p *Processor) MediaPrune(ctx context.Context, remoteCacheAge longdur.Duration) gtserror.WithCode {
+// MediaPrune triggers a non-blocking prune of unused and
+// orphaned media, uncaching remote and fixing cache states.
+func (p *Processor) MediaPrune(
+	ctx context.Context,
+	maxRemoteAge longdur.Duration,
+) gtserror.WithCode {
+
+	// If remoteCacheAge not provided,
+	// use configured cache duration.
+	if maxRemoteAge <= 0 {
+		rtConf := p.state.DB.RuntimeConfig(ctx)
+		maxRemoteAge = rtConf.MediaRemoteCacheDuration
+	}
 
 	// Start background task
 	// performing media cleanup.
 	go func() {
 		now := time.Now()
 		ctx := gtscontext.WithValues(context.Background(), ctx)
-		p.cleaner.Media().AllAndFix(ctx, now, remoteCacheAge)
-		p.cleaner.Emoji().AllAndFix(ctx, now, remoteCacheAge)
+		p.cleaner.Media().AllAndFix(ctx, now, maxRemoteAge)
+		p.cleaner.Emoji().AllAndFix(ctx, now, maxRemoteAge)
 	}()
 
 	return nil

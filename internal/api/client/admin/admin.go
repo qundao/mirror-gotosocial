@@ -104,6 +104,8 @@ const (
 	RelayActorMatchersPath               = RelayActorsPathWithID + "/matchers"
 	RelayActorMatchersPathWithMatcherID  = RelayActorMatchersPath + "/:" + apiutil.RelayMatcherIDKey
 
+	RuntimeConfigPath = BasePath + "/runtime_config"
+
 	FilterQueryKey        = "filter"
 	MaxShortcodeDomainKey = "max_shortcode_domain"
 	MinShortcodeDomainKey = "min_shortcode_domain"
@@ -254,4 +256,8 @@ func (m *Module) Route(g *httputil.RouteGroup) {
 	g.GET(RelayActorBlocksPath, m.RelayActorBlocksGETHandler)
 	g.POST(RelayActorBlockPath, m.RelayActorBlockPOSTHandler)
 	g.POST(RelayActorUnblockPath, m.RelayActorUnblockPOSTHandler)
+
+	// runtime config stuff
+	g.GET(RuntimeConfigPath, m.RuntimeConfigGETHandler)
+	g.PATCH(RuntimeConfigPath, m.RuntimeConfigPATCHHandler)
 }

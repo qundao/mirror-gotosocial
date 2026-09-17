@@ -46,7 +46,7 @@ import (
 
 // ScheduleJobs schedules domain permission subscription
 // fetching + updating using configured parameters.
-func (s *Subscriptions) ScheduleJobs() error {
+func (s *Subscriptions) ScheduleJobs(ctx context.Context) error {
 	fn := func(ctx context.Context, start time.Time) {
 		log.Info(ctx, "starting instance subscriptions processing")
 
@@ -76,17 +76,18 @@ func (s *Subscriptions) ScheduleJobs() error {
 		log.Infof(ctx, "finished instance subscriptions processing after %s", time.Since(start))
 	}
 
-	expr := config.GetInstanceSubscriptionsProcessCron()
-	log.Infof(nil, "scheduling instance subscriptions processing: %s", expr.Expr)
+	rtConf := s.state.DB.RuntimeConfig(ctx)
+	expr := rtConf.InstanceSubscriptionsProcessCron
+	log.Infof(ctx, "scheduling instance subscriptions processing: %s", expr.Expr)
+
+	// Cancel any existing scheduled task.
+	const taskID = "@instancesubsprocessing"
+	s.state.Workers.Scheduler.Cancel(taskID)
 
 	// Schedule processing to
 	// execute according to schedule.
-	if !s.state.Workers.Scheduler.Add(
-		"@instancesubsprocessing",
-		fn,
-		expr,
-	) {
-		panic("failed to schedule @instancesubsprocessing")
+	if !s.state.Workers.Scheduler.Add(taskID, fn, expr) {
+		return gtserror.New("failed to schedule " + taskID)
 	}
 
 	return nil

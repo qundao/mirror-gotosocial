@@ -510,7 +510,7 @@ If you change Swagger annotations on any of the API paths, you can generate a ne
 
 ```bash
 go run ./vendor/github.com/go-swagger/go-swagger/cmd/swagger \
-generate spec --scan-models --exclude-deps -o docs/api/swagger.yaml \
+generate spec --scan-models -o docs/api/swagger.yaml \
 && cp docs/api/swagger.yaml web/assets/swagger.yaml
 ```
 

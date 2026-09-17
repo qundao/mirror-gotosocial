@@ -30,6 +30,7 @@ const (
 	scopeApplications  = "applications"
 	scopeBlocks        = "blocks"
 	scopeBookmarks     = "bookmarks"
+	scopeConfig        = "config"
 	scopeConversations = "conversations"
 	scopeCustomEmojis  = "custom_emojis"
 	scopeDirectory     = "directory"
@@ -93,6 +94,8 @@ const (
 	ScopeWriteStatuses          Scope = ScopeWrite + ":" + scopeStatuses
 	ScopeAdminReadAccounts      Scope = ScopeAdminRead + ":" + scopeAccounts
 	ScopeAdminWriteAccounts     Scope = ScopeAdminWrite + ":" + scopeAccounts
+	ScopeAdminReadConfig        Scope = ScopeAdminRead + ":" + scopeConfig
+	ScopeAdminWriteConfig       Scope = ScopeAdminWrite + ":" + scopeConfig
 	ScopeAdminReadCustomEmojis  Scope = ScopeAdminRead + ":" + scopeCustomEmojis
 	ScopeAdminWriteCustomEmojis Scope = ScopeAdminWrite + ":" + scopeCustomEmojis
 	ScopeAdminReadDomainAllows  Scope = ScopeAdminRead + ":" + scopeDomainAllows

@@ -25,13 +25,13 @@ import MutationButton from "../../../../components/form/mutation-button";
 import { useMediaCleanupMutation } from "../../../../lib/query/admin/actions";
 
 export default function Cleanup({}) {
-	const remote_cache_days = useTextInput("remote_cache_days", { defaultValue: "1 day" });
+	const media_remote_cache_duration = useTextInput("media_remote_cache_duration", { defaultValue: "1 day" });
 
 	const [mediaCleanup, mediaCleanupResult] = useMediaCleanupMutation();
 
 	function submitCleanup(e) {
 		e.preventDefault();
-		mediaCleanup(remote_cache_days.value);
+		mediaCleanup(media_remote_cache_duration.value);
 	}
 	return (
 		<form onSubmit={submitCleanup}>
@@ -40,10 +40,12 @@ export default function Cleanup({}) {
 				<p>
 					Cleanup (by removing from storage) remote media, headers, avatars, and emojis
 					older than the given duration string (<code>1 second</code>, <code>1 day</code>,
-					<code>1 week</code>, etc) or number of days (<code>1</code>, <code>7</code>, <code>30</code> etc).
+					<code>1 week</code>, etc).
 					<br/>
-					If you specify <code>0</code> here, then the value of your config
-					variable <code>media-remote-cache-duration</code> will be used instead.
+					If you specify <code>0 sec</code> here, then the value of your runtime config
+					variable <code>media_remote_cache_duration</code> will be used instead.
+					<br/>
+					To clear as much media as possible, pass something like <code>1 sec</code>.
 					<br/>
 					If the remote instance is still online, any media removed
 					from storage in this way will be recached when needed.
@@ -58,12 +60,12 @@ export default function Cleanup({}) {
 				</a>
 			</div>
 			<TextInput
-				field={remote_cache_days}
+				field={media_remote_cache_duration}
 				label="Duration"
 				placeholder="1 day"
 			/>
 			<MutationButton
-				disabled={!remote_cache_days.value}
+				disabled={!media_remote_cache_duration.value}
 				label="Cleanup"
 				result={mediaCleanupResult}
 			/>

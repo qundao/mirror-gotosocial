@@ -110,5 +110,5 @@ func (m *Module) MediaRefetchPOSTHandler(c *httputil.Context) {
 		return
 	}
 
-	httputil.Data(c, http.StatusOK, apiutil.AppJSON, apiutil.StatusAcceptedJSON)
+	httputil.Data(c, http.StatusAccepted, apiutil.AppJSON, apiutil.StatusAcceptedJSON)
 }

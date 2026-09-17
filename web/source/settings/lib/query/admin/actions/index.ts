@@ -26,7 +26,7 @@ const extended = gtsApi.injectEndpoints({
 				method: "POST",
 				url: `/api/v1/admin/media_cleanup`,
 				params: {
-					remote_cache_days: days
+					media_remote_cache_duration: days
 				}
 			})
 		}),

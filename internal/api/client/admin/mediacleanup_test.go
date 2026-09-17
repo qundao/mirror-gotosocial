@@ -39,7 +39,7 @@ func (suite *MediaCleanupTestSuite) TestMediaCleanup() {
 
 	// set up the request
 	recorder := httptest.NewRecorder()
-	ctx := suite.newContext(recorder, http.MethodPost, []byte("{\"remote_cache_days\": 1}"), admin.MediaCleanupPath, "application/json")
+	ctx := suite.newContext(recorder, http.MethodPost, []byte("{\"media_remote_cache_duration\": 1}"), admin.MediaCleanupPath, "application/json")
 
 	// call the handler
 	suite.adminModule.MediaCleanupPOSTHandler(ctx)
@@ -89,7 +89,7 @@ func (suite *MediaCleanupTestSuite) TestMediaCleanupNotOldEnough() {
 
 	// set up the request
 	recorder := httptest.NewRecorder()
-	ctx := suite.newContext(recorder, http.MethodPost, []byte("{\"remote_cache_days\": 10000}"), admin.MediaCleanupPath, "application/json")
+	ctx := suite.newContext(recorder, http.MethodPost, []byte("{\"media_remote_cache_duration\": 10000}"), admin.MediaCleanupPath, "application/json")
 
 	// call the handler
 	suite.adminModule.MediaCleanupPOSTHandler(ctx)
@@ -117,7 +117,7 @@ func (suite *MediaCleanupTestSuite) TestMediaCleanupNegative() {
 	ctx := suite.newContext(
 		recorder,
 		http.MethodPost,
-		[]byte("{\"remote_cache_days\": -10}"),
+		[]byte("{\"media_remote_cache_duration\": -10}"),
 		admin.MediaCleanupPath,
 		"application/json",
 	)
