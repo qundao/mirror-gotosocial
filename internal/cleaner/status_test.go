@@ -34,7 +34,7 @@ import (
 type StatusTestSuite struct {
 	suite.Suite
 
-	state        state.State
+	state        *state.State
 	cleaner      *cleaner.Cleaner
 	testStatuses map[string]*gtsmodel.Status
 }
@@ -47,20 +47,20 @@ func (suite *StatusTestSuite) SetupTest() {
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
-	_ = testrig.NewTestDB(&suite.state)
+	_ = testrig.NewTestDB(suite.state)
 	testrig.StandardDBSetup(suite.state.DB, nil)
 
-	suite.cleaner = cleaner.New(&suite.state)
+	suite.cleaner = cleaner.New(suite.state)
 
 	suite.testStatuses = testrig.NewTestStatuses()
 }
 
 func (suite *StatusTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.state.DB)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *StatusTestSuite) TestPruneOldRemote() {

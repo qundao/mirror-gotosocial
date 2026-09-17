@@ -27,7 +27,6 @@ import (
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
-	"code.superseriousbusiness.org/gotosocial/internal/cache"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
@@ -692,9 +691,8 @@ func (suite *ASToInternalTestSuite) TestParseHonkAccount() {
 	suite.False(*dbAcct.Discoverable)
 	suite.False(*dbAcct.Indexable)
 
-	// Clear caches.
-	suite.state.Caches.DB = cache.DBCaches{}
-	suite.state.Caches.Init()
+	// Clear database account model caches.
+	suite.state.Caches.DB.Account.Clear()
 
 	dbAcct, err = suite.db.GetAccountByID(ctx, acct.ID)
 	if err != nil {

@@ -49,7 +49,7 @@ type ProcessingStandardTestSuite struct {
 	suite.Suite
 	db                  db.DB
 	storage             *storage.Driver
-	state               state.State
+	state               *state.State
 	mediaManager        *media.Manager
 	typeconverter       *typeutils.Converter
 	httpClient          *testrig.MockHTTPClient
@@ -98,45 +98,45 @@ func (suite *ProcessingStandardTestSuite) SetupSuite() {
 }
 
 func (suite *ProcessingStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	suite.testActivities = testrig.NewTestActivities(suite.testAccounts)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.typeconverter = typeutils.NewConverter(&suite.state)
+	suite.typeconverter = typeutils.NewConverter(suite.state)
 
 	suite.httpClient = testrig.NewMockHTTPClient(nil, "../../testrig/media")
 	suite.httpClient.TestRemotePeople = testrig.NewTestFediPeople()
 	suite.httpClient.TestRemoteStatuses = testrig.NewTestFediStatuses()
 
-	suite.transportController = testrig.NewTestTransportController(&suite.state, suite.httpClient)
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, suite.transportController, suite.mediaManager)
-	suite.oauthServer = testrig.NewTestOauthServer(&suite.state)
+	suite.transportController = testrig.NewTestTransportController(suite.state, suite.httpClient)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, suite.transportController, suite.mediaManager)
+	suite.oauthServer = testrig.NewTestOauthServer(suite.state)
 	suite.emailSender = testrig.NewEmailSender("../../web/template/", nil)
 
 	suite.processor = processing.NewProcessor(
-		cleaner.New(&suite.state),
-		subscriptions.New(&suite.state, suite.transportController, suite.typeconverter),
+		cleaner.New(suite.state),
+		subscriptions.New(suite.state, suite.transportController, suite.typeconverter),
 		suite.typeconverter,
 		suite.federator,
 		suite.oauthServer,
 		suite.mediaManager,
-		&suite.state,
+		suite.state,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
-		visibility.NewFilter(&suite.state),
-		mutes.NewFilter(&suite.state),
-		interaction.NewFilter(&suite.state),
-		status.NewFilter(&suite.state),
+		visibility.NewFilter(suite.state),
+		mutes.NewFilter(suite.state),
+		interaction.NewFilter(suite.state),
+		status.NewFilter(suite.state),
 	)
-	testrig.StartWorkers(&suite.state, suite.processor.Workers())
+	testrig.StartWorkers(suite.state, suite.processor.Workers())
 
 	testrig.StandardDBSetup(suite.db, suite.testAccounts)
 	testrig.StandardStorageSetup(suite.storage, "../../testrig/media")
@@ -145,7 +145,7 @@ func (suite *ProcessingStandardTestSuite) SetupTest() {
 func (suite *ProcessingStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *ProcessingStandardTestSuite) openStreams(ctx context.Context, account *gtsmodel.Account, listIDs []string) map[string]*stream.Stream {

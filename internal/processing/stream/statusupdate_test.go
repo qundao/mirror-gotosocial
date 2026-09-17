@@ -36,7 +36,7 @@ func (suite *StatusUpdateTestSuite) TestStreamNotification() {
 	openStream := suite.streamProcessor.Open(suite.T().Context(), account, "user")
 
 	editedStatus := suite.testStatuses["remote_account_1_status_1"]
-	apiStatus, err := typeutils.NewConverter(&suite.state).StatusToAPIStatus(suite.T().Context(), editedStatus, account)
+	apiStatus, err := typeutils.NewConverter(suite.state).StatusToAPIStatus(suite.T().Context(), editedStatus, account)
 	suite.NoError(err)
 
 	suite.streamProcessor.StatusUpdate(suite.T().Context(), account, apiStatus, stream.TimelineHome)

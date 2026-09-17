@@ -2,7 +2,6 @@ package mangler
 
 import (
 	"unsafe"
-	_ "unsafe"
 )
 
 // Notes:
@@ -19,13 +18,13 @@ func mangle_string(buf []byte, ptr unsafe.Pointer) []byte {
 
 func mangle_string_slice(buf []byte, ptr unsafe.Pointer) []byte {
 	s := *(*[]string)(ptr)
+	if s == nil {
+		return buf
+	}
 	buf = append_uint(buf, uint(len(s)))
 	for _, s := range s {
+		buf = append_uint(buf, uint(len(s)))
 		buf = append(buf, s...)
-		buf = append(buf, ',')
-	}
-	if len(s) > 0 {
-		buf = buf[:len(buf)-1]
 	}
 	return buf
 }
@@ -39,6 +38,9 @@ func mangle_bool(buf []byte, ptr unsafe.Pointer) []byte {
 
 func mangle_bool_slice(buf []byte, ptr unsafe.Pointer) []byte {
 	s := *(*[]bool)(ptr)
+	if s == nil {
+		return buf
+	}
 	buf = append_uint(buf, uint(len(s)))
 	for _, b := range s {
 		if b {
@@ -50,79 +52,143 @@ func mangle_bool_slice(buf []byte, ptr unsafe.Pointer) []byte {
 	return buf
 }
 
+func mangle_int(buf []byte, ptr unsafe.Pointer) []byte {
+	return append_int(buf, *(*int)(ptr))
+}
+
+func mangle_int_slice(buf []byte, ptr unsafe.Pointer) []byte {
+	s := *(*[]int)(ptr)
+	if s == nil {
+		return buf
+	}
+	buf = append_uint(buf, uint(len(s)))
+	for _, v := range s {
+		buf = append_int(buf, v)
+	}
+	return buf
+}
+
+func mangle_uint(buf []byte, ptr unsafe.Pointer) []byte {
+	return append_uint(buf, *(*uint)(ptr))
+}
+
+func mangle_uint_slice(buf []byte, ptr unsafe.Pointer) []byte {
+	s := *(*[]uint)(ptr)
+	if s == nil {
+		return buf
+	}
+	buf = append_uint(buf, uint(len(s)))
+	for _, v := range s {
+		buf = append_uint(buf, v)
+	}
+	return buf
+}
+
+func mangle_int16(buf []byte, ptr unsafe.Pointer) []byte {
+	return append_int(buf, *(*int16)(ptr))
+}
+
+func mangle_int16_slice(buf []byte, ptr unsafe.Pointer) []byte {
+	s := *(*[]int16)(ptr)
+	if s == nil {
+		return buf
+	}
+	buf = append_uint(buf, uint(len(s)))
+	for _, v := range s {
+		buf = append_int(buf, v)
+	}
+	return buf
+}
+
+func mangle_uint16(buf []byte, ptr unsafe.Pointer) []byte {
+	return append_uint(buf, *(*uint16)(ptr))
+}
+
+func mangle_uint16_slice(buf []byte, ptr unsafe.Pointer) []byte {
+	s := *(*[]uint16)(ptr)
+	if s == nil {
+		return buf
+	}
+	buf = append_uint(buf, uint(len(s)))
+	for _, v := range s {
+		buf = append_uint(buf, v)
+	}
+	return buf
+}
+
+func mangle_int32(buf []byte, ptr unsafe.Pointer) []byte {
+	return append_int(buf, *(*int32)(ptr))
+}
+
+func mangle_int32_slice(buf []byte, ptr unsafe.Pointer) []byte {
+	s := *(*[]int32)(ptr)
+	if s == nil {
+		return buf
+	}
+	buf = append_uint(buf, uint(len(s)))
+	for _, v := range s {
+		buf = append_int(buf, v)
+	}
+	return buf
+}
+
+func mangle_uint32(buf []byte, ptr unsafe.Pointer) []byte {
+	return append_uint(buf, *(*uint32)(ptr))
+}
+
+func mangle_uint32_slice(buf []byte, ptr unsafe.Pointer) []byte {
+	s := *(*[]uint32)(ptr)
+	if s == nil {
+		return buf
+	}
+	buf = append_uint(buf, uint(len(s)))
+	for _, v := range s {
+		buf = append_uint(buf, v)
+	}
+	return buf
+}
+
+func mangle_int64(buf []byte, ptr unsafe.Pointer) []byte {
+	return append_int(buf, *(*int64)(ptr))
+}
+
+func mangle_int64_slice(buf []byte, ptr unsafe.Pointer) []byte {
+	s := *(*[]int64)(ptr)
+	if s == nil {
+		return buf
+	}
+	buf = append_uint(buf, uint(len(s)))
+	for _, v := range s {
+		buf = append_int(buf, v)
+	}
+	return buf
+}
+
+func mangle_uint64(buf []byte, ptr unsafe.Pointer) []byte {
+	return append_uint(buf, *(*uint64)(ptr))
+}
+
+func mangle_uint64_slice(buf []byte, ptr unsafe.Pointer) []byte {
+	s := *(*[]uint64)(ptr)
+	if s == nil {
+		return buf
+	}
+	buf = append_uint(buf, uint(len(s)))
+	for _, v := range s {
+		buf = append_uint(buf, v)
+	}
+	return buf
+}
+
 func mangle_8bit(buf []byte, ptr unsafe.Pointer) []byte {
 	return append(buf, *(*uint8)(ptr))
 }
 
 func mangle_8bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
 	s := *(*[]uint8)(ptr)
+	if s == nil {
+		return buf
+	}
 	buf = append_uint(buf, uint(len(s)))
 	return append(buf, s...)
-}
-
-func mangle_16bit(buf []byte, ptr unsafe.Pointer) []byte {
-	return append_uint(buf, *(*uint16)(ptr))
-}
-
-func mangle_16bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	s := *(*[]uint16)(ptr)
-	buf = append_uint(buf, uint(len(s)))
-	for _, u := range s {
-		buf = append_uint(buf, u)
-	}
-	return buf
-}
-
-func mangle_32bit(buf []byte, ptr unsafe.Pointer) []byte {
-	return append_uint(buf, *(*uint32)(ptr))
-}
-
-func mangle_32bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	s := *(*[]uint32)(ptr)
-	buf = append_uint(buf, uint(len(s)))
-	for _, u := range s {
-		buf = append_uint(buf, u)
-	}
-	return buf
-}
-
-func mangle_64bit(buf []byte, ptr unsafe.Pointer) []byte {
-	return append_uint(buf, *(*uint64)(ptr))
-}
-
-func mangle_64bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	s := *(*[]uint64)(ptr)
-	buf = append_uint(buf, uint(len(s)))
-	for _, u := range s {
-		buf = append_uint(buf, u)
-	}
-	return buf
-}
-
-func mangle_int(buf []byte, ptr unsafe.Pointer) []byte {
-	return append_uint(buf, *(*uint)(ptr))
-}
-
-func mangle_int_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	s := *(*[]uint)(ptr)
-	buf = append_uint(buf, uint(len(s)))
-	for _, u := range s {
-		buf = append_uint(buf, u)
-	}
-	return buf
-}
-
-func mangle_128bit(buf []byte, ptr unsafe.Pointer) []byte {
-	u2 := *(*[2]uint64)(ptr)
-	buf = append_uint(buf, u2[0])
-	buf = append_uint(buf, u2[1])
-	return buf
-}
-
-func mangle_128bit_slice(buf []byte, ptr unsafe.Pointer) []byte {
-	for _, u2 := range *(*[][2]uint64)(ptr) {
-		buf = append_uint(buf, u2[0])
-		buf = append_uint(buf, u2[1])
-	}
-	return buf
 }

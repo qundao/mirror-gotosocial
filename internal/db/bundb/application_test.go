@@ -57,8 +57,8 @@ func (suite *ApplicationTestSuite) TestGetApplicationBy() {
 				return suite.db.GetApplicationByClientID(ctx, app.ClientID)
 			},
 		} {
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear application model database caches.
+			suite.state.Caches.DB.Application.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 
@@ -95,8 +95,8 @@ func (suite *ApplicationTestSuite) TestDeleteApplicationBy() {
 				return suite.db.DeleteApplicationByID(ctx, app.ID)
 			},
 		} {
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear application model database caches.
+			suite.state.Caches.DB.Application.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 

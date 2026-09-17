@@ -34,7 +34,7 @@ type ParseMentionTestSuite struct {
 func (suite *ParseMentionTestSuite) TestParseMentionFunc() {
 	var (
 		ctx          = suite.T().Context()
-		parseMention = processing.GetParseMentionFunc(&suite.state, suite.federator)
+		parseMention = processing.GetParseMentionFunc(suite.state, suite.federator)
 		originAcctID = suite.testAccounts["local_account_1"].ID
 		statusID     = id.NewULID()
 	)

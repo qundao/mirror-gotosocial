@@ -29,15 +29,8 @@ import (
 	"code.superseriousbusiness.org/gopkg/httputil"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/api/wellknown/webfinger"
-	"code.superseriousbusiness.org/gotosocial/internal/cleaner"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/interaction"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/mutes"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/status"
-	"code.superseriousbusiness.org/gotosocial/internal/filter/visibility"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
-	"code.superseriousbusiness.org/gotosocial/internal/processing"
-	"code.superseriousbusiness.org/gotosocial/internal/subscriptions"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
@@ -80,27 +73,8 @@ func (suite *WebfingerGetTestSuite) funkifyAccountDomain(host string, accountDom
 	// to new host + account domain.
 	config.SetHost(host)
 	config.SetAccountDomain(accountDomain)
-	testrig.StopWorkers(&suite.state)
-	testrig.StartNoopWorkers(&suite.state)
-
-	suite.processor = processing.NewProcessor(
-		cleaner.New(&suite.state),
-		subscriptions.New(&suite.state, suite.federator.TransportController(), suite.tc),
-		suite.tc,
-		suite.federator,
-		testrig.NewTestOauthServer(&suite.state),
-		testrig.NewTestMediaManager(&suite.state),
-		&suite.state,
-		suite.emailSender,
-		testrig.NewNoopWebPushSender(),
-		visibility.NewFilter(&suite.state),
-		mutes.NewFilter(&suite.state),
-		interaction.NewFilter(&suite.state),
-		status.NewFilter(&suite.state),
-	)
-
-	suite.webfingerModule = webfinger.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
-	testrig.StartNoopWorkers(&suite.state)
+	suite.TearDownTest()
+	suite.setupTest()
 
 	// Generate a new account for the
 	// tester, which uses the new host.

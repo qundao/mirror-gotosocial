@@ -32,7 +32,7 @@ import (
 type ClientStoreTestSuite struct {
 	suite.Suite
 	db               db.DB
-	state            state.State
+	state            *state.State
 	testApplications map[string]*gtsmodel.Application
 }
 
@@ -41,10 +41,10 @@ func (suite *ClientStoreTestSuite) SetupSuite() {
 }
 
 func (suite *ClientStoreTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	testrig.StandardDBSetup(suite.db, nil)
@@ -56,7 +56,7 @@ func (suite *ClientStoreTestSuite) TearDownTest() {
 
 func (suite *ClientStoreTestSuite) TestClientStoreGet() {
 	testApp := suite.testApplications["application_1"]
-	cs := oauth.NewClientStore(&suite.state)
+	cs := oauth.NewClientStore(suite.state)
 
 	// Fetch clientInfo from the store.
 	clientInfo, err := cs.GetByID(suite.T().Context(), testApp.ClientID)

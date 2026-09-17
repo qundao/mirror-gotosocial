@@ -62,7 +62,6 @@ func (suite *TextStandardTestSuite) SetupSuite() {
 
 func (suite *TextStandardTestSuite) SetupTest() {
 	var state state.State
-	state.Caches.Init()
 
 	testrig.InitTestLog()
 	testrig.InitTestConfig()

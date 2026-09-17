@@ -39,7 +39,7 @@ type AdminStandardTestSuite struct {
 	suite.Suite
 	processor  *processing.Processor
 	sentEmails map[string]string
-	state      state.State
+	state      *state.State
 
 	// standard suite models
 	testTokens          map[string]*gtsmodel.Token
@@ -69,12 +69,12 @@ func (suite *AdminStandardTestSuite) SetupSuite() {
 }
 
 func (suite *AdminStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.state.DB = testrig.NewTestDB(&suite.state)
+	suite.state.DB = testrig.NewTestDB(suite.state)
 	suite.state.Storage = testrig.NewInMemoryStorage()
 
 	testrig.StandardDBSetup(suite.state.DB, nil)
@@ -84,27 +84,27 @@ func (suite *AdminStandardTestSuite) SetupTest() {
 
 	suite.sentEmails = make(map[string]string)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		testrig.NewTestFederator(
-			&suite.state,
+			suite.state,
 			testrig.NewTestTransportController(
-				&suite.state,
+				suite.state,
 				testrig.NewMockHTTPClient(nil, "../../../../testrig/media"),
 			),
-			testrig.NewTestMediaManager(&suite.state),
+			testrig.NewTestMediaManager(suite.state),
 		),
 		testrig.NewEmailSender("../../../../web/template/", suite.sentEmails),
 		testrig.NewNoopWebPushSender(),
-		testrig.NewTestMediaManager(&suite.state),
+		testrig.NewTestMediaManager(suite.state),
 	)
-	testrig.StartWorkers(&suite.state, suite.processor.Workers())
-	suite.adminModule = admin.New(&suite.state, suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	testrig.StartWorkers(suite.state, suite.processor.Workers())
+	suite.adminModule = admin.New(suite.state, suite.processor, testrig.LoadTemplates(suite.state, ""))
 }
 
 func (suite *AdminStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.state.DB)
 	testrig.StandardStorageTeardown(suite.state.Storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *AdminStandardTestSuite) newContext(recorder *httptest.ResponseRecorder, requestMethod string, requestBody []byte, requestPath string, bodyContentType string) *httputil.Context {

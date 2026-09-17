@@ -40,7 +40,7 @@ import (
 type TimelineStandardTestSuite struct {
 	suite.Suite
 	db    db.DB
-	state state.State
+	state *state.State
 
 	// standard suite models
 	testAccounts map[string]*gtsmodel.Account
@@ -56,31 +56,31 @@ func (suite *TimelineStandardTestSuite) SetupSuite() {
 }
 
 func (suite *TimelineStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 
-	typeconv := typeutils.NewConverter(&suite.state)
-	media := media.NewManager(&suite.state)
-	transport := testrig.NewTestTransportController(&suite.state, nil)
+	typeconv := typeutils.NewConverter(suite.state)
+	media := media.NewManager(suite.state)
+	transport := testrig.NewTestTransportController(suite.state, nil)
 
-	federator := testrig.NewTestFederator(&suite.state, transport, media)
+	federator := testrig.NewTestFederator(suite.state, transport, media)
 
-	visFilter := visibility.NewFilter(&suite.state)
-	muteFilter := mutes.NewFilter(&suite.state)
-	statusFilter := status.NewFilter(&suite.state)
+	visFilter := visibility.NewFilter(suite.state)
+	muteFilter := mutes.NewFilter(suite.state)
+	statusFilter := status.NewFilter(suite.state)
 
-	stream := stream.New(&suite.state, testrig.NewTestOauthServer(&suite.state))
-	conversations := conversations.New(&suite.state, typeconv, visFilter, muteFilter, statusFilter)
+	stream := stream.New(suite.state, testrig.NewTestOauthServer(suite.state))
+	conversations := conversations.New(suite.state, typeconv, visFilter, muteFilter, statusFilter)
 
 	surfacer := surfacing.New(
-		&suite.state,
+		suite.state,
 		typeconv,
 		federator,
 		&stream,
@@ -93,19 +93,19 @@ func (suite *TimelineStandardTestSuite) SetupTest() {
 	)
 
 	common := common.New(
-		&suite.state,
+		suite.state,
 		media,
 		typeconv,
 		federator,
 		visFilter,
 		muteFilter,
 		statusFilter,
-		processing.GetParseMentionFunc(&suite.state, federator),
+		processing.GetParseMentionFunc(suite.state, federator),
 		surfacer,
 	)
 
 	suite.timeline = timeline.New(
-		&suite.state,
+		suite.state,
 		&common,
 		typeconv,
 		visFilter,
@@ -118,5 +118,5 @@ func (suite *TimelineStandardTestSuite) SetupTest() {
 
 func (suite *TimelineStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

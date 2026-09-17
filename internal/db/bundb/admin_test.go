@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
@@ -68,25 +69,24 @@ func (suite *AdminTestSuite) TestIsEmailAvailableDomainBlocked() {
 }
 
 func (suite *AdminTestSuite) TestCreateInstanceAccount() {
-	// reinitialize db caches to clear
-	suite.state.Caches.Init()
-	// we need to take an empty db for this...
-	testrig.StandardDBTeardown(suite.db)
-	// ...with tables created but no data
-	suite.db = testrig.NewTestDB(&suite.state)
-	testrig.CreateTestTables(suite.db)
+	state := new(state.State)
+
+	// Prepare new test database
+	// with tables but w/o data.
+	db := testrig.NewTestDB(state)
+	testrig.CreateTestTables(db)
 
 	// make sure there's no instance account in the db yet
-	acct, err := suite.db.GetInstanceAccount(suite.T().Context(), "")
+	acct, err := db.GetInstanceAccount(suite.T().Context(), "")
 	suite.Error(err)
 	suite.Nil(acct)
 
 	// create it
-	err = suite.db.CreateInstanceAccount(suite.T().Context())
+	err = db.CreateInstanceAccount(suite.T().Context())
 	suite.NoError(err)
 
 	// and now check it exists
-	acct, err = suite.db.GetInstanceAccount(suite.T().Context(), "")
+	acct, err = db.GetInstanceAccount(suite.T().Context(), "")
 	suite.NoError(err)
 	suite.NotNil(acct)
 }

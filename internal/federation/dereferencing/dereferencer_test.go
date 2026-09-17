@@ -38,7 +38,7 @@ type DereferencerStandardTestSuite struct {
 	suite.Suite
 	db          db.DB
 	storage     *storage.Driver
-	state       state.State
+	state       *state.State
 	client      *testrig.MockHTTPClient
 	converter   *typeutils.Converter
 	visFilter   *visibility.Filter
@@ -69,16 +69,16 @@ func (suite *DereferencerStandardTestSuite) SetupTest() {
 	suite.testRemoteAttachments = testrig.NewTestFediAttachments("../../../testrig/media")
 	suite.testEmojis = testrig.NewTestEmojis()
 
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 
-	suite.converter = typeutils.NewConverter(&suite.state)
-	suite.visFilter = visibility.NewFilter(&suite.state)
-	suite.intFilter = interaction.NewFilter(&suite.state)
-	suite.relayFilter = relay.NewFilter(&suite.state)
-	suite.media = testrig.NewTestMediaManager(&suite.state)
+	suite.converter = typeutils.NewConverter(suite.state)
+	suite.visFilter = visibility.NewFilter(suite.state)
+	suite.intFilter = interaction.NewFilter(suite.state)
+	suite.relayFilter = relay.NewFilter(suite.state)
+	suite.media = testrig.NewTestMediaManager(suite.state)
 
 	suite.client = testrig.NewMockHTTPClient(nil, "../../../testrig/media")
 	suite.storage = testrig.NewInMemoryStorage()
@@ -87,10 +87,10 @@ func (suite *DereferencerStandardTestSuite) SetupTest() {
 	suite.state.Storage = suite.storage
 
 	suite.dereferencer = dereferencing.NewDereferencer(
-		&suite.state,
+		suite.state,
 		suite.converter,
 		testrig.NewTestTransportController(
-			&suite.state,
+			suite.state,
 			suite.client,
 		),
 		suite.visFilter,
@@ -103,5 +103,5 @@ func (suite *DereferencerStandardTestSuite) SetupTest() {
 
 func (suite *DereferencerStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

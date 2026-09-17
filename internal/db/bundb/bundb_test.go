@@ -29,7 +29,7 @@ type BunDBStandardTestSuite struct {
 	// standard suite interfaces
 	suite.Suite
 	db    db.DB
-	state state.State
+	state *state.State
 
 	// standard suite models
 	testTokens              map[string]*gtsmodel.Token
@@ -88,8 +88,8 @@ func (suite *BunDBStandardTestSuite) SetupSuite() {
 func (suite *BunDBStandardTestSuite) SetupTest() {
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
-	suite.state.Caches.Init()
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.state = new(state.State)
+	suite.db = testrig.NewTestDB(suite.state)
 	testrig.StandardDBSetup(suite.db, suite.testAccounts)
 }
 

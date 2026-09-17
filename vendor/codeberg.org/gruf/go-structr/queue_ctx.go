@@ -27,29 +27,33 @@ func (q *QueueCtx[T]) PopBack(ctx context.Context) (T, bool) {
 // PushFront pushes values to front of queue.
 func (q *QueueCtx[T]) PushFront(values ...T) {
 	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	buf := new_buffer()
 	for i := range values {
-		item := q.index(values[i])
+		item := q.index(buf, values[i])
 		q.queue.push_front(&item.elem)
 	}
+	free_buffer(buf)
 	if q.ch != nil {
 		close(q.ch)
 		q.ch = nil
 	}
-	q.mutex.Unlock()
 }
 
 // PushBack pushes values to back of queue.
 func (q *QueueCtx[T]) PushBack(values ...T) {
 	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	buf := new_buffer()
 	for i := range values {
-		item := q.index(values[i])
+		item := q.index(buf, values[i])
 		q.queue.push_back(&item.elem)
 	}
+	free_buffer(buf)
 	if q.ch != nil {
 		close(q.ch)
 		q.ch = nil
 	}
-	q.mutex.Unlock()
 }
 
 // Wait returns a ptr to the current ctx channel,
@@ -89,8 +93,10 @@ func (q *QueueCtx[T]) pop(ctx context.Context, next func() *list_elem) (T, bool)
 		panic("nil ctx")
 	}
 
-	// Acquire lock.
-	q.mutex.Lock()
+	// Acquire lock w/ safe unlock,
+	// note the wrapping function.
+	unlock := q.mutex.SafeLock()
+	defer func() { unlock() }()
 
 	var elem *list_elem
 
@@ -110,8 +116,9 @@ func (q *QueueCtx[T]) pop(ctx context.Context, next func() *list_elem) (T, bool)
 		// ch pointer.
 		ch := q.ch
 
-		// Unlock queue.
-		q.mutex.Unlock()
+		// Done w/
+		// lock.
+		unlock()
 
 		select {
 		// Ctx cancelled.
@@ -123,8 +130,8 @@ func (q *QueueCtx[T]) pop(ctx context.Context, next func() *list_elem) (T, bool)
 		case <-ch:
 		}
 
-		// Relock queue.
-		q.mutex.Lock()
+		// Reacquire the mutex lock.
+		unlock = q.mutex.SafeLock()
 	}
 
 	// Cast the indexed item from elem.
@@ -139,8 +146,9 @@ func (q *QueueCtx[T]) pop(ctx context.Context, next func() *list_elem) (T, bool)
 	// Get func ptrs.
 	pop := q.Queue.pop
 
-	// Done with lock.
-	q.mutex.Unlock()
+	// Done w/
+	// lock.
+	unlock()
 
 	if pop != nil {
 		// Pass to

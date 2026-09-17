@@ -262,9 +262,9 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountByRedirect() {
 
 	// Update dereferencer to use new test HTTP client.
 	suite.dereferencer = dereferencing.NewDereferencer(
-		&suite.state,
+		suite.state,
 		suite.converter,
-		testrig.NewTestTransportController(&suite.state, suite.client),
+		testrig.NewTestTransportController(suite.state, suite.client),
 		suite.visFilter,
 		suite.intFilter,
 		suite.relayFilter,
@@ -319,9 +319,9 @@ func (suite *AccountTestSuite) TestDereferenceMasqueradingLocalAccount() {
 
 	// Update dereferencer to use new test HTTP client.
 	suite.dereferencer = dereferencing.NewDereferencer(
-		&suite.state,
+		suite.state,
 		suite.converter,
-		testrig.NewTestTransportController(&suite.state, suite.client),
+		testrig.NewTestTransportController(suite.state, suite.client),
 		suite.visFilter,
 		suite.intFilter,
 		suite.relayFilter,

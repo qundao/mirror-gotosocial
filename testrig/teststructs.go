@@ -65,8 +65,6 @@ func SetupTestStructs(
 ) *TestStructs {
 	state := state.State{}
 
-	state.Caches.Init()
-
 	db := NewTestDB(&state)
 	state.DB = db
 	state.AdminActions = admin.New(db, &state.Workers)

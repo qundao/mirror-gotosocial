@@ -474,7 +474,7 @@ const (
 type TypeUtilsTestSuite struct {
 	suite.Suite
 	db                      db.DB
-	state                   state.State
+	state                   *state.State
 	testAccounts            map[string]*gtsmodel.Account
 	testStatuses            map[string]*gtsmodel.Status
 	testAttachments         map[string]*gtsmodel.MediaAttachment
@@ -493,12 +493,12 @@ type TypeUtilsTestSuite struct {
 }
 
 func (suite *TypeUtilsTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	storage := testrig.NewInMemoryStorage()
@@ -517,28 +517,28 @@ func (suite *TypeUtilsTestSuite) SetupTest() {
 	suite.testFilterStatues = testrig.NewTestFilterStatuses()
 	suite.testInteractionRequests = testrig.NewTestInteractionRequests()
 	suite.testDomainLimits = testrig.NewTestDomainLimits()
-	suite.typeconverter = typeutils.NewConverter(&suite.state)
+	suite.typeconverter = typeutils.NewConverter(suite.state)
 
 	testrig.StandardDBSetup(suite.db, nil)
 }
 
 func (suite *TypeUtilsTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 // GetProcessor is a utility function that instantiates a processor.
 // Useful when a test in the test suite needs to change some state.
 func (suite *TypeUtilsTestSuite) GetProcessor() *processing.Processor {
 	httpClient := testrig.NewMockHTTPClient(nil, "../../testrig/media")
-	transportController := testrig.NewTestTransportController(&suite.state, httpClient)
-	mediaManager := testrig.NewTestMediaManager(&suite.state)
-	federator := testrig.NewTestFederator(&suite.state, transportController, mediaManager)
+	transportController := testrig.NewTestTransportController(suite.state, httpClient)
+	mediaManager := testrig.NewTestMediaManager(suite.state)
+	federator := testrig.NewTestFederator(suite.state, transportController, mediaManager)
 	emailSender := testrig.NewEmailSender("../../web/template/", nil)
 	webPushSender := testrig.NewNoopWebPushSender()
 
-	processor := testrig.NewTestProcessor(&suite.state, federator, emailSender, webPushSender, mediaManager)
-	testrig.StartWorkers(&suite.state, processor.Workers())
+	processor := testrig.NewTestProcessor(suite.state, federator, emailSender, webPushSender, mediaManager)
+	testrig.StartWorkers(suite.state, processor.Workers())
 
 	return processor
 }

@@ -42,7 +42,7 @@ type MediaStandardTestSuite struct {
 	db                  db.DB
 	tc                  *typeutils.Converter
 	storage             *storage.Driver
-	state               state.State
+	state               *state.State
 	mediaManager        *media.Manager
 	transportController transport.Controller
 
@@ -61,28 +61,28 @@ type MediaStandardTestSuite struct {
 }
 
 func (suite *MediaStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.transportController = testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media"))
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.transportController = testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media"))
 
-	federator := testrig.NewTestFederator(&suite.state, suite.transportController, suite.mediaManager)
-	visFilter := visibility.NewFilter(&suite.state)
-	muteFilter := mutes.NewFilter(&suite.state)
-	statusFilter := status.NewFilter(&suite.state)
-	surfacer := testrig.NewTestSurfacer(&suite.state, federator, testrig.NewEmailSender("../../../web/template", nil), testrig.NewNoopWebPushSender())
-	common := common.New(&suite.state, suite.mediaManager, suite.tc, federator, visFilter, muteFilter, statusFilter, processing.GetParseMentionFunc(&suite.state, federator), surfacer)
+	federator := testrig.NewTestFederator(suite.state, suite.transportController, suite.mediaManager)
+	visFilter := visibility.NewFilter(suite.state)
+	muteFilter := mutes.NewFilter(suite.state)
+	statusFilter := status.NewFilter(suite.state)
+	surfacer := testrig.NewTestSurfacer(suite.state, federator, testrig.NewEmailSender("../../../web/template", nil), testrig.NewNoopWebPushSender())
+	common := common.New(suite.state, suite.mediaManager, suite.tc, federator, visFilter, muteFilter, statusFilter, processing.GetParseMentionFunc(suite.state, federator), surfacer)
 
-	suite.mediaProcessor = mediaprocessing.New(&common, &suite.state, suite.tc, federator, suite.mediaManager, suite.transportController)
+	suite.mediaProcessor = mediaprocessing.New(&common, suite.state, suite.tc, federator, suite.mediaManager, suite.transportController)
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../testrig/media")
 

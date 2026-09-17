@@ -3,8 +3,9 @@ package structr
 import (
 	"context"
 	"errors"
-	"sync"
 	"unsafe"
+
+	"codeberg.org/gruf/go-byteutil"
 )
 
 // DefaultIgnoreErr is the default function used to
@@ -76,7 +77,7 @@ type Cache[StructType any] struct {
 	// protective mutex, guards:
 	// - Cache{}.*
 	// - Index{}.data
-	mutex sync.Mutex
+	mutex mutex
 }
 
 // Init initializes the cache with given configuration
@@ -100,25 +101,35 @@ func (c *Cache[T]) Init(config CacheConfig[T]) {
 		panic("minimum cache size is 2 for LRU to work")
 	}
 
-	// Safely copy over
-	// provided config.
+	// Acquire lock.
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
+
+	// Ensure not setup.
+	if c.indices != nil {
+		panic("already initialized")
+	}
+
+	// Prepare each of configured struct indices.
 	c.indices = make([]Index, len(config.Indices))
 	for i, cfg := range config.Indices {
 		c.indices[i].ptr = unsafe.Pointer(c)
 		c.indices[i].init(t, cfg, config.MaxSize)
 	}
+
+	// Copy over functions.
 	c.ignore = config.IgnoreErr
 	c.copy = config.Copy
+
+	// Copy over size configs.
 	c.invalid = config.Invalidate
 	c.maxSize = config.MaxSize
 }
 
 // Index selects index with given name from cache, else panics.
 func (c *Cache[T]) Index(name string) *Index {
-	for i, idx := range c.indices {
-		if idx.name == name {
+	for i := range c.indices {
+		if c.indices[i].name == name {
 			return &(c.indices[i])
 		}
 	}
@@ -178,17 +189,16 @@ func (c *Cache[T]) Get(index *Index, keys ...Key) []T {
 // Put will insert the given values into cache,
 // calling any invalidate hook on each value.
 func (c *Cache[T]) Put(values ...T) {
-	// Acquire lock.
-	c.mutex.Lock()
+	if len(values) < 1 {
+		return
+	}
 
-	// Ensure mutex
-	// gets unlocked.
-	var unlocked bool
-	defer func() {
-		if !unlocked {
-			c.mutex.Unlock()
-		}
-	}()
+	// Acquire buffer.
+	buf := new_buffer()
+
+	// Acquire lock w/ safe unlock.
+	unlock := c.mutex.SafeLock()
+	defer unlock()
 
 	// Check cache init.
 	if c.copy == nil {
@@ -198,7 +208,9 @@ func (c *Cache[T]) Put(values ...T) {
 	// Store all passed values.
 	for i := range values {
 		c.store_value(
-			nil, "",
+			buf,
+			nil,
+			"",
 			values[i],
 		)
 	}
@@ -206,9 +218,12 @@ func (c *Cache[T]) Put(values ...T) {
 	// Get func ptrs.
 	invalid := c.invalid
 
-	// Done with lock.
-	c.mutex.Unlock()
-	unlocked = true
+	// Done w/
+	// lock.
+	unlock()
+
+	// Done w/ buffer.
+	free_buffer(buf)
 
 	if invalid != nil {
 		// Pass all invalidated values
@@ -219,7 +234,7 @@ func (c *Cache[T]) Put(values ...T) {
 	}
 }
 
-// LoadOneBy fetches one result from the cache stored under index, using precalculated index key.
+// LoadOne fetches one result from the cache stored under index, using precalculated index key.
 // In the case that no result is found, provided load callback will be used to hydrate the cache.
 func (c *Cache[T]) LoadOne(index *Index, key Key, load func() (T, error)) (T, error) {
 	if index == nil {
@@ -242,17 +257,10 @@ func (c *Cache[T]) LoadOne(index *Index, key Key, load func() (T, error)) (T, er
 		err error
 	)
 
-	// Acquire lock.
-	c.mutex.Lock()
-
-	// Ensure mutex
-	// gets unlocked.
-	var unlocked bool
-	defer func() {
-		if !unlocked {
-			c.mutex.Unlock()
-		}
-	}()
+	// Acquire lock w/ safe unlock,
+	// note the wrapping function.
+	unlock := c.mutex.SafeLock()
+	defer func() { unlock() }()
 
 	// Check init'd.
 	if c.copy == nil ||
@@ -270,24 +278,24 @@ func (c *Cache[T]) LoadOne(index *Index, key Key, load func() (T, error)) (T, er
 			// Set value COPY.
 			val = c.copy(val)
 
-			// Push to front of LRU list, USING
-			// THE ITEM'S LRU ENTRY, NOT THE
-			// INDEX KEY ENTRY. VERY IMPORTANT!!
-			c.lru.move_front(&item.elem)
-
 		} else {
 
 			// Attempt to return error.
 			err, _ = item.data.(error)
 		}
+
+		// Push to front of LRU list, USING
+		// THE ITEM'S LRU ENTRY, NOT THE
+		// INDEX KEY ENTRY. VERY IMPORTANT!!
+		c.lru.move_front(&item.elem)
 	}
 
 	// Get func ptrs.
 	ignore := c.ignore
 
-	// Done with lock.
-	c.mutex.Unlock()
-	unlocked = true
+	// Done w/
+	// lock.
+	unlock()
 
 	if ok {
 		// item found!
@@ -302,9 +310,11 @@ func (c *Cache[T]) LoadOne(index *Index, key Key, load func() (T, error)) (T, er
 		return val, err
 	}
 
-	// Acquire lock.
-	c.mutex.Lock()
-	unlocked = false
+	// Acquire buffer.
+	buf := new_buffer()
+
+	// Reacquire the mutex lock.
+	unlock = c.mutex.SafeLock()
 
 	// Index this new loaded item.
 	// Note this handles copying of
@@ -313,12 +323,15 @@ func (c *Cache[T]) LoadOne(index *Index, key Key, load func() (T, error)) (T, er
 	if err != nil {
 		c.store_error(index, key.key, err)
 	} else {
-		c.store_value(index, key.key, val)
+		c.store_value(buf, index, key.key, val)
 	}
 
-	// Done with lock.
-	c.mutex.Unlock()
-	unlocked = true
+	// Done w/
+	// lock.
+	unlock()
+
+	// Done w/ buffer.
+	free_buffer(buf)
 
 	return val, err
 }
@@ -331,22 +344,17 @@ func (c *Cache[T]) Load(index *Index, keys []Key, load func([]Key) ([]T, error))
 		panic("no index given")
 	} else if index.ptr != unsafe.Pointer(c) {
 		panic("invalid index for cache")
+	} else if len(keys) < 1 {
+		return nil, nil
 	}
 
 	// Preallocate expected ret slice.
 	values := make([]T, 0, len(keys))
 
-	// Acquire lock.
-	c.mutex.Lock()
-
-	// Ensure mutex
-	// gets unlocked.
-	var unlocked bool
-	defer func() {
-		if !unlocked {
-			c.mutex.Unlock()
-		}
-	}()
+	// Acquire lock w/ safe unlock,
+	// note the wrapping function.
+	unlock := c.mutex.SafeLock()
+	defer func() { unlock() }()
 
 	// Check init'd.
 	if c.copy == nil {
@@ -382,9 +390,9 @@ func (c *Cache[T]) Load(index *Index, keys []Key, load func([]Key) ([]T, error))
 		}
 	}
 
-	// Done with lock.
-	c.mutex.Unlock()
-	unlocked = true
+	// Done w/
+	// lock.
+	unlock()
 
 	if len(toLoad) == 0 {
 		// We loaded everything!
@@ -394,24 +402,31 @@ func (c *Cache[T]) Load(index *Index, keys []Key, load func([]Key) ([]T, error))
 	// Load uncached key values.
 	uncached, err := load(toLoad)
 	if err != nil {
-		return nil, err
+		return values, err
 	}
 
-	// Acquire lock.
-	c.mutex.Lock()
-	unlocked = false
+	// Acquire buffer.
+	buf := new_buffer()
+
+	// Reacquire the mutex lock.
+	unlock = c.mutex.SafeLock()
 
 	// Store all uncached values.
 	for i := range uncached {
 		c.store_value(
-			nil, "",
+			buf,
+			nil,
+			"",
 			uncached[i],
 		)
 	}
 
-	// Done with lock.
-	c.mutex.Unlock()
-	unlocked = true
+	// Done w/
+	// lock.
+	unlock()
+
+	// Done w/ buffer.
+	free_buffer(buf)
 
 	// Append uncached to return values.
 	values = append(values, uncached...)
@@ -457,8 +472,9 @@ func (c *Cache[T]) Invalidate(index *Index, keys ...Key) {
 		panic("invalid index for cache")
 	}
 
-	// Acquire lock.
-	c.mutex.Lock()
+	// Acquire lock w/ safe unlock.
+	unlock := c.mutex.SafeLock()
+	defer unlock()
 
 	// Preallocate expected ret slice.
 	values := make([]T, 0, len(keys))
@@ -482,8 +498,9 @@ func (c *Cache[T]) Invalidate(index *Index, keys ...Key) {
 	// Get func ptrs.
 	invalid := c.invalid
 
-	// Done with lock.
-	c.mutex.Unlock()
+	// Done w/
+	// lock.
+	unlock()
 
 	if invalid != nil {
 		// Pass all invalidated values
@@ -500,14 +517,15 @@ func (c *Cache[T]) Trim(perc float64) {
 
 	// Acquire lock.
 	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	// Calculate number of cache items to drop.
 	max := (perc / 100) * float64(c.maxSize)
 	diff := c.lru.len - int(max)
 	if diff <= 0 {
 
-		// Trim not needed.
-		c.mutex.Unlock()
+		// Trim not
+		// needed.
 		return
 	}
 
@@ -530,12 +548,9 @@ func (c *Cache[T]) Trim(perc float64) {
 	}
 
 	// Compact index data stores.
-	for _, idx := range c.indices {
-		(&idx).data.Compact()
+	for i := range c.indices {
+		c.indices[i].data.Compact()
 	}
-
-	// Done with lock.
-	c.mutex.Unlock()
 }
 
 // Clear empties the cache by calling .Trim(0).
@@ -575,7 +590,19 @@ func (c *Cache[T]) Cap() int {
 	return m
 }
 
-func (c *Cache[T]) store_value(index *Index, key string, value T) {
+func (c *Cache[T]) store_value(
+	// key generation buffer.
+	buf *byteutil.Buffer,
+
+	// optional index to
+	// already store in.
+	index *Index,
+	key string,
+
+	// value being
+	// stored.
+	value T,
+) {
 	// Alloc new index item.
 	item := new_indexed_item()
 	if cap(item.indexed) < len(c.indices) {
@@ -602,13 +629,10 @@ func (c *Cache[T]) store_value(index *Index, key string, value T) {
 		}
 	}
 
-	// Get ptr to value data.
+	// Get pointer to value data.
 	ptr := unsafe.Pointer(&value)
-
-	// Acquire key buf.
-	buf := new_buffer()
-
 	for i := range c.indices {
+
 		// Get current index ptr.
 		idx := (&c.indices[i])
 		if idx == index {
@@ -618,11 +642,10 @@ func (c *Cache[T]) store_value(index *Index, key string, value T) {
 			continue
 		}
 
-		// Extract fields comprising index key.
-		parts := extract_fields(ptr, idx.fields)
-
-		// Calculate index key.
-		key := idx.key(buf, parts)
+		// Calculate key for this index
+		// for this value by extracting
+		// its struct fields and mangling.
+		key := idx.extract_key(buf, ptr)
 		if key == "" {
 			continue
 		}
@@ -637,9 +660,6 @@ func (c *Cache[T]) store_value(index *Index, key string, value T) {
 			free_indexed_item(evicted)
 		}
 	}
-
-	// Done with buf.
-	free_buffer(buf)
 
 	if len(item.indexed) == 0 {
 		// Item was not stored under
@@ -709,11 +729,12 @@ func (c *Cache[T]) delete(i *indexed_item) {
 		i.indexed[len(i.indexed)-1] = nil
 		i.indexed = i.indexed[:len(i.indexed)-1]
 
-		// Get entry's index.
-		index := entry.index
+		// Delete entry from
+		// its storing index.
+		entry.delete_self()
 
-		// Drop this index_entry.
-		index.delete_entry(entry)
+		// Free entry to pool.
+		free_index_entry(entry)
 	}
 
 	// Drop from lru list.

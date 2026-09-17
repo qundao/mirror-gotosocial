@@ -30,7 +30,7 @@ type FilterStandardTestSuite struct {
 	// standard suite interfaces
 	suite.Suite
 	db    db.DB
-	state state.State
+	state *state.State
 
 	// standard suite models
 	testTokens       map[string]*gtsmodel.Token
@@ -61,13 +61,13 @@ func (suite *FilterStandardTestSuite) SetupSuite() {
 }
 
 func (suite *FilterStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
-	suite.filter = mutes.NewFilter(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
+	suite.filter = mutes.NewFilter(suite.state)
 
 	testrig.StandardDBSetup(suite.db, nil)
 }

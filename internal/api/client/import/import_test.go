@@ -37,7 +37,7 @@ import (
 type ImportTestSuite struct {
 	// Suite interfaces
 	suite.Suite
-	state state.State
+	state *state.State
 
 	// standard suite models
 	testTokens       map[string]*gtsmodel.Token
@@ -57,38 +57,38 @@ func (suite *ImportTestSuite) SetupSuite() {
 }
 
 func (suite *ImportTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.state.DB = testrig.NewTestDB(&suite.state)
+	suite.state.DB = testrig.NewTestDB(suite.state)
 	suite.state.Storage = testrig.NewInMemoryStorage()
 
 	testrig.StandardDBSetup(suite.state.DB, nil)
 	testrig.StandardStorageSetup(suite.state.Storage, "../../../../testrig/media")
 
-	mediaManager := testrig.NewTestMediaManager(&suite.state)
+	mediaManager := testrig.NewTestMediaManager(suite.state)
 
 	federator := testrig.NewTestFederator(
-		&suite.state,
+		suite.state,
 		testrig.NewTestTransportController(
-			&suite.state,
+			suite.state,
 			testrig.NewMockHTTPClient(nil, "../../../../testrig/media"),
 		),
 		mediaManager,
 	)
 
 	processor := testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		federator,
 		testrig.NewEmailSender("../../../../web/template/", nil),
 		testrig.NewNoopWebPushSender(),
 		mediaManager,
 	)
-	testrig.StartWorkers(&suite.state, processor.Workers())
+	testrig.StartWorkers(suite.state, processor.Workers())
 
-	suite.importModule = importdata.New(processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.importModule = importdata.New(processor, testrig.LoadTemplates(suite.state, ""))
 }
 
 func (suite *ImportTestSuite) TriggerHandler(
@@ -139,7 +139,7 @@ func (suite *ImportTestSuite) TriggerHandler(
 func (suite *ImportTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.state.DB)
 	testrig.StandardStorageTeardown(suite.state.Storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *ImportTestSuite) TestImportFollows() {

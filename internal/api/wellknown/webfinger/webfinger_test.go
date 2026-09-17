@@ -38,7 +38,7 @@ type WebfingerStandardTestSuite struct {
 	// standard suite interfaces
 	suite.Suite
 	db           db.DB
-	state        state.State
+	state        *state.State
 	tc           *typeutils.Converter
 	mediaManager *media.Manager
 	federator    *federation.Federator
@@ -69,31 +69,33 @@ func (suite *WebfingerStandardTestSuite) SetupSuite() {
 }
 
 func (suite *WebfingerStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
-
 	testrig.InitTestLog()
 	testrig.InitTestConfig()
+	suite.setupTest()
+}
 
-	suite.db = testrig.NewTestDB(&suite.state)
+func (suite *WebfingerStandardTestSuite) setupTest() {
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
 	suite.emailSender = testrig.NewEmailSender("../../../../web/template/", nil)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
-	suite.webfingerModule = webfinger.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
-	suite.oauthServer = testrig.NewTestOauthServer(&suite.state)
+	suite.webfingerModule = webfinger.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
+	suite.oauthServer = testrig.NewTestOauthServer(suite.state)
 	testrig.StandardDBSetup(suite.db, suite.testAccounts)
 	testrig.StandardStorageSetup(suite.storage, "../../../../testrig/media")
 }
@@ -101,5 +103,5 @@ func (suite *WebfingerStandardTestSuite) SetupTest() {
 func (suite *WebfingerStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

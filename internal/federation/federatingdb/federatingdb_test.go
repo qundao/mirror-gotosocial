@@ -39,7 +39,7 @@ type FederatingDBTestSuite struct {
 	db           db.DB
 	tc           *typeutils.Converter
 	federatingDB *federatingdb.DB
-	state        state.State
+	state        *state.State
 
 	testTokens       map[string]*gtsmodel.Token
 	testApplications map[string]*gtsmodel.Application
@@ -72,15 +72,15 @@ func (suite *FederatingDBTestSuite) SetupTest() {
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 
 	suite.testActivities = testrig.NewTestActivities(suite.testAccounts)
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 
-	suite.federatingDB = testrig.NewTestFederatingDB(&suite.state)
+	suite.federatingDB = testrig.NewTestFederatingDB(suite.state)
 	testrig.StandardDBSetup(suite.db, suite.testAccounts)
 
 	suite.state.DB = suite.db
@@ -89,7 +89,7 @@ func (suite *FederatingDBTestSuite) SetupTest() {
 
 func (suite *FederatingDBTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func createTestContext(t *testing.T, receivingAccount *gtsmodel.Account, requestingAccount *gtsmodel.Account) context.Context {

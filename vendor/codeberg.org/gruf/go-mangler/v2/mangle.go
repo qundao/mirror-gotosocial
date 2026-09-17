@@ -44,7 +44,7 @@ func Append(b []byte, a any) []byte {
 }
 
 // AppendMulti appends all mangled forms of input value(s) 'a' to buffer 'b'
-// separated by colon characters. When all type manglers are currently cached
+// separated by period characters. When all type manglers are currently cached
 // for all types in 'a', this will be faster than multiple calls to Append().
 //
 // See mangler.String() for more information on mangled output.
@@ -86,7 +86,7 @@ slow:
 // mangled output with the input data's runtime type pointer.
 //
 // Default supported types include all concrete (i.e. non-interface{})
-// data types, and interfaces implementing Mangleable{}.
+// data types, except complex numbers, and those implementing Mangleable{}.
 func String(a any) string {
 	b := Append(make([]byte, 0, 32), a)
 	d := unsafe.SliceData(b)

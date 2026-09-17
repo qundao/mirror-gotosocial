@@ -32,12 +32,13 @@ func iterArrayType(t xunsafe.TypeIter) Mangler {
 		return fn
 	default:
 		return func(buf []byte, ptr unsafe.Pointer) []byte {
-			for i := 0; i < n; i++ {
+			var offset uintptr
+			for range n {
 				// Mangle data at array index.
-				offset := esz * uintptr(i)
-				eptr := add(ptr, offset)
+				eptr := unsafe.Add(ptr, offset)
 				buf = fn(buf, eptr)
 				buf = append(buf, ',')
+				offset += esz
 			}
 
 			// Drop final comma.

@@ -17,16 +17,25 @@ $ go test -run=none -benchmem -gcflags=all='-l=4' -bench=.*
 goos: linux
 goarch: amd64
 pkg: codeberg.org/gruf/go-mangler/v2
-cpu: AMD Ryzen 7 7840U w/ Radeon  780M Graphics
-BenchmarkMangle-16                       3229830               371.4 ns/op             0 B/op          0 allocs/op
-BenchmarkMangleMulti-16                  3235609               370.3 ns/op             0 B/op          0 allocs/op
-BenchmarkMangleKnown-16                  7368690               162.2 ns/op             0 B/op          0 allocs/op
-BenchmarkJSON-16                          734290              1653 ns/op            2334 B/op        113 allocs/op
-BenchmarkLoosy-16                        1117132              1074 ns/op             768 B/op         70 allocs/op
-BenchmarkFmt-16                           413862              2487 ns/op            1514 B/op        146 allocs/op
-BenchmarkFxmackerCbor-16                 1089543              1160 ns/op            1610 B/op        113 allocs/op
-BenchmarkMitchellhHashStructure-16        184632              6109 ns/op           11461 B/op       1145 allocs/op
-BenchmarkCnfStructhash-16                  12608             97234 ns/op          275670 B/op       3799 allocs/op
+cpu: Intel(R) Core(TM) i7-9700T CPU @ 2.00GHz
+BenchmarkMangle
+BenchmarkMangle-8                         950618              1238 ns/op               0 B/op          0 allocs/op
+BenchmarkMangleMulti
+BenchmarkMangleMulti-8                    977418              1323 ns/op               0 B/op          0 allocs/op
+BenchmarkMangleKnown
+BenchmarkMangleKnown-8                   1961787               603.4 ns/op             0 B/op          0 allocs/op
+BenchmarkJSON
+BenchmarkJSON-8                           266931              4470 ns/op            2730 B/op        146 allocs/op
+BenchmarkLoosy
+BenchmarkLoosy-8                          353376              3643 ns/op            1008 B/op         98 allocs/op
+BenchmarkFmt
+BenchmarkFmt-8                            202864              7582 ns/op            1472 B/op        136 allocs/op
+BenchmarkFxmackerCbor
+BenchmarkFxmackerCbor-8                   419496              2855 ns/op            1640 B/op        150 allocs/op
+BenchmarkMitchellhHashStructure
+BenchmarkMitchellhHashStructure-8         113822             10711 ns/op           12046 B/op       1270 allocs/op
+BenchmarkCnfStructhash
+BenchmarkCnfStructhash-8                    8990            150967 ns/op          280594 B/op       3912 allocs/op
 PASS
-ok      codeberg.org/gruf/go-mangler/v2 16.613s
+ok      codeberg.org/gruf/go-mangler/v2
 ```

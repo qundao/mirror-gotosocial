@@ -54,7 +54,7 @@ type RealSenderStandardTestSuite struct {
 	suite.Suite
 	db                  db.DB
 	storage             *storage.Driver
-	state               state.State
+	state               *state.State
 	mediaManager        *media.Manager
 	typeconverter       *typeutils.Converter
 	httpClient          *testrig.MockHTTPClient
@@ -81,39 +81,39 @@ func (suite *RealSenderStandardTestSuite) SetupSuite() {
 }
 
 func (suite *RealSenderStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.typeconverter = typeutils.NewConverter(&suite.state)
+	suite.typeconverter = typeutils.NewConverter(suite.state)
 
 	suite.httpClient = testrig.NewMockHTTPClient(nil, "../../testrig/media")
 	suite.httpClient.TestRemotePeople = testrig.NewTestFediPeople()
 	suite.httpClient.TestRemoteStatuses = testrig.NewTestFediStatuses()
 
-	suite.transportController = testrig.NewTestTransportController(&suite.state, suite.httpClient)
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, suite.transportController, suite.mediaManager)
-	suite.oauthServer = testrig.NewTestOauthServer(&suite.state)
+	suite.transportController = testrig.NewTestTransportController(suite.state, suite.httpClient)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, suite.transportController, suite.mediaManager)
+	suite.oauthServer = testrig.NewTestOauthServer(suite.state)
 	suite.emailSender = testrig.NewEmailSender("../../web/template/", nil)
 
 	suite.webPushSender = newSenderWith(
 		&http.Client{
 			Transport: suite,
 		},
-		&suite.state,
+		suite.state,
 		suite.typeconverter,
 	)
 
 	suite.processor = processing.NewProcessor(
-		cleaner.New(&suite.state),
+		cleaner.New(suite.state),
 		subscriptions.New(
-			&suite.state,
+			suite.state,
 			suite.transportController,
 			suite.typeconverter,
 		),
@@ -121,15 +121,15 @@ func (suite *RealSenderStandardTestSuite) SetupTest() {
 		suite.federator,
 		suite.oauthServer,
 		suite.mediaManager,
-		&suite.state,
+		suite.state,
 		suite.emailSender,
 		suite.webPushSender,
-		visibility.NewFilter(&suite.state),
-		mutes.NewFilter(&suite.state),
-		interaction.NewFilter(&suite.state),
-		status.NewFilter(&suite.state),
+		visibility.NewFilter(suite.state),
+		mutes.NewFilter(suite.state),
+		interaction.NewFilter(suite.state),
+		status.NewFilter(suite.state),
 	)
-	testrig.StartWorkers(&suite.state, suite.processor.Workers())
+	testrig.StartWorkers(suite.state, suite.processor.Workers())
 
 	testrig.StandardDBSetup(suite.db, suite.testAccounts)
 	testrig.StandardStorageSetup(suite.storage, "../../testrig/media")
@@ -138,7 +138,7 @@ func (suite *RealSenderStandardTestSuite) SetupTest() {
 func (suite *RealSenderStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 	suite.webPushHttpClientDo = nil
 }
 

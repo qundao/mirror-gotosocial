@@ -34,7 +34,7 @@ type UserStandardTestSuite struct {
 	suite.Suite
 	emailSender email.Sender
 	db          db.DB
-	state       state.State
+	state       *state.State
 	oauthServer oauth.Server
 
 	testApps   map[string]*gtsmodel.Application
@@ -46,15 +46,15 @@ type UserStandardTestSuite struct {
 }
 
 func (suite *UserStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
-	suite.oauthServer = testrig.NewTestOauthServer(&suite.state)
+	suite.oauthServer = testrig.NewTestOauthServer(suite.state)
 
 	suite.sentEmails = make(map[string]string)
 	suite.emailSender = testrig.NewEmailSender("../../../web/template/", suite.sentEmails)
@@ -62,7 +62,7 @@ func (suite *UserStandardTestSuite) SetupTest() {
 	suite.testTokens = testrig.NewTestTokens()
 	suite.testUsers = testrig.NewTestUsers()
 
-	suite.user = user.New(&suite.state, typeutils.NewConverter(&suite.state), testrig.NewTestOauthServer(&suite.state), suite.emailSender)
+	suite.user = user.New(suite.state, typeutils.NewConverter(suite.state), testrig.NewTestOauthServer(suite.state), suite.emailSender)
 
 	testrig.StandardDBSetup(suite.db, nil)
 }

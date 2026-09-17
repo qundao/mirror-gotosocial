@@ -68,8 +68,8 @@ func (suite *PollTestSuite) TestGetPollBy() {
 			},
 		} {
 
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear poll model database caches.
+			suite.state.Caches.DB.Poll.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 
@@ -136,8 +136,8 @@ func (suite *PollTestSuite) TestGetPollVoteBy() {
 			},
 		} {
 
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear pollvote model database caches.
+			suite.state.Caches.DB.PollVote.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 

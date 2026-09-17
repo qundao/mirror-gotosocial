@@ -51,8 +51,8 @@ func iterStructType(t xunsafe.TypeIter) Mangler {
 	default:
 		return func(buf []byte, ptr unsafe.Pointer) []byte {
 			for i := range fields {
-				// Get struct field ptr via offset.
-				fptr := add(ptr, fields[i].offset)
+				// Get struct field pointer via offset.
+				fptr := unsafe.Add(ptr, fields[i].offset)
 
 				// Mangle the struct field data.
 				buf = fields[i].mangle(buf, fptr)
