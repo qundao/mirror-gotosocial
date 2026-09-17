@@ -58,7 +58,7 @@ type MediaCreateTestSuite struct {
 	oauthServer  oauth.Server
 	emailSender  email.Sender
 	processor    *processing.Processor
-	state        state.State
+	state        *state.State
 
 	// standard suite models
 	testTokens       map[string]*gtsmodel.Token
@@ -76,29 +76,28 @@ type MediaCreateTestSuite struct {
 */
 
 func (suite *MediaCreateTestSuite) SetupTest() {
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	// setup standard items
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.state.Caches.Init()
-
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../../testrig/media")
 
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.oauthServer = testrig.NewTestOauthServer(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.oauthServer = testrig.NewTestOauthServer(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
 	suite.emailSender = testrig.NewEmailSender("../../../../web/template/", nil)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
@@ -106,7 +105,7 @@ func (suite *MediaCreateTestSuite) SetupTest() {
 	)
 
 	// setup module being tested
-	suite.mediaModule = mediamodule.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.mediaModule = mediamodule.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
 
 	// setup test data
 	suite.testTokens = testrig.NewTestTokens()
@@ -119,7 +118,7 @@ func (suite *MediaCreateTestSuite) SetupTest() {
 func (suite *MediaCreateTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 /*

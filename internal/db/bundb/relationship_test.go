@@ -110,8 +110,8 @@ func (suite *RelationshipTestSuite) TestGetBlockBy() {
 			},
 		} {
 
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear block model database caches.
+			suite.state.Caches.DB.Block.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 
@@ -220,8 +220,8 @@ func (suite *RelationshipTestSuite) TestGetFollowBy() {
 				return suite.db.GetFollow(ctx, follow.AccountID, follow.TargetAccountID)
 			},
 		} {
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear follow model database caches.
+			suite.state.Caches.DB.Follow.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 
@@ -331,8 +331,8 @@ func (suite *RelationshipTestSuite) TestGetFollowRequestBy() {
 			},
 		} {
 
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear follow request model database caches.
+			suite.state.Caches.DB.FollowRequest.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 

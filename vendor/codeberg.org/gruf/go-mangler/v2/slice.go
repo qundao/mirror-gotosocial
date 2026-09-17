@@ -28,27 +28,23 @@ func iterSliceType(t xunsafe.TypeIter) Mangler {
 	}
 
 	return func(buf []byte, ptr unsafe.Pointer) []byte {
-		// Get data as unsafe slice header.
+		// Cast data as unsafe slice header type.
 		hdr := (*xunsafe.Unsafeheader_Slice)(ptr)
 		if hdr == nil || hdr.Data == nil {
-
-			// Append nil indicator.
-			buf = append(buf, '0')
 			return buf
 		}
 
-		// Append not-nil and
-		// current slice length.
-		buf = append(buf, '1')
+		// Append slice length.
 		buf = append_uint(buf,
 			uint(hdr.Len))
 
-		for i := 0; i < hdr.Len; i++ {
-			// Mangle at array index.
-			offset := esz * uintptr(i)
-			ptr = add(hdr.Data, offset)
+		var offset uintptr
+		for range hdr.Len {
+			// Mangle data at slice index.
+			ptr = unsafe.Add(hdr.Data, offset)
 			buf = fn(buf, ptr)
 			buf = append(buf, ',')
+			offset += esz
 		}
 
 		if hdr.Len > 0 {
@@ -68,26 +64,29 @@ func mangleKnownSlice(t xunsafe.TypeIter) Mangler {
 		return mangle_string_slice
 	case reflect.Bool:
 		return mangle_bool_slice
-	case reflect.Int,
-		reflect.Uint,
-		reflect.Uintptr:
+	case reflect.Int:
 		return mangle_int_slice
-	case reflect.Int8, reflect.Uint8:
+	case reflect.Uint:
+		return mangle_uint_slice
+	case reflect.Int8,
+		reflect.Uint8:
 		return mangle_8bit_slice
-	case reflect.Int16, reflect.Uint16:
-		return mangle_16bit_slice
-	case reflect.Int32, reflect.Uint32:
-		return mangle_32bit_slice
-	case reflect.Int64, reflect.Uint64:
-		return mangle_64bit_slice
+	case reflect.Int16:
+		return mangle_int16_slice
+	case reflect.Uint16:
+		return mangle_uint16_slice
+	case reflect.Int32:
+		return mangle_int32_slice
+	case reflect.Uint32:
+		return mangle_uint32_slice
+	case reflect.Int64:
+		return mangle_int64_slice
+	case reflect.Uint64:
+		return mangle_uint64_slice
 	case reflect.Float32:
-		return mangle_32bit_slice
+		return mangle_int32_slice
 	case reflect.Float64:
-		return mangle_64bit_slice
-	case reflect.Complex64:
-		return mangle_64bit_slice
-	case reflect.Complex128:
-		return mangle_128bit_slice
+		return mangle_int64_slice
 	default:
 		return nil
 	}

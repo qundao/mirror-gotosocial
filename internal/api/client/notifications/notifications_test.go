@@ -43,7 +43,7 @@ type NotificationsTestSuite struct {
 	emailSender  email.Sender
 	processor    *processing.Processor
 	storage      *storage.Driver
-	state        state.State
+	state        *state.State
 
 	// standard suite models
 	testTokens        map[string]*gtsmodel.Token
@@ -71,38 +71,38 @@ func (suite *NotificationsTestSuite) SetupSuite() {
 }
 
 func (suite *NotificationsTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
 
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../../testrig/media")
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
 	suite.emailSender = testrig.NewEmailSender("../../../../web/template/", nil)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
-	suite.notificationsModule = notifications.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.notificationsModule = notifications.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
 }
 
 func (suite *NotificationsTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

@@ -32,7 +32,7 @@ import (
 type FederatorStandardTestSuite struct {
 	suite.Suite
 	storage             *storage.Driver
-	state               state.State
+	state               *state.State
 	typeconverter       *typeutils.Converter
 	transportController transport.Controller
 	httpClient          *testrig.MockHTTPClient
@@ -52,17 +52,17 @@ func (suite *FederatorStandardTestSuite) SetupSuite() {
 }
 
 func (suite *FederatorStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.state.DB = testrig.NewTestDB(&suite.state)
+	suite.state.DB = testrig.NewTestDB(suite.state)
 	suite.testActivities = testrig.NewTestActivities(suite.testAccounts)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.typeconverter = typeutils.NewConverter(&suite.state)
+	suite.typeconverter = typeutils.NewConverter(suite.state)
 
 	// Ensure it's possible to deref
 	// main key of foss satan.
@@ -75,8 +75,8 @@ func (suite *FederatorStandardTestSuite) SetupTest() {
 	suite.httpClient.TestRemotePeople = testrig.NewTestFediPeople()
 	suite.httpClient.TestRemoteStatuses = testrig.NewTestFediStatuses()
 
-	suite.transportController = testrig.NewTestTransportController(&suite.state, suite.httpClient)
-	suite.federator = testrig.NewTestFederator(&suite.state, suite.transportController, testrig.NewTestMediaManager(&suite.state))
+	suite.transportController = testrig.NewTestTransportController(suite.state, suite.httpClient)
+	suite.federator = testrig.NewTestFederator(suite.state, suite.transportController, testrig.NewTestMediaManager(suite.state))
 
 	testrig.StandardDBSetup(suite.state.DB, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../testrig/media")
@@ -85,5 +85,5 @@ func (suite *FederatorStandardTestSuite) SetupTest() {
 func (suite *FederatorStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.state.DB)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

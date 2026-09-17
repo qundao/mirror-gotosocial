@@ -1,8 +1,9 @@
 package structr
 
 import (
-	"sync"
 	"unsafe"
+
+	"codeberg.org/gruf/go-byteutil"
 )
 
 // QueueConfig defines config vars
@@ -26,8 +27,7 @@ type QueueConfig[StructType any] struct {
 type Queue[StructType any] struct {
 
 	// hook functions.
-	copy func(StructType) StructType
-	pop  func(StructType)
+	pop func(StructType)
 
 	// main underlying
 	// struct item queue.
@@ -41,7 +41,7 @@ type Queue[StructType any] struct {
 	// - Queue{}.queue
 	// - Index{}.data
 	// - Queue{} hook fns
-	mutex sync.Mutex
+	mutex mutex
 }
 
 // Init initializes the queue with given configuration
@@ -53,22 +53,30 @@ func (q *Queue[T]) Init(config QueueConfig[T]) {
 		panic("no indices provided")
 	}
 
-	// Safely copy over
-	// provided config.
+	// Acquire lock.
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
+
+	// Ensure not setup.
+	if q.indices != nil {
+		panic("already initialized")
+	}
+
+	// Prepare each of configured struct indices.
 	q.indices = make([]Index, len(config.Indices))
 	for i, cfg := range config.Indices {
 		q.indices[i].ptr = unsafe.Pointer(q)
 		q.indices[i].init(t, cfg, 0)
 	}
+
+	// Copy functions.
 	q.pop = config.Pop
 }
 
 // Index selects index with given name from queue, else panics.
 func (q *Queue[T]) Index(name string) *Index {
-	for i, idx := range q.indices {
-		if idx.name == name {
+	for i := range q.indices {
+		if q.indices[i].name == name {
 			return &(q.indices[i])
 		}
 	}
@@ -117,8 +125,9 @@ func (q *Queue[T]) Pop(index *Index, keys ...Key) []T {
 		panic("invalid index for queue")
 	}
 
-	// Acquire lock.
-	q.mutex.Lock()
+	// Acquire lock w/ safe unlock.
+	unlock := q.mutex.SafeLock()
+	defer unlock()
 
 	// Preallocate expected ret slice.
 	values := make([]T, 0, len(keys))
@@ -140,8 +149,9 @@ func (q *Queue[T]) Pop(index *Index, keys ...Key) []T {
 	// Get func ptrs.
 	pop := q.pop
 
-	// Done with lock.
-	q.mutex.Unlock()
+	// Done w/
+	// lock.
+	unlock()
 
 	if pop != nil {
 		// Pass all popped values
@@ -157,52 +167,56 @@ func (q *Queue[T]) Pop(index *Index, keys ...Key) []T {
 // PushFront pushes values to front of queue.
 func (q *Queue[T]) PushFront(values ...T) {
 	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	buf := new_buffer()
 	for i := range values {
-		item := q.index(values[i])
+		item := q.index(buf, values[i])
 		q.queue.push_front(&item.elem)
 	}
-	q.mutex.Unlock()
+	free_buffer(buf)
 }
 
 // PushBack pushes values to back of queue.
 func (q *Queue[T]) PushBack(values ...T) {
 	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	buf := new_buffer()
 	for i := range values {
-		item := q.index(values[i])
+		item := q.index(buf, values[i])
 		q.queue.push_back(&item.elem)
 	}
-	q.mutex.Unlock()
+	free_buffer(buf)
 }
 
 // MoveFront attempts to move values indexed under any of keys to the front of the queue.
 func (q *Queue[T]) MoveFront(index *Index, keys ...Key) {
 	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	for i := range keys {
 		index.get(keys[i].key, func(item *indexed_item) {
 			q.queue.move_front(&item.elem)
 		})
 	}
-	q.mutex.Unlock()
 }
 
 // MoveBack attempts to move values indexed under any of keys to the back of the queue.
 func (q *Queue[T]) MoveBack(index *Index, keys ...Key) {
 	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	for i := range keys {
 		index.get(keys[i].key, func(item *indexed_item) {
 			q.queue.move_back(&item.elem)
 		})
 	}
-	q.mutex.Unlock()
 }
 
 // Count returns how many values are indexed under any of keys.
 func (q *Queue[T]) Count(index *Index, keys ...Key) (n int) {
 	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	for i := range keys {
 		index.get(keys[i].key, func(*indexed_item) { n++ })
 	}
-	q.mutex.Unlock()
 	return
 }
 
@@ -237,8 +251,9 @@ func (q *Queue[T]) pop_n(n int, next func() *list_elem) []T {
 		panic("nil fn")
 	}
 
-	// Acquire lock.
-	q.mutex.Lock()
+	// Acquire lock w/ safe unlock.
+	unlock := q.mutex.SafeLock()
+	defer unlock()
 
 	// Preallocate ret slice.
 	values := make([]T, 0, n)
@@ -269,8 +284,9 @@ func (q *Queue[T]) pop_n(n int, next func() *list_elem) []T {
 	// Get func ptrs.
 	pop := q.pop
 
-	// Done with lock.
-	q.mutex.Unlock()
+	// Done w/
+	// lock.
+	unlock()
 
 	if pop != nil {
 		// Pass all popped values
@@ -283,7 +299,7 @@ func (q *Queue[T]) pop_n(n int, next func() *list_elem) []T {
 	return values
 }
 
-func (q *Queue[T]) index(value T) *indexed_item {
+func (q *Queue[T]) index(buf *byteutil.Buffer, value T) *indexed_item {
 	item := new_indexed_item()
 	if cap(item.indexed) < len(q.indices) {
 
@@ -295,22 +311,21 @@ func (q *Queue[T]) index(value T) *indexed_item {
 	// Set item value.
 	item.data = value
 
-	// Get ptr to value data.
+	// Get pointer to value data.
 	ptr := unsafe.Pointer(&value)
-
-	// Acquire key buf.
-	buf := new_buffer()
-
 	for i := range q.indices {
+
 		// Get current index ptr.
 		idx := &(q.indices[i])
 
-		// Extract fields comprising index key.
-		parts := extract_fields(ptr, idx.fields)
-
-		// Calculate index key.
-		key := idx.key(buf, parts)
+		// Calculate key for this index
+		// for this value by extracting
+		// its struct fields and mangling.
+		key := idx.extract_key(buf, ptr)
 		if key == "" {
+
+			// zero value field
+			// w/ !AllowZero.
 			continue
 		}
 
@@ -325,9 +340,6 @@ func (q *Queue[T]) index(value T) *indexed_item {
 		}
 	}
 
-	// Done with buf.
-	free_buffer(buf)
-
 	return item
 }
 
@@ -338,14 +350,15 @@ func (q *Queue[T]) delete(i *indexed_item) {
 		i.indexed[len(i.indexed)-1] = nil
 		i.indexed = i.indexed[:len(i.indexed)-1]
 
-		// Get entry's index.
-		index := entry.index
+		// Delete entry from
+		// its storing index.
+		entry.delete_self()
 
-		// Drop this index_entry.
-		index.delete_entry(entry)
+		// Check index load factor.
+		entry.index.data.Compact()
 
-		// Compact index map.
-		index.data.Compact()
+		// Free entry to pool.
+		free_index_entry(entry)
 	}
 
 	// Drop from queue list.

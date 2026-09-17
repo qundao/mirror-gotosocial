@@ -8,4 +8,9 @@ See the [docs](https://pkg.go.dev/codeberg.org/gruf/go-structr) for more API inf
 
 ## Notes
 
+If I don't reach a v2 of this library beforehand, some nice performance improvements could be found with:
+- speed-up multi-index key generation by building a trie at init time so we don't need to re-iterate over indices with shared field prefixes
+- exploring alternate data structures for the underlying types, especially for the queue and timeline types for which hashmaps probably aren't ideal
+- exploring ways of minimising GC time with so many pointers in the linked lists by either hiding them with uintptrs, or linking to them with fixed indices in an underlying backing data array
+
 This is a core underpinning of [GoToSocial](https://github.com/superseriousbusiness/gotosocial)'s performance.

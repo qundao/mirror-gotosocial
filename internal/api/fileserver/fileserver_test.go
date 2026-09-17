@@ -18,7 +18,6 @@
 package fileserver_test
 
 import (
-	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/admin"
 	"code.superseriousbusiness.org/gotosocial/internal/api/fileserver"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
@@ -40,7 +39,7 @@ type FileserverTestSuite struct {
 	suite.Suite
 	db           db.DB
 	storage      *storage.Driver
-	state        state.State
+	state        *state.State
 	federator    *federation.Federator
 	tc           *typeutils.Converter
 	processor    *processing.Processor
@@ -63,18 +62,14 @@ type FileserverTestSuite struct {
 	TEST INFRASTRUCTURE
 */
 
-func (suite *FileserverTestSuite) SetupSuite() {
-	testrig.StartNoopWorkers(&suite.state)
+func (suite *FileserverTestSuite) SetupTest() {
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
-}
 
-func (suite *FileserverTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
-
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 
@@ -84,30 +79,30 @@ func (suite *FileserverTestSuite) SetupTest() {
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../testrig/media")
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
 	suite.federator = testrig.NewTestFederator(
-		&suite.state,
+		suite.state,
 		testrig.NewTestTransportController(
-			&suite.state,
+			suite.state,
 			testrig.NewMockHTTPClient(nil, "../../../testrig/media"),
 		),
 		suite.mediaManager,
 	)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
 
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.oauthServer = testrig.NewTestOauthServer(&suite.state)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.oauthServer = testrig.NewTestOauthServer(suite.state)
 	suite.emailSender = testrig.NewEmailSender("../../../web/template/", nil)
 
-	suite.fileServer = fileserver.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.fileServer = fileserver.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
 
 	suite.testTokens = testrig.NewTestTokens()
 	suite.testApplications = testrig.NewTestApplications()
@@ -116,15 +111,8 @@ func (suite *FileserverTestSuite) SetupTest() {
 	suite.testAttachments = testrig.NewTestAttachments()
 }
 
-func (suite *FileserverTestSuite) TearDownSuite() {
-	if err := suite.db.Close(); err != nil {
-		log.Panicf(nil, "error closing db connection: %s", err)
-	}
-	testrig.StopWorkers(&suite.state)
-}
-
 func (suite *FileserverTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

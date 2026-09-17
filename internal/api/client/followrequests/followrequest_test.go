@@ -47,7 +47,7 @@ type FollowRequestStandardTestSuite struct {
 	federator    *federation.Federator
 	processor    *processing.Processor
 	emailSender  email.Sender
-	state        state.State
+	state        *state.State
 
 	// standard suite models
 	testTokens       map[string]*gtsmodel.Token
@@ -71,29 +71,29 @@ func (suite *FollowRequestStandardTestSuite) SetupSuite() {
 }
 
 func (suite *FollowRequestStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
 	suite.emailSender = testrig.NewEmailSender("../../../../web/template/", nil)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
-	suite.followRequestModule = followrequests.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.followRequestModule = followrequests.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../../testrig/media")
 }
@@ -101,7 +101,7 @@ func (suite *FollowRequestStandardTestSuite) SetupTest() {
 func (suite *FollowRequestStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *FollowRequestStandardTestSuite) newContext(recorder *httptest.ResponseRecorder, requestMethod string, requestBody []byte, requestPath string, bodyContentType string) *httputil.Context {

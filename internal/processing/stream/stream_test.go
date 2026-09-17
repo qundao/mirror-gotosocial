@@ -35,13 +35,13 @@ type StreamTestSuite struct {
 	testTokens   map[string]*gtsmodel.Token
 	db           db.DB
 	oauthServer  oauth.Server
-	state        state.State
+	state        *state.State
 
 	streamProcessor stream.Processor
 }
 
 func (suite *StreamTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestLog()
 	testrig.InitTestConfig()
@@ -49,11 +49,11 @@ func (suite *StreamTestSuite) SetupTest() {
 	suite.testAccounts = testrig.NewTestAccounts()
 	suite.testStatuses = testrig.NewTestStatuses()
 	suite.testTokens = testrig.NewTestTokens()
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
-	suite.oauthServer = testrig.NewTestOauthServer(&suite.state)
-	suite.streamProcessor = stream.New(&suite.state, suite.oauthServer)
+	suite.oauthServer = testrig.NewTestOauthServer(suite.state)
+	suite.streamProcessor = stream.New(suite.state, suite.oauthServer)
 
 	testrig.StandardDBSetup(suite.db, suite.testAccounts)
 }

@@ -48,7 +48,7 @@ type AdminStandardTestSuite struct {
 	db                  db.DB
 	tc                  *typeutils.Converter
 	storage             *storage.Driver
-	state               state.State
+	state               *state.State
 	mediaManager        *media.Manager
 	oauthServer         oauth.Server
 	fromClientAPIChan   chan messages.FromClientAPI
@@ -84,43 +84,43 @@ func (suite *AdminStandardTestSuite) SetupSuite() {
 }
 
 func (suite *AdminStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = adminactions.New(suite.state.DB, &suite.state.Workers)
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.oauthServer = testrig.NewTestOauthServer(&suite.state)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.oauthServer = testrig.NewTestOauthServer(suite.state)
 
-	suite.transportController = testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media"))
-	suite.federator = testrig.NewTestFederator(&suite.state, suite.transportController, suite.mediaManager)
+	suite.transportController = testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media"))
+	suite.federator = testrig.NewTestFederator(suite.state, suite.transportController, suite.mediaManager)
 	suite.sentEmails = make(map[string]string)
 	suite.emailSender = testrig.NewEmailSender("../../../web/template/", suite.sentEmails)
 
 	suite.processor = processing.NewProcessor(
-		cleaner.New(&suite.state),
-		subscriptions.New(&suite.state, suite.transportController, suite.tc),
+		cleaner.New(suite.state),
+		subscriptions.New(suite.state, suite.transportController, suite.tc),
 		suite.tc,
 		suite.federator,
 		suite.oauthServer,
 		suite.mediaManager,
-		&suite.state,
+		suite.state,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
-		visibility.NewFilter(&suite.state),
-		mutes.NewFilter(&suite.state),
-		interaction.NewFilter(&suite.state),
-		status.NewFilter(&suite.state),
+		visibility.NewFilter(suite.state),
+		mutes.NewFilter(suite.state),
+		interaction.NewFilter(suite.state),
+		status.NewFilter(suite.state),
 	)
 
-	testrig.StartWorkers(&suite.state, suite.processor.Workers())
+	testrig.StartWorkers(suite.state, suite.processor.Workers())
 	suite.adminProcessor = suite.processor.Admin()
 
 	testrig.StandardDBSetup(suite.db, nil)
@@ -130,5 +130,5 @@ func (suite *AdminStandardTestSuite) SetupTest() {
 func (suite *AdminStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

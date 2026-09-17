@@ -50,7 +50,7 @@ type StatusStandardTestSuite struct {
 	emailSender  email.Sender
 	processor    *processing.Processor
 	storage      *storage.Driver
-	state        state.State
+	state        *state.State
 
 	// standard suite models
 	testTokens       map[string]*gtsmodel.Token
@@ -183,39 +183,39 @@ func (suite *StatusStandardTestSuite) SetupSuite() {
 }
 
 func (suite *StatusStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
 
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../../testrig/media")
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
 	suite.emailSender = testrig.NewEmailSender("../../../../web/template/", nil)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
-	suite.statusModule = statuses.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.statusModule = statuses.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
 
-	testrig.StartWorkers(&suite.state, suite.processor.Workers())
+	testrig.StartWorkers(suite.state, suite.processor.Workers())
 }
 
 func (suite *StatusStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

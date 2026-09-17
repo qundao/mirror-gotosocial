@@ -53,18 +53,18 @@ func (suite *FederatingActorTestSuite) TestSendNoRemoteFollowers() {
 
 	// setup transport controller with a no-op client so we don't make external calls
 	httpClient := testrig.NewMockHTTPClient(nil, "../../testrig/media")
-	tc := testrig.NewTestTransportController(&suite.state, httpClient)
+	tc := testrig.NewTestTransportController(suite.state, httpClient)
 
 	// setup module being tested
 	federator := federation.NewFederator(
-		&suite.state,
-		testrig.NewTestFederatingDB(&suite.state),
+		suite.state,
+		testrig.NewTestFederatingDB(suite.state),
 		tc,
 		suite.typeconverter,
-		visibility.NewFilter(&suite.state),
-		interaction.NewFilter(&suite.state),
-		relay.NewFilter(&suite.state),
-		testrig.NewTestMediaManager(&suite.state),
+		visibility.NewFilter(suite.state),
+		interaction.NewFilter(suite.state),
+		relay.NewFilter(suite.state),
+		testrig.NewTestMediaManager(suite.state),
 	)
 
 	activity, err := federator.FederatingActor().Send(ctx, testrig.URLMustParse(testAccount.OutboxURI), testActivity)
@@ -102,18 +102,18 @@ func (suite *FederatingActorTestSuite) TestSendRemoteFollower() {
 	testActivity := testrig.WrapAPNoteInCreate(testrig.URLMustParse("http://localhost:8080/whatever_some_create"), testrig.URLMustParse(testAccount.URI), testrig.TimeMustParse("2022-06-02T12:22:21+02:00"), testNote)
 
 	httpClient := testrig.NewMockHTTPClient(nil, "../../testrig/media")
-	tc := testrig.NewTestTransportController(&suite.state, httpClient)
+	tc := testrig.NewTestTransportController(suite.state, httpClient)
 
 	// setup module being tested
 	federator := federation.NewFederator(
-		&suite.state,
-		testrig.NewTestFederatingDB(&suite.state),
+		suite.state,
+		testrig.NewTestFederatingDB(suite.state),
 		tc,
 		suite.typeconverter,
-		visibility.NewFilter(&suite.state),
-		interaction.NewFilter(&suite.state),
-		relay.NewFilter(&suite.state),
-		testrig.NewTestMediaManager(&suite.state),
+		visibility.NewFilter(suite.state),
+		interaction.NewFilter(suite.state),
+		relay.NewFilter(suite.state),
+		testrig.NewTestMediaManager(suite.state),
 	)
 
 	activity, err := federator.FederatingActor().Send(ctx, testrig.URLMustParse(testAccount.OutboxURI), testActivity)

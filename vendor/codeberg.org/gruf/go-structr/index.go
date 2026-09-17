@@ -73,6 +73,11 @@ type Index struct {
 	// by keys of this index.
 	fields []struct_field
 
+	// pre-prepared extracted fields
+	// pointers slice, reused by
+	// index.extract_key() function.
+	xptrs []unsafe.Pointer
+
 	// index flags:
 	// - 1 << 0 = unique
 	// - 1 << 1 = allow zero
@@ -115,12 +120,18 @@ func (i *Index) init(t xunsafe.TypeIter, cfg IndexConfig, cap int) {
 	i.fields = make([]struct_field, len(fields))
 	for x, name := range fields {
 
+		// Allow space between entries.
+		name = strings.TrimSpace(name)
+
 		// Split name to account for nesting.
 		names := strings.Split(name, ".")
 
 		// Look for struct field by names.
 		i.fields[x], _ = find_field(t, names)
 	}
+
+	// Alloc reusable field pointer extraction slice.
+	i.xptrs = make([]unsafe.Pointer, len(i.fields))
 
 	// Initialize store for
 	// index_entry lists.
@@ -173,37 +184,58 @@ func (i *Index) get(key string, hook func(*indexed_item)) {
 	}
 }
 
-// key ...
-func (i *Index) key(buf *byteutil.Buffer, parts []unsafe.Pointer) string {
-	if len(parts) != len(i.fields) {
-		panic(assert("len(parts) = len(i.fields)"))
+// extract_key extracts the struct field pointers from given struct pointer, then passes
+// each to their struct field mangler function to serialize them into the given buffer.
+// returns a copy of serialized key string, or "" if field == zero and !index.AllowZero.
+func (i *Index) extract_key(buf *byteutil.Buffer, ptr unsafe.Pointer) string {
+	extract_fields(i.xptrs, ptr, i.fields)
+	return i.make_key(buf)
+}
+
+// make_key serializes current stored struct field pointers, i.xptrs, into given buffer.
+// returns a copy of serialized key string, or "" if field == zero and !index.AllowZero.
+func (i *Index) make_key(buf *byteutil.Buffer) (key string) {
+	if len(i.xptrs) != len(i.fields) {
+		panic(assert("len(i.xptrs) = len(i.fields)"))
 	}
+
+	// Reset buffer.
 	buf.B = buf.B[:0]
+
+	// Generate key string
+	// depending on index flags.
 	if !allow_zero(i.flags) {
 		for x, field := range i.fields {
 			before := len(buf.B)
-			buf.B = field.mangle(buf.B, parts[x])
+			buf.B = field.mangle(buf.B, i.xptrs[x])
 			if string(buf.B[before:]) == field.zerostr {
-				return ""
+				goto _return
 			}
 			buf.B = append(buf.B, '.')
 		}
 	} else {
 		for x, field := range i.fields {
-			buf.B = field.mangle(buf.B, parts[x])
+			buf.B = field.mangle(buf.B, i.xptrs[x])
 			buf.B = append(buf.B, '.')
 		}
 	}
-	return string(buf.B)
+
+	// Key becomes a copy
+	// of accumulated str.
+	key = string(buf.B)
+
+_return:
+	clear(i.xptrs)
+	return
 }
 
 // add will attempt to add given index entry to appropriate
 // doubly-linked-list in index hashmap. in the case of an
 // existing entry in a "unique" index, it will return false.
 func (i *Index) add(key string, item *indexed_item) bool {
+
 	// Look for existing.
 	l := i.data.Get(key)
-
 	if l == nil {
 
 		// Allocate new.
@@ -235,9 +267,9 @@ func (i *Index) add(key string, item *indexed_item) bool {
 // overwriting "unique" index entries, and removes from given
 // outer linked-list in the case that it is no longer indexed.
 func (i *Index) append(key string, item *indexed_item) (evicted *indexed_item) {
+
 	// Look for existing.
 	l := i.data.Get(key)
-
 	if l == nil {
 
 		// Allocate new.
@@ -327,29 +359,6 @@ func (i *Index) delete(key string, hook func(*indexed_item)) {
 	free_list(l)
 }
 
-// delete_entry deletes the given index entry.
-func (i *Index) delete_entry(entry *index_entry) {
-	// Get list at hash sum.
-	l := i.data.Get(entry.key)
-	if l == nil {
-		return
-	}
-
-	// Remove list entry.
-	l.remove(&entry.elem)
-
-	if l.len == 0 {
-		// Remove entry from map.
-		i.data.Delete(entry.key)
-
-		// Release list.
-		free_list(l)
-	}
-
-	// Drop this index from item.
-	entry.item.drop_index(entry)
-}
-
 // index_entry represents a single entry
 // in an Index{}, where it will be accessible
 // by .key pointing to a containing list{}.
@@ -396,6 +405,25 @@ func free_index_entry(entry *index_entry) {
 	entry.item = nil
 	ptr := unsafe.Pointer(entry)
 	index_entry_pool.Put(ptr)
+}
+
+func (e *index_entry) delete_self() {
+	// Get list at our entry key.
+	l := e.index.data.Get(e.key)
+	if l == nil {
+		return
+	}
+
+	// Drop from list.
+	l.remove(&e.elem)
+
+	if l.len == 0 {
+		// Remove entry from map.
+		e.index.data.Delete(e.key)
+
+		// Release list.
+		free_list(l)
+	}
 }
 
 func is_unique(f uint8) bool {

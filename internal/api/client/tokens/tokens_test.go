@@ -25,15 +25,12 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/api/client/tokens"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/oauth"
-	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
 
 type TokensStandardTestSuite struct {
 	suite.Suite
-
-	state state.State
 
 	// standard suite models
 	testTokens       map[string]*gtsmodel.Token
@@ -99,7 +96,7 @@ func (suite *TokensStandardTestSuite) SetupTest() {
 		"../../../../testrig/media",
 		"../../../../web/template",
 	)
-	suite.tokens = tokens.New(suite.testStructs.Processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.tokens = tokens.New(suite.testStructs.Processor, testrig.LoadTemplates(suite.testStructs.State, ""))
 }
 
 func (suite *TokensStandardTestSuite) TearDownTest() {

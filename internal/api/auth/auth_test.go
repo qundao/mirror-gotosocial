@@ -45,7 +45,7 @@ type AuthStandardTestSuite struct {
 	suite.Suite
 	db           db.DB
 	storage      *storage.Driver
-	state        state.State
+	state        *state.State
 	mediaManager *media.Manager
 	federator    *federation.Federator
 	processor    *processing.Processor
@@ -75,35 +75,35 @@ func (suite *AuthStandardTestSuite) SetupSuite() {
 }
 
 func (suite *AuthStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media")), suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media")), suite.mediaManager)
 	suite.emailSender = testrig.NewEmailSender("../../../web/template/", nil)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
-	suite.authModule = auth.New(&suite.state, suite.processor, testrig.LoadTemplates(&suite.state, ""), suite.idp)
+	suite.authModule = auth.New(suite.state, suite.processor, testrig.LoadTemplates(suite.state, ""), suite.idp)
 
 	testrig.StandardDBSetup(suite.db, suite.testAccounts)
-	testrig.StartNoopWorkers(&suite.state)
+	testrig.StartNoopWorkers(suite.state)
 }
 
 func (suite *AuthStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *AuthStandardTestSuite) newContext(

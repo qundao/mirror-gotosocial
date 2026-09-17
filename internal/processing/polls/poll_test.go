@@ -41,7 +41,7 @@ import (
 
 type PollTestSuite struct {
 	suite.Suite
-	state      state.State
+	state      *state.State
 	visFilter  *visibility.Filter
 	muteFilter *mutes.Filter
 	polls      polls.Processor
@@ -53,23 +53,23 @@ type PollTestSuite struct {
 func (suite *PollTestSuite) SetupTest() {
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
-	testrig.NewTestDB(&suite.state)
-	converter := typeutils.NewConverter(&suite.state)
-	controller := testrig.NewTestTransportController(&suite.state, nil)
-	mediaMgr := media.NewManager(&suite.state)
-	federator := testrig.NewTestFederator(&suite.state, controller, mediaMgr)
-	suite.visFilter = visibility.NewFilter(&suite.state)
-	suite.muteFilter = mutes.NewFilter(&suite.state)
-	statusFilter := status.NewFilter(&suite.state)
-	surfacer := testrig.NewTestSurfacer(&suite.state, federator, testrig.NewEmailSender("../../../web/template", nil), testrig.NewNoopWebPushSender())
-	common := common.New(&suite.state, mediaMgr, converter, federator, suite.visFilter, suite.muteFilter, statusFilter, processing.GetParseMentionFunc(&suite.state, federator), surfacer)
-	suite.polls = polls.New(&common, &suite.state, converter)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
+	testrig.NewTestDB(suite.state)
+	converter := typeutils.NewConverter(suite.state)
+	controller := testrig.NewTestTransportController(suite.state, nil)
+	mediaMgr := media.NewManager(suite.state)
+	federator := testrig.NewTestFederator(suite.state, controller, mediaMgr)
+	suite.visFilter = visibility.NewFilter(suite.state)
+	suite.muteFilter = mutes.NewFilter(suite.state)
+	statusFilter := status.NewFilter(suite.state)
+	surfacer := testrig.NewTestSurfacer(suite.state, federator, testrig.NewEmailSender("../../../web/template", nil), testrig.NewNoopWebPushSender())
+	common := common.New(suite.state, mediaMgr, converter, federator, suite.visFilter, suite.muteFilter, statusFilter, processing.GetParseMentionFunc(suite.state, federator), surfacer)
+	suite.polls = polls.New(&common, suite.state, converter)
 }
 
 func (suite *PollTestSuite) TearDownTest() {
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 	testrig.StandardDBTeardown(suite.state.DB)
 }
 

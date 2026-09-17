@@ -46,7 +46,7 @@ type StatusStandardTestSuite struct {
 	typeConverter *typeutils.Converter
 	tc            transport.Controller
 	storage       *storage.Driver
-	state         state.State
+	state         *state.State
 	mediaManager  *media.Manager
 	federator     *federation.Federator
 
@@ -78,34 +78,34 @@ func (suite *StatusStandardTestSuite) SetupSuite() {
 }
 
 func (suite *StatusStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
-	suite.typeConverter = typeutils.NewConverter(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
+	suite.typeConverter = typeutils.NewConverter(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 
-	suite.tc = testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media"))
+	suite.tc = testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media"))
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, suite.tc, suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, suite.tc, suite.mediaManager)
 
-	visFilter := visibility.NewFilter(&suite.state)
-	muteFilter := mutes.NewFilter(&suite.state)
-	intFilter := interaction.NewFilter(&suite.state)
-	statusFilter := statusfilter.NewFilter(&suite.state)
-	surfacer := testrig.NewTestSurfacer(&suite.state, suite.federator, testrig.NewEmailSender("../../../web/template", nil), testrig.NewNoopWebPushSender())
-	common := common.New(&suite.state, suite.mediaManager, suite.typeConverter, suite.federator, visFilter, muteFilter, statusFilter, processing.GetParseMentionFunc(&suite.state, suite.federator), surfacer)
-	polls := polls.New(&common, &suite.state, suite.typeConverter)
-	intReqs := interactionrequests.New(&common, &suite.state, suite.typeConverter)
+	visFilter := visibility.NewFilter(suite.state)
+	muteFilter := mutes.NewFilter(suite.state)
+	intFilter := interaction.NewFilter(suite.state)
+	statusFilter := statusfilter.NewFilter(suite.state)
+	surfacer := testrig.NewTestSurfacer(suite.state, suite.federator, testrig.NewEmailSender("../../../web/template", nil), testrig.NewNoopWebPushSender())
+	common := common.New(suite.state, suite.mediaManager, suite.typeConverter, suite.federator, visFilter, muteFilter, statusFilter, processing.GetParseMentionFunc(suite.state, suite.federator), surfacer)
+	polls := polls.New(&common, suite.state, suite.typeConverter)
+	intReqs := interactionrequests.New(&common, suite.state, suite.typeConverter)
 
 	suite.status = status.New(
-		&suite.state,
+		suite.state,
 		&common,
 		&polls,
 		&intReqs,
@@ -116,7 +116,7 @@ func (suite *StatusStandardTestSuite) SetupTest() {
 		statusFilter,
 		intFilter,
 		processing.GetParseMentionFunc(
-			&suite.state,
+			suite.state,
 			suite.federator,
 		),
 	)
@@ -128,5 +128,5 @@ func (suite *StatusStandardTestSuite) SetupTest() {
 func (suite *StatusStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

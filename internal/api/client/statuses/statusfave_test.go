@@ -186,7 +186,7 @@ func (suite *StatusFaveTestSuite) TestPostFaveImplicitAccept() {
 		token        = suite.testTokens["local_account_2"]
 		user         = suite.testUsers["local_account_2"]
 		account      = suite.testAccounts["local_account_2"]
-		visFilter    = visibility.NewFilter(&suite.state)
+		visFilter    = visibility.NewFilter(suite.state)
 	)
 
 	// Check visibility of status to public before posting fave.

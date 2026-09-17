@@ -44,7 +44,7 @@ type FollowedTagsTestSuite struct {
 	processor    *processing.Processor
 	emailSender  email.Sender
 	sentEmails   map[string]string
-	state        state.State
+	state        *state.State
 
 	// standard suite models
 	testTokens       map[string]*gtsmodel.Token
@@ -66,8 +66,8 @@ func (suite *FollowedTagsTestSuite) SetupSuite() {
 }
 
 func (suite *FollowedTagsTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	config.Config(func(cfg *config.Configuration) {
@@ -76,24 +76,24 @@ func (suite *FollowedTagsTestSuite) SetupTest() {
 	})
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
 	suite.sentEmails = make(map[string]string)
 	suite.emailSender = testrig.NewEmailSender("../../../../web/template/", suite.sentEmails)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
-	suite.followedTagsModule = followedtags.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.followedTagsModule = followedtags.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
 
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../../testrig/media")
@@ -102,7 +102,7 @@ func (suite *FollowedTagsTestSuite) SetupTest() {
 func (suite *FollowedTagsTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func TestFollowedTagsTestSuite(t *testing.T) {

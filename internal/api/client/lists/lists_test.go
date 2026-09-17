@@ -41,7 +41,7 @@ type ListsStandardTestSuite struct {
 	federator    *federation.Federator
 	processor    *processing.Processor
 	emailSender  email.Sender
-	state        state.State
+	state        *state.State
 
 	// standard suite models
 	testTokens          map[string]*gtsmodel.Token
@@ -73,32 +73,32 @@ func (suite *ListsStandardTestSuite) SetupSuite() {
 }
 
 func (suite *ListsStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	if err := suite.state.Caches.Start(); err != nil {
-		panic("error starting caches: " + err.Error())
-	}
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
+	if err := suite.state.Caches.Start(); err != nil {
+		panic("error starting caches: " + err.Error())
+	}
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
-	suite.federator = testrig.NewTestFederator(&suite.state, testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
+	suite.federator = testrig.NewTestFederator(suite.state, testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../../testrig/media")), suite.mediaManager)
 	suite.emailSender = testrig.NewEmailSender("../../../../web/template/", nil)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		suite.emailSender,
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
-	suite.listsModule = lists.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.listsModule = lists.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
 
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../../testrig/media")
@@ -107,5 +107,5 @@ func (suite *ListsStandardTestSuite) SetupTest() {
 func (suite *ListsStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

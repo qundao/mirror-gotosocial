@@ -33,7 +33,7 @@ import (
 type StatusFilterTestSuite struct {
 	suite.Suite
 
-	state     state.State
+	state     *state.State
 	filter    *status.Filter
 	converter *typeutils.Converter
 
@@ -43,17 +43,17 @@ type StatusFilterTestSuite struct {
 }
 
 func (suite *StatusFilterTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	db := testrig.NewTestDB(&suite.state)
+	db := testrig.NewTestDB(suite.state)
 	suite.state.DB = db
 
-	suite.filter = status.NewFilter(&suite.state)
+	suite.filter = status.NewFilter(suite.state)
 
-	suite.converter = typeutils.NewConverter(&suite.state)
+	suite.converter = typeutils.NewConverter(suite.state)
 
 	suite.testAccounts = testrig.NewTestAccounts()
 	suite.testFilters = testrig.NewTestFilters()
@@ -64,7 +64,7 @@ func (suite *StatusFilterTestSuite) SetupTest() {
 
 func (suite *StatusFilterTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.state.DB)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *StatusFilterTestSuite) TestHideFilteredStatus() {

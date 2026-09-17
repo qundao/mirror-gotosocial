@@ -40,14 +40,14 @@ func (suite *EmailChangeTestSuite) TestEmailChangePOST() {
 	// want the other tests interfering if
 	// we're running them at the same time.
 	state := new(state.State)
-	state.DB = testrig.NewTestDB(&suite.state)
+	state.DB = testrig.NewTestDB(state)
 	storage := testrig.NewInMemoryStorage()
 	sentEmails := make(map[string]string)
 	emailSender := testrig.NewEmailSender("../../../../web/template/", sentEmails)
 	webPushSender := testrig.NewNoopWebPushSender()
 	processor := testrig.NewTestProcessor(state, suite.federator, emailSender, webPushSender, suite.mediaManager)
 	testrig.StartWorkers(state, processor.Workers())
-	userModule := user.New(processor, testrig.LoadTemplates(&suite.state, ""))
+	userModule := user.New(processor, testrig.LoadTemplates(state, ""))
 	testrig.StandardDBSetup(state.DB, suite.testAccounts)
 	testrig.StandardStorageSetup(storage, "../../../../testrig/media")
 

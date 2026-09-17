@@ -30,7 +30,7 @@ type FilterStandardTestSuite struct {
 	// standard suite interfaces
 	suite.Suite
 	db    db.DB
-	state state.State
+	state *state.State
 
 	// standard suite models
 	testAccounts map[string]*gtsmodel.Account
@@ -43,13 +43,13 @@ func (suite *FilterStandardTestSuite) SetupSuite() {
 }
 
 func (suite *FilterStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
-	suite.filter = spam.NewFilter(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
+	suite.filter = spam.NewFilter(suite.state)
 
 	testrig.StandardDBSetup(suite.db, nil)
 }

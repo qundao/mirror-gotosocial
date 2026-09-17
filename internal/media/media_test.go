@@ -34,7 +34,7 @@ type MediaStandardTestSuite struct {
 
 	db                  db.DB
 	storage             *storage.Driver
-	state               state.State
+	state               *state.State
 	manager             *media.Manager
 	transportController transport.Controller
 	testAttachments     map[string]*gtsmodel.MediaAttachment
@@ -46,10 +46,10 @@ func (suite *MediaStandardTestSuite) SetupTest() {
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
@@ -61,12 +61,12 @@ func (suite *MediaStandardTestSuite) SetupTest() {
 	suite.testAttachments = testrig.NewTestAttachments()
 	suite.testAccounts = testrig.NewTestAccounts()
 	suite.testEmojis = testrig.NewTestEmojis()
-	suite.manager = testrig.NewTestMediaManager(&suite.state)
-	suite.transportController = testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../testrig/media"))
+	suite.manager = testrig.NewTestMediaManager(suite.state)
+	suite.transportController = testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../testrig/media"))
 }
 
 func (suite *MediaStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }

@@ -33,7 +33,6 @@ type TransTestSuite struct {
 
 func (suite *TransTestSuite) SetupTest() {
 	var state state.State
-	state.Caches.Init()
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()

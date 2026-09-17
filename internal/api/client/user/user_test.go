@@ -46,7 +46,7 @@ type UserStandardTestSuite struct {
 	federator    *federation.Federator
 	processor    *processing.Processor
 	storage      *storage.Driver
-	state        state.State
+	state        *state.State
 
 	testTokens       map[string]*gtsmodel.Token
 	testApplications map[string]*gtsmodel.Application
@@ -57,8 +57,8 @@ type UserStandardTestSuite struct {
 }
 
 func (suite *UserStandardTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
@@ -68,31 +68,31 @@ func (suite *UserStandardTestSuite) SetupTest() {
 	suite.testUsers = testrig.NewTestUsers()
 	suite.testAccounts = testrig.NewTestAccounts()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
 
-	suite.tc = typeutils.NewConverter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
 
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
 	suite.federator = testrig.NewTestFederator(
-		&suite.state,
+		suite.state,
 		testrig.NewTestTransportController(
-			&suite.state,
+			suite.state,
 			testrig.NewMockHTTPClient(nil, "../../../../testrig/media"),
 		),
 		suite.mediaManager,
 	)
 	suite.processor = testrig.NewTestProcessor(
-		&suite.state,
+		suite.state,
 		suite.federator,
 		testrig.NewEmailSender("../../../../web/template/", nil),
 		testrig.NewNoopWebPushSender(),
 		suite.mediaManager,
 	)
-	suite.userModule = user.New(suite.processor, testrig.LoadTemplates(&suite.state, ""))
+	suite.userModule = user.New(suite.processor, testrig.LoadTemplates(suite.state, ""))
 	testrig.StandardDBSetup(suite.db, suite.testAccounts)
 	testrig.StandardStorageSetup(suite.storage, "../../../../testrig/media")
 }
@@ -100,7 +100,7 @@ func (suite *UserStandardTestSuite) SetupTest() {
 func (suite *UserStandardTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *UserStandardTestSuite) POST(path string, formValues map[string][]string, handler httputil.HandlerFunc) (*http.Response, int) {

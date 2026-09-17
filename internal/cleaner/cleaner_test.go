@@ -28,7 +28,7 @@ import (
 )
 
 type CleanerTestSuite struct {
-	state   state.State
+	state   *state.State
 	cleaner *cleaner.Cleaner
 	emojis  map[string]*gtsmodel.Emoji
 	suite.Suite
@@ -44,22 +44,21 @@ func (suite *CleanerTestSuite) SetupSuite() {
 }
 
 func (suite *CleanerTestSuite) SetupTest() {
-	// Initialize gts caches.
-	suite.state.Caches.Init()
+	suite.state = new(state.State)
 
 	// Ensure scheduler started (even if unused).
 	suite.state.Workers.Scheduler.Start()
 
 	// Initialize test database.
-	_ = testrig.NewTestDB(&suite.state)
+	_ = testrig.NewTestDB(suite.state)
 	testrig.StandardDBSetup(suite.state.DB, nil)
 
 	// Initialize test storage (in-memory).
 	suite.state.Storage = testrig.NewInMemoryStorage()
 
 	// Initialize test cleaner instance.
-	testrig.StartNoopWorkers(&suite.state)
-	suite.cleaner = cleaner.New(&suite.state)
+	testrig.StartNoopWorkers(suite.state)
+	suite.cleaner = cleaner.New(suite.state)
 
 	// Allocate new test model emojis.
 	suite.emojis = testrig.NewTestEmojis()
@@ -67,7 +66,7 @@ func (suite *CleanerTestSuite) SetupTest() {
 
 func (suite *CleanerTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.state.DB)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 // mapvals extracts a slice of values from the values contained within the map.

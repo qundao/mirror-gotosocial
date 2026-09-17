@@ -58,25 +58,24 @@ func get_type_iter[T any]() xunsafe.TypeIter {
 // find_field will search for a struct field with given set of names,
 // where names is a len > 0 slice of names account for struct nesting.
 func find_field(t xunsafe.TypeIter, names []string) (sfield struct_field, ftype reflect.Type) {
-	var (
-		// is_exported returns whether name is exported
-		// from a package; can be func or struct field.
-		is_exported = func(name string) bool {
-			r, _ := utf8.DecodeRuneInString(name)
-			return unicode.IsUpper(r)
-		}
 
-		// pop_name pops the next name from
-		// the provided slice of field names.
-		pop_name = func() string {
-			name := names[0]
-			names = names[1:]
-			if !is_exported(name) {
-				panic(fmt.Sprintf("field is not exported: %s", name))
-			}
-			return name
+	// is_exported returns whether name is exported
+	// from a package; can be func or struct field.
+	is_exported := func(name string) bool {
+		r, _ := utf8.DecodeRuneInString(name)
+		return unicode.IsUpper(r)
+	}
+
+	// pop_name pops the next name from
+	// the provided slice of field names.
+	pop_name := func() string {
+		name := names[0]
+		names = names[1:]
+		if !is_exported(name) {
+			panic(fmt.Sprintf("field is not exported: %s", name))
 		}
-	)
+		return name
+	}
 
 	for len(names) > 0 {
 		// Pop next name.
@@ -136,11 +135,8 @@ func find_field(t xunsafe.TypeIter, names []string) (sfield struct_field, ftype 
 
 // extract_fields extracts given structfields from the provided value type,
 // this is done using predetermined struct field memory offset locations.
-func extract_fields(ptr unsafe.Pointer, fields []struct_field) []unsafe.Pointer {
-
-	// Prepare slice of field value pointers.
-	ptrs := make([]unsafe.Pointer, len(fields))
-	if len(ptrs) != len(fields) {
+func extract_fields(dest []unsafe.Pointer, ptr unsafe.Pointer, fields []struct_field) {
+	if len(dest) != len(fields) {
 		panic(assert("BCE"))
 	}
 
@@ -166,10 +162,8 @@ func extract_fields(ptr unsafe.Pointer, fields []struct_field) []unsafe.Pointer 
 		}
 
 		// Set field ptr.
-		ptrs[i] = fptr
+		dest[i] = fptr
 	}
-
-	return ptrs
 }
 
 // pkey_field contains pre-prepared type

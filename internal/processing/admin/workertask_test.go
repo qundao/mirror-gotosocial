@@ -336,7 +336,7 @@ func (suite *WorkerTaskTestSuite) TestPersistWorkerQueues() {
 func (suite *WorkerTaskTestSuite) SetupTest() {
 	suite.AdminStandardTestSuite.SetupTest()
 	// we don't want workers running
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func TestWorkerTaskTestSuite(t *testing.T) {

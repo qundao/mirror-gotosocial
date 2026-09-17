@@ -57,7 +57,6 @@ func (suite *ImportMinimalTestSuite) TestImportMinimalOK() {
 	fmt.Println(string(b))
 
 	var state state.State
-	state.Caches.Init()
 
 	// create a new database with just the tables created, no entries
 	newDB := testrig.NewTestDB(&state)

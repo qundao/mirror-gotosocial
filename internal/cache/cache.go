@@ -65,8 +65,8 @@ type Caches struct {
 	_ nocopy
 }
 
-// Init will (re)initialize both the GTS and AP cache collections.
-// NOTE: the cache MUST NOT be in use anywhere, this is not thread-safe.
+// Init will initialize all available database caches.
+// NOTE: THIS CAN ONLY BE CALLED ONCE, ELSE PANICS.
 func (c *Caches) Init() {
 	log.Infof(nil, "init: %p", c)
 

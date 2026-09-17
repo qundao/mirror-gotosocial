@@ -522,8 +522,8 @@ func (suite *AccountTestSuite) TestGetAccountBy() {
 			},
 		} {
 
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear account database caches.
+			suite.state.Caches.DB.Account.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 

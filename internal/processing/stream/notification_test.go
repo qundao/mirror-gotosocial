@@ -36,7 +36,7 @@ func (suite *NotificationTestSuite) TestStreamNotification() {
 	openStream := suite.streamProcessor.Open(suite.T().Context(), account, "user")
 
 	followAccount := suite.testAccounts["remote_account_1"]
-	followAccountAPIModel, err := typeutils.NewConverter(&suite.state).AccountToAPIAccountPublic(suite.T().Context(), followAccount)
+	followAccountAPIModel, err := typeutils.NewConverter(suite.state).AccountToAPIAccountPublic(suite.T().Context(), followAccount)
 	suite.NoError(err)
 
 	notification := &apimodel.Notification{

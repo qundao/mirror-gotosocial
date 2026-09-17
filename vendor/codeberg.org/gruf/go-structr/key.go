@@ -16,6 +16,7 @@ type Key struct {
 }
 
 // MakeKey generates Key{} from given parts.
+// NOTE: returned key retains given parts slice.
 func MakeKey(parts ...any) Key {
 	buf := new_buffer()
 	buf.B = mangler.AppendMulti(buf.B[:0], parts...)
@@ -28,6 +29,7 @@ func MakeKey(parts ...any) Key {
 }
 
 // MakeKeys generates []Key{} from given (multiple) parts.
+// NOTE: returned keys retain given parts slices.
 func MakeKeys(parts ...[]any) []Key {
 	keys := make([]Key, len(parts))
 	if len(keys) != len(parts) {

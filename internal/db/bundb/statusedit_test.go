@@ -49,8 +49,8 @@ func (suite *StatusEditTestSuite) TestGetStatusEditBy() {
 				return suite.db.GetStatusEditByID(ctx, edit.ID)
 			},
 		} {
-			// Clear database caches.
-			suite.state.Caches.Init()
+			// Clear status edit model database caches.
+			suite.state.Caches.DB.StatusEdit.Clear()
 
 			t.Logf("checking database lookup %q", lookup)
 

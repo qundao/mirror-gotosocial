@@ -40,7 +40,7 @@ import (
 type MediaTestSuite struct {
 	suite.Suite
 
-	state               state.State
+	state               *state.State
 	manager             *media.Manager
 	cleaner             *cleaner.Cleaner
 	transportController transport.Controller
@@ -57,10 +57,10 @@ func (suite *MediaTestSuite) SetupTest() {
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
-	_ = testrig.NewTestDB(&suite.state)
+	_ = testrig.NewTestDB(suite.state)
 	suite.state.Storage = testrig.NewInMemoryStorage()
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
 
@@ -70,15 +70,15 @@ func (suite *MediaTestSuite) SetupTest() {
 	suite.testAttachments = testrig.NewTestAttachments()
 	suite.testAccounts = testrig.NewTestAccounts()
 	suite.testEmojis = testrig.NewTestEmojis()
-	suite.manager = testrig.NewTestMediaManager(&suite.state)
-	suite.cleaner = cleaner.New(&suite.state)
-	suite.transportController = testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../testrig/media"))
+	suite.manager = testrig.NewTestMediaManager(suite.state)
+	suite.cleaner = cleaner.New(suite.state)
+	suite.transportController = testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../testrig/media"))
 }
 
 func (suite *MediaTestSuite) TearDownTest() {
 	testrig.StandardDBTeardown(suite.state.DB)
 	testrig.StandardStorageTeardown(suite.state.Storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func (suite *MediaTestSuite) TestUncacheRemote() {

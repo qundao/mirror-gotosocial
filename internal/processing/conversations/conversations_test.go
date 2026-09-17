@@ -49,7 +49,7 @@ type ConversationsTestSuite struct {
 	db                  db.DB
 	tc                  *typeutils.Converter
 	storage             *storage.Driver
-	state               state.State
+	state               *state.State
 	mediaManager        *media.Manager
 	transportController transport.Controller
 	federator           *federation.Federator
@@ -97,29 +97,29 @@ func (suite *ConversationsTestSuite) SetupSuite() {
 }
 
 func (suite *ConversationsTestSuite) SetupTest() {
-	suite.state.Caches.Init()
-	testrig.StartNoopWorkers(&suite.state)
+	suite.state = new(state.State)
+	testrig.StartNoopWorkers(suite.state)
 
 	testrig.InitTestConfig()
 	testrig.InitTestLog()
 
-	suite.db = testrig.NewTestDB(&suite.state)
+	suite.db = testrig.NewTestDB(suite.state)
 	suite.state.DB = suite.db
 	suite.state.AdminActions = admin.New(suite.state.DB, &suite.state.Workers)
-	suite.tc = typeutils.NewConverter(&suite.state)
-	suite.visFilter = visibility.NewFilter(&suite.state)
-	suite.muteFilter = mutes.NewFilter(&suite.state)
+	suite.tc = typeutils.NewConverter(suite.state)
+	suite.visFilter = visibility.NewFilter(suite.state)
+	suite.muteFilter = mutes.NewFilter(suite.state)
 
 	suite.storage = testrig.NewInMemoryStorage()
 	suite.state.Storage = suite.storage
-	suite.mediaManager = testrig.NewTestMediaManager(&suite.state)
+	suite.mediaManager = testrig.NewTestMediaManager(suite.state)
 
-	suite.transportController = testrig.NewTestTransportController(&suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media"))
-	suite.federator = testrig.NewTestFederator(&suite.state, suite.transportController, suite.mediaManager)
+	suite.transportController = testrig.NewTestTransportController(suite.state, testrig.NewMockHTTPClient(nil, "../../../testrig/media"))
+	suite.federator = testrig.NewTestFederator(suite.state, suite.transportController, suite.mediaManager)
 	suite.sentEmails = make(map[string]string)
 	suite.emailSender = testrig.NewEmailSender("../../../web/template/", suite.sentEmails)
 
-	suite.conversationsProcessor = conversations.New(&suite.state, suite.tc, suite.visFilter, suite.muteFilter, status.NewFilter(&suite.state))
+	suite.conversationsProcessor = conversations.New(suite.state, suite.tc, suite.visFilter, suite.muteFilter, status.NewFilter(suite.state))
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../../testrig/media")
 
@@ -141,7 +141,7 @@ func (suite *ConversationsTestSuite) TearDownTest() {
 
 	testrig.StandardDBTeardown(suite.db)
 	testrig.StandardStorageTeardown(suite.storage)
-	testrig.StopWorkers(&suite.state)
+	testrig.StopWorkers(suite.state)
 }
 
 func TestConversationsTestSuite(t *testing.T) {

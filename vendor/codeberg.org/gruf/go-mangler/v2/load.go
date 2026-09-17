@@ -81,7 +81,7 @@ func get(t xunsafe.TypeIter) (fn Mangler) {
 
 		// Wrap the mangler func to prepend type pointer.
 		fn = func(buf []byte, ptr unsafe.Pointer) []byte {
-			buf = append_uint(buf, uint64(uptr))
+			buf = append_uint(buf, uptr)
 			return mng(buf, ptr)
 		}
 	}()
@@ -103,9 +103,12 @@ func get(t xunsafe.TypeIter) (fn Mangler) {
 	}
 
 	if !visit(t) {
-		// On type recursion simply
-		// mangle as raw pointer.
-		return mangle_int
+		// don't bother for recursive types,
+		// we either serialize the pointer value
+		// itself which isn't deterministic, or
+		// we add recursion checks to serialize
+		// hot paths which i'd rather not do.
+		return nil
 	}
 
 	// Get func for kind.
@@ -122,27 +125,34 @@ func get(t xunsafe.TypeIter) (fn Mangler) {
 		return mangle_string
 	case reflect.Bool:
 		return mangle_bool
-	case reflect.Int,
-		reflect.Uint,
-		reflect.Uintptr,
-		reflect.UnsafePointer:
+	case reflect.Int:
 		return mangle_int
+	case reflect.Uint:
+		return mangle_uint
+	case reflect.Uintptr,
+		reflect.UnsafePointer:
+		// mangling pointers without being
+		// able to follow and know what they
+		// contain is not deterministic.
+		return nil
 	case reflect.Int8, reflect.Uint8:
 		return mangle_8bit
-	case reflect.Int16, reflect.Uint16:
-		return mangle_16bit
-	case reflect.Int32, reflect.Uint32:
-		return mangle_32bit
-	case reflect.Int64, reflect.Uint64:
-		return mangle_64bit
+	case reflect.Int16:
+		return mangle_int16
+	case reflect.Uint16:
+		return mangle_uint16
+	case reflect.Int32:
+		return mangle_int32
+	case reflect.Uint32:
+		return mangle_uint32
+	case reflect.Int64:
+		return mangle_int64
+	case reflect.Uint64:
+		return mangle_uint64
 	case reflect.Float32:
-		return mangle_32bit
+		return mangle_uint32
 	case reflect.Float64:
-		return mangle_64bit
-	case reflect.Complex64:
-		return mangle_64bit
-	case reflect.Complex128:
-		return mangle_128bit
+		return mangle_uint64
 	default:
 		return nil
 	}
