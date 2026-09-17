@@ -41,12 +41,7 @@ func FollowRequestToFollow(fr *gtsmodel.FollowRequest) *gtsmodel.Follow {
 		AccountID:       fr.AccountID,
 		TargetAccountID: fr.TargetAccountID,
 		URI:             fr.URI,
-		Flags: func() (flags gtsmodel.FollowFlags) {
-			flags.SetShowReblogs(fr.Flags.ShowReblogs())
-			flags.SetNotify(fr.Flags.Notify())
-			flags.SetUsePublicURI(fr.Flags.UsePublicURI())
-			return
-		}(),
+		Flags:           fr.Flags,
 	}
 }
 
