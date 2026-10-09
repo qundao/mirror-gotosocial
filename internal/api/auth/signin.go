@@ -191,7 +191,8 @@ func incorrectPassword(err error) (*gtsmodel.User, gtserror.WithCode) {
 func (m *Module) TwoFactorCodeGETHandler(c *httputil.Context) {
 	s := middleware.GetSession(c)
 
-	user := m.mustUserFromSession(c, s)
+	// User must be awaiting 2fa.
+	user := m.mustUserFromSession(c, s, sessionUserIDAwaiting2FA)
 	if user == nil {
 		// Error already
 		// written.
@@ -217,7 +218,8 @@ func (m *Module) TwoFactorCodeGETHandler(c *httputil.Context) {
 func (m *Module) TwoFactorCodePOSTHandler(c *httputil.Context) {
 	s := middleware.GetSession(c)
 
-	user := m.mustUserFromSession(c, s)
+	// User must be awaiting 2fa.
+	user := m.mustUserFromSession(c, s, sessionUserIDAwaiting2FA)
 	if user == nil {
 		// Error already
 		// written.

@@ -56,15 +56,17 @@ func (m *Module) AuthorizeGETHandler(c *httputil.Context) {
 	// If it's not set, then we don't yet know
 	// yet who the user is, so send them to the
 	// sign in page first.
-	if userID, ok := s.Values[sessionUserID].(string); !ok || userID == "" {
+	userID, ok := s.Values[sessionUserID].(string)
+	if !ok || userID == "" {
 		m.redirectAuthFormToSignIn(c)
 		return
 	}
 
-	user := m.mustUserFromSession(c, s)
-	if user == nil {
-		// Error already
-		// written.
+	// Get user for given userID.
+	user, err := m.state.DB.GetUserByID(c, userID)
+	if err != nil {
+		safe := "db error getting user " + userID
+		m.clearSessionWithInternalError(c, s, err, safe, oauth.HelpfulAdvice)
 		return
 	}
 
@@ -162,7 +164,8 @@ func (m *Module) AuthorizePOSTHandler(c *httputil.Context) {
 		return
 	}
 
-	user := m.mustUserFromSession(c, s)
+	// User must be fully authed.
+	user := m.mustUserFromSession(c, s, sessionUserID)
 	if user == nil {
 		// Error already
 		// written.
