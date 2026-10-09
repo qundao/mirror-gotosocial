@@ -15,39 +15,35 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-package log
+package format
 
 import (
+	"time"
+
+	"code.superseriousbusiness.org/gopkg/log/level"
+	"codeberg.org/gruf/go-byteutil"
+	"codeberg.org/gruf/go-kv/v2"
 	"codeberg.org/gruf/go-kv/v2/format"
 )
 
-// LogFormatted provides log formatting
-// of wrapped interface via String() method.
-type LogFormatted struct{ any }
+// CLI wraps an existing FormatFunc to strip away much
+// of the extra log formatting fields when level = UNSET.
+type CLI struct{ FormatFunc }
 
-// String: implements fmt.Stringer{}.
-func (f LogFormatted) String() string {
-	buf := bufpool.Get()
-	buf.B = format.Global.Append(buf.B, f.any, argArgs)
-	str := string(buf.B)
-	bufpool.Put(buf)
-	return str
-}
+func (cli CLI) Format(buf *byteutil.Buffer, stamp time.Time, pc uintptr, lvl level.LEVEL, kvs []kv.Field, msg string) {
+	if lvl == level.UNSET {
+		// Append formatted fields.
+		for _, field := range kvs {
+			kv.AppendQuoteString(buf, field.K)
+			buf.B = append(buf.B, '=')
+			buf.B = format.Global.Append(buf.B, field.V, format.Args{})
+			buf.B = append(buf.B, ' ')
+		}
 
-// GoString: implements fmt.GoStringer{}.
-func (f LogFormatted) GoString() string {
-	verboseArgs := argArgs
-	verboseArgs.SetWithType()
-	verboseArgs.SetNoMethod()
-	buf := bufpool.Get()
-	buf.B = format.Global.Append(buf.B, f.any, verboseArgs)
-	str := string(buf.B)
-	bufpool.Put(buf)
-	return str
-}
-
-// Formatted wraps value in LogFormatted{}
-// for nicer formatting via String() method.
-func Formatted(v any) LogFormatted {
-	return LogFormatted{v}
+		// Only output log message.
+		buf.B = append(buf.B, msg...)
+	} else {
+		// For logging at level, passing to wrapped.
+		cli.FormatFunc(buf, stamp, pc, lvl, kvs, msg)
+	}
 }
