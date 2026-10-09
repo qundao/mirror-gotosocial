@@ -73,26 +73,6 @@ func (suite *ConfigValidateTestSuite) TestValidateAccountDomainOK3() {
 	suite.NoError(err)
 }
 
-func (suite *ConfigValidateTestSuite) TestValidateAccountDomainNotSubdomain1() {
-	testrig.InitTestConfig()
-
-	config.SetHost("gts.example.org")
-	config.SetAccountDomain("somethingelse.com")
-
-	err := config.Validate()
-	suite.EqualError(err, "host gts.example.org is not a valid subdomain of account-domain somethingelse.com")
-}
-
-func (suite *ConfigValidateTestSuite) TestValidateAccountDomainNotSubdomain2() {
-	testrig.InitTestConfig()
-
-	config.SetHost("example.org")
-	config.SetAccountDomain("gts.example.org")
-
-	err := config.Validate()
-	suite.EqualError(err, "host example.org is not a valid subdomain of account-domain gts.example.org")
-}
-
 func (suite *ConfigValidateTestSuite) TestValidateConfigNoProtocol() {
 	testrig.InitTestConfig()
 

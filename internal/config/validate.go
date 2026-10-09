@@ -46,8 +46,9 @@ func Validate() error {
 	}
 
 	// If `account-domain` and `host`
-	// are set, `host` must be a valid
-	// subdomain of `account-domain`.
+	// are set, `host` should probably
+	// be a valid subdomain of
+	// `account-domain`.
 	if host != "" {
 		ad := GetAccountDomain()
 		if ad == "" {
@@ -55,7 +56,9 @@ func Validate() error {
 			// back by setting it to `host`.
 			SetAccountDomain(GetHost())
 		} else if !dns.IsSubDomain(ad, host) {
-			errf("%s %s is not a valid subdomain of %s %s",
+			// `account-domain` is not a valid subdomain of `host`,
+			// log a warning.
+			log.Warnf(nil, "%s %s is not a valid subdomain of %s %s, not all implementations may play nicely",
 				HostFlag, host, AccountDomainFlag, ad)
 		}
 	}

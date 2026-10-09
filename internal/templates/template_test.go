@@ -237,6 +237,41 @@ With her hands on her hips looking annoyed she says &#34;That sign won&#39;t sto
 	}
 }
 
+func TestOutdentAsciiSpacebar(t *testing.T) {
+	const asciiSpacebar = template.HTML(`
+                            <div class="text">
+                                <div class="content e-content" lang="en">
+                                    <pre><code>  +-----+-+-+---+---+---+---+---+---+---+---+-+-+-----+---+---+
+                                    		  |                                   |
+                                    		  |                                   |
+                                    		  +-----------------------------------+
+                                    </code></pre>
+                                    
+                                </div>
+                            </div>
+`)
+
+	const expected = template.HTML(`
+                            <div class="text">
+                                <div class="content e-content" lang="en">
+<pre><code>  +-----+-+-+---+---+---+---+---+---+---+---+-+-+-----+---+---+
+		  |                                   |
+		  |                                   |
+		  +-----------------------------------+
+</code></pre>
+                                    
+                                </div>
+                            </div>
+`)
+
+	out := outdentPreformatted(asciiSpacebar)
+	if out != expected {
+		t.Fatalf("unexpected output:\n`%s`\n", out)
+	}
+
+    noescape(string(out))
+}
+
 func TestOutdentOGMeta(t *testing.T) {
 	const html = template.HTML(`<html lang="en">
     <head>

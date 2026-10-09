@@ -20,7 +20,7 @@
 {{- define "statusContent" -}}
 {{- with .Content }}
 <div class="content e-content" lang="{{- $.LanguageTag.TagStr -}}">
-    {{ noescape . | emojify $.Emojis }}
+{{ noescape . | emojify $.Emojis | indent 1 }}
 </div>
 {{- end }}
 {{- end -}}

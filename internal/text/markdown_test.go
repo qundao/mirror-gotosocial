@@ -96,6 +96,21 @@ const (
 	// the first ö is one rune, the second ö is an o with a combining diacritic.
 	mdUnnormalizedHashtag         = "#hellöthere #hellöthere"
 	mdUnnormalizedHashtagExpected = "<p><a href=\"http://localhost:8080/tags/hell%C3%B6there\" class=\"mention hashtag\" rel=\"tag nofollow noreferrer noopener\" target=\"_blank\">#<span>hellöthere</span></a> <a href=\"http://localhost:8080/tags/hell%C3%B6there\" class=\"mention hashtag\" rel=\"tag nofollow noreferrer noopener\" target=\"_blank\">#<span>hellöthere</span></a></p>"
+
+	// https://codeberg.org/superseriousbusiness/gotosocial/issues/5043
+	// https://bin.benjaminhollon.com/niquouderi
+	asciiSpacebar = "```" + `
+  +-----+-+-+---+---+---+---+---+---+---+---+-+-+-----+---+---+
+		  |                                   |
+		  |                                   |
+		  +-----------------------------------+
+` + "```"
+
+	asciiSpacebarExpected = `<pre><code>  +-----+-+-+---+---+---+---+---+---+---+---+-+-+-----+---+---+
+		  |                                   |
+		  |                                   |
+		  +-----------------------------------+
+</code></pre>`
 )
 
 type MarkdownTestSuite struct {
@@ -243,6 +258,11 @@ func (suite *MarkdownTestSuite) TestParseHashtagUnderscoreSuffix() {
 func (suite *MarkdownTestSuite) TestParseUnnormalizedHashtag() {
 	formatted := suite.FromMarkdown(mdUnnormalizedHashtag)
 	suite.Equal(mdUnnormalizedHashtagExpected, formatted.HTML)
+}
+
+func (suite *MarkdownTestSuite) TestParseAsciiSpacebar() {
+	formatted := suite.FromMarkdown(asciiSpacebar)
+	suite.Equal(asciiSpacebarExpected, formatted.HTML)
 }
 
 func TestMarkdownTestSuite(t *testing.T) {
