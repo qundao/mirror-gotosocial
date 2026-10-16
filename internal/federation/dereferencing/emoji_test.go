@@ -18,21 +18,30 @@
 package dereferencing_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
 	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/media"
+	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
 )
 
 type EmojiTestSuite struct {
-	DereferencerStandardTestSuite
+	DereferencerTestSuite
 }
 
 func (suite *EmojiTestSuite) TestDereferenceEmojiBlocking() {
-	ctx := suite.T().Context()
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	emojiImageRemoteURL := "http://example.org/media/emojis/1781772.gif"
 	emojiImageStaticRemoteURL := "http://example.org/media/emojis/1781772.gif"
 	emojiURI := "http://example.org/emojis/1781772"
@@ -41,7 +50,7 @@ func (suite *EmojiTestSuite) TestDereferenceEmojiBlocking() {
 	emojiDisabled := false
 	emojiVisibleInPicker := false
 
-	emoji, err := suite.dereferencer.GetEmoji(
+	emoji, err := testStructs.Federator.Dereferencer.GetEmoji(
 		ctx,
 		emojiShortcode,
 		emojiDomain,
@@ -84,17 +93,24 @@ func (suite *EmojiTestSuite) TestDereferenceEmojiBlocking() {
 	suite.Empty(emoji.CategoryID)
 
 	// ensure that emoji is now in storage
-	stored, err := suite.storage.Get(ctx, emoji.ImagePath)
+	stored, err := testStructs.State.Storage.Get(ctx, emoji.ImagePath)
 	suite.NoError(err)
 	suite.Len(stored, emoji.ImageFileSize)
 
-	storedStatic, err := suite.storage.Get(ctx, emoji.ImageStaticPath)
+	storedStatic, err := testStructs.State.Storage.Get(ctx, emoji.ImageStaticPath)
 	suite.NoError(err)
 	suite.Len(storedStatic, emoji.ImageStaticFileSize)
 }
 
 func (suite *EmojiTestSuite) TestDereferenceEmojiMaxSizeZero() {
-	ctx := suite.T().Context()
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	emojiImageRemoteURL := "http://example.org/media/emojis/1781772.gif"
 	emojiImageStaticRemoteURL := "http://example.org/media/emojis/1781772.gif"
 	emojiURI := "http://example.org/emojis/1781772"
@@ -106,7 +122,7 @@ func (suite *EmojiTestSuite) TestDereferenceEmojiMaxSizeZero() {
 
 	// Emoji model should be returned, but
 	// should not be cached in our storage.
-	emoji, err := suite.dereferencer.GetEmoji(
+	emoji, err := testStructs.Federator.Dereferencer.GetEmoji(
 		ctx,
 		emojiShortcode,
 		emojiDomain,

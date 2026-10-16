@@ -55,10 +55,10 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 		return nil // Already processed.
 	}
 
-	requestingAcct := activityContext.requestingAcct
-	receivingAcct := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
-	if requestingAcct.IsMoving() {
+	if requesting.IsMoving() {
 		// A Moving account
 		// can't do this.
 		return nil
@@ -80,7 +80,7 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 		return gtserror.NewErrorBadRequest(errors.New(text), text)
 	}
 
-	if requestingAcct.URI != actorURI.String() {
+	if requesting.URI != actorURI.String() {
 		const text = "Accept actor and requesting account were not the same"
 		return gtserror.NewErrorBadRequest(errors.New(text), text)
 	}
@@ -97,8 +97,8 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 				if err := f.acceptFollowType(
 					ctx,
 					asType,
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -119,8 +119,8 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 					acceptID,
 					accept,
 					objIRI.String(),
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -141,8 +141,8 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 					acceptID,
 					accept,
 					objIRI,
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -165,8 +165,8 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 					acceptID,
 					accept,
 					replyReq,
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -191,8 +191,8 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 				if err := f.acceptFollowIRI(
 					ctx,
 					objIRI.String(),
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -204,8 +204,8 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 					acceptID,
 					accept,
 					objIRI.String(),
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -220,8 +220,8 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 					acceptID,
 					accept,
 					objIRI,
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -235,8 +235,8 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 func (f *DB) acceptFollowType(
 	ctx context.Context,
 	asType vocab.Type,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Cast the vocab.Type object to known AS type.
 	asFollow := asType.(vocab.ActivityStreamsFollow)
@@ -250,14 +250,14 @@ func (f *DB) acceptFollowType(
 
 	// Make sure the creator of the original follow
 	// is the same as whatever inbox this landed in.
-	if follow.AccountID != receivingAcct.ID {
+	if follow.AccountID != receiving.ID {
 		const text = "Follow account and inbox account were not the same"
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
 	// Make sure the target of the original follow
 	// is the same as the account making the request.
-	if follow.TargetAccountID != requestingAcct.ID {
+	if follow.TargetAccountID != requesting.ID {
 		const text = "Follow target account and requesting account were not the same"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
@@ -284,8 +284,8 @@ func (f *DB) acceptFollowType(
 		APObjectType:   ap.ActivityFollow,
 		APActivityType: ap.ActivityAccept,
 		GTSModel:       follow,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -294,8 +294,8 @@ func (f *DB) acceptFollowType(
 func (f *DB) acceptFollowIRI(
 	ctx context.Context,
 	objectIRI string,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Get the follow req from the db.
 	followReq, err := f.state.DB.GetFollowRequestByURI(ctx, objectIRI)
@@ -313,14 +313,14 @@ func (f *DB) acceptFollowIRI(
 
 	// Make sure the creator of the original follow
 	// is the same as whatever inbox this landed in.
-	if followReq.AccountID != receivingAcct.ID {
+	if followReq.AccountID != receiving.ID {
 		const text = "Follow account and inbox account were not the same"
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
 	// Make sure the target of the original follow
 	// is the same as the account making the request.
-	if followReq.TargetAccountID != requestingAcct.ID {
+	if followReq.TargetAccountID != requesting.ID {
 		const text = "Follow target account and requesting account were not the same"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
@@ -347,8 +347,8 @@ func (f *DB) acceptFollowIRI(
 		APObjectType:   ap.ActivityFollow,
 		APActivityType: ap.ActivityAccept,
 		GTSModel:       follow,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -359,8 +359,8 @@ func (f *DB) acceptOtherIRI(
 	acceptID *url.URL,
 	accept vocab.ActivityStreamsAccept,
 	objectIRI *url.URL,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// See if we can get a status from the db.
 	status, err := f.state.DB.GetStatusByURI(ctx, objectIRI.String())
@@ -377,8 +377,8 @@ func (f *DB) acceptOtherIRI(
 			acceptID,
 			accept,
 			status,
-			receivingAcct,
-			requestingAcct,
+			requesting,
+			receiving,
 		)
 	}
 
@@ -396,8 +396,8 @@ func (f *DB) acceptOtherIRI(
 	// by checking that receiver follows requester.
 	following, err := f.state.DB.IsFollowing(
 		ctx,
-		receivingAcct.ID,
-		requestingAcct.ID,
+		receiving.ID,
+		requesting.ID,
 	)
 	if err != nil {
 		err := gtserror.Newf("db error checking following: %w", err)
@@ -430,8 +430,8 @@ func (f *DB) acceptOtherIRI(
 		APActivityType: ap.ActivityAccept,
 		APIRI:          approvedByURI,
 		APObject:       objectIRI,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -442,8 +442,8 @@ func (f *DB) acceptStoredStatus(
 	acceptID *url.URL,
 	accept vocab.ActivityStreamsAccept,
 	status *gtsmodel.Status,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Lock on this status URI
 	// as we may be updating it.
@@ -459,8 +459,8 @@ func (f *DB) acceptStoredStatus(
 
 	// Make sure the target of the interaction (reply/boost)
 	// is the same as the account doing the Accept.
-	if status.BoostOfAccountID != requestingAcct.ID &&
-		status.InReplyToAccountID != requestingAcct.ID {
+	if status.BoostOfAccountID != requesting.ID &&
+		status.InReplyToAccountID != requesting.ID {
 		const text = "status reply to or boost of account and requesting account were not the same"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
@@ -498,8 +498,8 @@ func (f *DB) acceptStoredStatus(
 		APObjectType:   apObjectType,
 		APActivityType: ap.ActivityAccept,
 		GTSModel:       status,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -510,8 +510,8 @@ func (f *DB) acceptLikeIRI(
 	acceptID *url.URL,
 	accept vocab.ActivityStreamsAccept,
 	objectIRI string,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Lock on this potential Like
 	// URI as we may be updating it.
@@ -550,14 +550,14 @@ func (f *DB) acceptLikeIRI(
 	// Make sure the creator of the original Like
 	// is the same as the inbox processing the Accept;
 	// this also ensures the Like is local.
-	if fave.AccountID != receivingAcct.ID {
+	if fave.AccountID != receiving.ID {
 		const text = "fave creator account and inbox account were not the same"
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
 	// Make sure the target of the Like is the
 	// same as the account doing the Accept.
-	if fave.TargetAccountID != requestingAcct.ID {
+	if fave.TargetAccountID != requesting.ID {
 		const text = "status fave target account and requesting account were not the same"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
@@ -586,8 +586,8 @@ func (f *DB) acceptLikeIRI(
 		APObjectType:   ap.ActivityLike,
 		APActivityType: ap.ActivityAccept,
 		GTSModel:       fave,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -614,8 +614,8 @@ func (f *DB) parseAcceptInteractionRequestable(
 	ctx context.Context,
 	accept vocab.ActivityStreamsAccept,
 	intRequestable ap.InteractionRequestable,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) (*partialAcceptInteractionRequest, error) {
 	intReqURI := ap.GetJSONLDId(intRequestable)
 	if intReqURI == nil {
@@ -704,8 +704,8 @@ func (f *DB) parseAcceptInteractionRequestable(
 		// checking that receiver follows requester.
 		following, err := f.state.DB.IsFollowing(
 			ctx,
-			receivingAcct.ID,
-			requestingAcct.ID,
+			receiving.ID,
+			requesting.ID,
 		)
 		if err != nil {
 			err := gtserror.Newf("db error checking following: %w", err)
@@ -731,7 +731,7 @@ func (f *DB) parseAcceptInteractionRequestable(
 
 		// The person doing the Accept must be the
 		// same as the target of the interaction request.
-		if intReq.TargetAccountID != requestingAcct.ID {
+		if intReq.TargetAccountID != requesting.ID {
 			const text = "cannot Accept interaction request on another actor's behalf"
 			return nil, gtserror.NewErrorForbidden(errors.New(text), text)
 		}
@@ -788,8 +788,8 @@ func (f *DB) acceptPoliteReplyRequest(
 	acceptID *url.URL,
 	accept vocab.ActivityStreamsAccept,
 	replyRequest vocab.GoToSocialReplyRequest,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Parse out the Accept and
 	// embedded interaction requestable.
@@ -797,8 +797,8 @@ func (f *DB) acceptPoliteReplyRequest(
 		ctx,
 		accept,
 		replyRequest,
-		receivingAcct,
-		requestingAcct,
+		requesting,
+		receiving,
 	)
 	if err != nil {
 		return err
@@ -821,8 +821,8 @@ func (f *DB) acceptPoliteReplyRequest(
 			APActivityType: ap.ActivityAccept,
 			APIRI:          partial.authURI,
 			APObject:       partial.instrumentURI,
-			Receiving:      receivingAcct,
-			Requesting:     requestingAcct,
+			Receiving:      receiving,
+			Requesting:     requesting,
 		})
 
 		return nil
@@ -890,8 +890,8 @@ func (f *DB) acceptPoliteReplyRequest(
 		APIRI:          partial.authURI,
 		APObject:       partial.instrumentURI,
 		GTSModel:       partial.intReq,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil

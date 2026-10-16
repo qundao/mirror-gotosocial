@@ -18,8 +18,11 @@
 package workers_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"io"
 	"testing"
 	"time"
 
@@ -31,6 +34,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/stream"
+	"code.superseriousbusiness.org/gotosocial/internal/transport/delivery"
 	"code.superseriousbusiness.org/gotosocial/internal/typeutils"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"code.superseriousbusiness.org/gotosocial/testrig"
@@ -68,6 +72,7 @@ func (suite *FromClientAPITestSuite) newStatus(
 		TagIDs:              tagIDs,
 		AccountURI:          account.URI,
 		AccountID:           account.ID,
+		Account:             account,
 		Visibility:          visibility,
 		ActivityStreamsType: ap.ObjectNote,
 	}
@@ -2188,6 +2193,207 @@ func (suite *FromClientAPITestSuite) TestProcessStatusDelete() {
 	}) {
 		suite.FailNow("timed out waiting for status delete")
 	}
+}
+
+func (suite *FromClientAPITestSuite) TestCreateStatusPushToRelay() {
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	adminAcct := suite.testAccounts["admin_account"]
+	relayActorAcct := suite.testAccounts["relay_actor_1"]
+
+	// Create a push connection from
+	// admin targeting our own relay.
+	relayPush1 := &gtsmodel.RelayPush{
+		ID:            "01M0CMNERQGN72X5AH1BE46481",
+		AccountID:     adminAcct.ID,
+		RelayActorURI: relayActorAcct.URI,
+		Flags: func() gtsmodel.RelayFlags {
+			var flags gtsmodel.RelayFlags
+			flags.SetMatchByDefault(true)
+			flags.SetPublic(true)
+			return flags
+		}(),
+	}
+	if err := testStructs.State.DB.PutRelayPush(ctx, relayPush1); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// "Accept" the connection by having our instance
+	// account follow1 our relay actor account.
+	follow1 := &gtsmodel.Follow{
+		ID:              "01M0CMVBPAGN0MY1ZME10KAVAJ",
+		URI:             "doesn't.fucking'.matter",
+		AccountID:       suite.testAccounts["instance_account"].ID,
+		TargetAccountID: relayActorAcct.ID,
+	}
+	if err := testStructs.State.DB.PutFollow(ctx, follow1); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Create a relay push targeting a remote
+	// account as well. It's not actually a relay
+	// but it'll do for the purposes of this test.
+	remoteAcct := suite.testAccounts["remote_account_1"]
+	relayPush2 := &gtsmodel.RelayPush{
+		ID:            "01M0CWKZTJBT37DPW0567N5JMM",
+		AccountID:     adminAcct.ID,
+		RelayActorURI: remoteAcct.URI,
+		Flags: func() gtsmodel.RelayFlags {
+			var flags gtsmodel.RelayFlags
+			flags.SetMatchByDefault(true)
+			flags.SetPublic(true)
+			return flags
+		}(),
+	}
+	if err := testStructs.State.DB.PutRelayPush(ctx, relayPush2); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// "Accept" the connection by having our
+	// instance account follow the remote account.
+	follow2 := &gtsmodel.Follow{
+		ID:              "01M0CWMRP2MYH0J717Q18PQKFW",
+		URI:             "doesn't.fucking'.matter.again",
+		AccountID:       suite.testAccounts["instance_account"].ID,
+		TargetAccountID: remoteAcct.ID,
+	}
+	if err := testStructs.State.DB.PutFollow(ctx, follow2); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Admin account posts a
+	// new top-level status.
+	status := suite.newStatus(
+		ctx,
+		testStructs.State,
+		adminAcct,
+		gtsmodel.VisibilityPublic,
+		nil,
+		nil,
+		nil,
+		false,
+		nil,
+	)
+
+	// Process the new status.
+	if err := testStructs.Processor.Workers().ProcessFromClientAPI(
+		ctx,
+		&messages.FromClientAPI{
+			APObjectType:   ap.ObjectNote,
+			APActivityType: ap.ActivityCreate,
+			GTSModel:       status,
+			Origin:         adminAcct,
+		},
+	); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Wait for our own relay actor to
+	// receive + send out the pushed status.
+	if !testrig.WaitFor(func() bool {
+		relayedURI, err := testStructs.State.DB.GetRelayedURI(ctx, relayActorAcct.URI, status.URI)
+		return err == nil && relayedURI != nil
+	}) {
+		suite.FailNow("timed out waiting for relayedURI entry to be created")
+	}
+
+	// Wait for a delivery to be
+	// queued to fossbros-anonymous.
+	var delivery *delivery.Delivery
+	if !testrig.WaitFor(func() bool {
+		var ok bool
+		delivery, ok = testStructs.State.Workers.Delivery.Queue.Pop()
+		return ok && delivery != nil
+	}) {
+		suite.FailNow("timed out waiting for message in delivery queue")
+	}
+	suite.Equal("http://fossbros-anonymous.io/inbox", delivery.Request.URL.String())
+	suite.Equal("http://localhost:8080/users/admin/statuses/"+status.ID, delivery.ObjectID)
+
+	// Serialize delivery body.
+	b, err := io.ReadAll(delivery.Request.Body)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Parse body to map.
+	m := make(map[string]any)
+	if err := json.Unmarshal(b, &m); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Delete transient "published"
+	// dates so we can check data.
+	delete(m, "published")
+	delete(m["object"].(map[string]any), "published")
+
+	// Remarshal the json.
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetIndent("", "  ")
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(&m); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	suite.Equal(`{
+  "@context": [
+    "https://gotosocial.org/ns",
+    "https://www.w3.org/ns/activitystreams"
+  ],
+  "actor": "http://localhost:8080/users/admin",
+  "cc": "http://localhost:8080/users/admin/followers",
+  "id": "http://localhost:8080/users/admin/statuses/`+status.ID+`/activity#Create",
+  "object": {
+    "attributedTo": "http://localhost:8080/users/admin",
+    "cc": "http://localhost:8080/users/admin/followers",
+    "content": "pee pee poo poo",
+    "id": "http://localhost:8080/users/admin/statuses/`+status.ID+`",
+    "interactionPolicy": {
+      "canAnnounce": {
+        "automaticApproval": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ]
+      },
+      "canLike": {
+        "automaticApproval": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ]
+      },
+      "canQuote": {
+        "automaticApproval": [
+          "http://localhost:8080/users/admin"
+        ]
+      },
+      "canReply": {
+        "automaticApproval": [
+          "https://www.w3.org/ns/activitystreams#Public"
+        ]
+      }
+    },
+    "replies": {
+      "first": {
+        "id": "http://localhost:8080/users/admin/statuses/`+status.ID+`/replies?page=true",
+        "next": "http://localhost:8080/users/admin/statuses/`+status.ID+`/replies?page=true&only_other_accounts=false",
+        "partOf": "http://localhost:8080/users/admin/statuses/`+status.ID+`/replies",
+        "type": "CollectionPage"
+      },
+      "id": "http://localhost:8080/users/admin/statuses/`+status.ID+`/replies",
+      "type": "Collection"
+    },
+    "to": "https://www.w3.org/ns/activitystreams#Public",
+    "type": "Note",
+    "url": "http://localhost:8080/@admin/statuses/`+status.ID+`"
+  },
+  "to": "https://www.w3.org/ns/activitystreams#Public",
+  "type": "Create"
+}
+`, buf.String())
 }
 
 func TestFromClientAPITestSuite(t *testing.T) {

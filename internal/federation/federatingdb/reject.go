@@ -42,8 +42,8 @@ func (f *DB) Reject(ctx context.Context, reject vocab.ActivityStreamsReject) err
 		return nil // Already processed.
 	}
 
-	requestingAcct := activityContext.requestingAcct
-	receivingAcct := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	activityID := ap.GetJSONLDId(reject)
 	if activityID == nil {
@@ -62,8 +62,8 @@ func (f *DB) Reject(ctx context.Context, reject vocab.ActivityStreamsReject) err
 				if err := f.rejectFollowType(
 					ctx,
 					asType,
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -83,8 +83,8 @@ func (f *DB) Reject(ctx context.Context, reject vocab.ActivityStreamsReject) err
 				if err := f.rejectFollowIRI(
 					ctx,
 					objIRI.String(),
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -95,8 +95,8 @@ func (f *DB) Reject(ctx context.Context, reject vocab.ActivityStreamsReject) err
 					ctx,
 					activityID.String(),
 					objIRI.String(),
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -107,8 +107,8 @@ func (f *DB) Reject(ctx context.Context, reject vocab.ActivityStreamsReject) err
 					ctx,
 					activityID.String(),
 					objIRI.String(),
-					receivingAcct,
-					requestingAcct,
+					requesting,
+					receiving,
 				); err != nil {
 					return err
 				}
@@ -126,8 +126,8 @@ func (f *DB) Reject(ctx context.Context, reject vocab.ActivityStreamsReject) err
 func (f *DB) rejectFollowType(
 	ctx context.Context,
 	asType vocab.Type,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Cast the vocab.Type object to known AS type.
 	asFollow := asType.(vocab.ActivityStreamsFollow)
@@ -141,8 +141,8 @@ func (f *DB) rejectFollowType(
 
 	// Reject the follow.
 	return f.rejectFollow(ctx,
-		receivingAcct,
-		requestingAcct,
+		requesting,
+		receiving,
 		follow.AccountID,
 		follow.TargetAccountID,
 	)
@@ -151,8 +151,8 @@ func (f *DB) rejectFollowType(
 func (f *DB) rejectFollowIRI(
 	ctx context.Context,
 	objectIRI string,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Try to get the follow req from the db.
 	followReq, err := f.state.DB.GetFollowRequestByURI(ctx, objectIRI)
@@ -164,8 +164,8 @@ func (f *DB) rejectFollowIRI(
 	if followReq != nil {
 		// Reject the follow req.
 		return f.rejectFollow(ctx,
-			receivingAcct,
-			requestingAcct,
+			requesting,
+			receiving,
 			followReq.AccountID,
 			followReq.TargetAccountID,
 		)
@@ -181,8 +181,8 @@ func (f *DB) rejectFollowIRI(
 	if follow != nil {
 		// Reject the Follow.
 		return f.rejectFollow(ctx,
-			receivingAcct,
-			requestingAcct,
+			requesting,
+			receiving,
 			follow.AccountID,
 			follow.TargetAccountID,
 		)
@@ -193,21 +193,21 @@ func (f *DB) rejectFollowIRI(
 
 func (f *DB) rejectFollow(
 	ctx context.Context,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	originAccountID string,
 	targetAccountID string,
 ) error {
 	// Make sure the origin of the original follow
 	// is the same as whatever inbox this landed in.
-	if originAccountID != receivingAcct.ID {
+	if originAccountID != receiving.ID {
 		const text = "Follow account and inbox account were not the same"
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
 	// Make sure the target of the original follow
 	// is the same as the account making the request.
-	if targetAccountID != requestingAcct.ID {
+	if targetAccountID != requesting.ID {
 		const text = "Follow target account and requesting account were not the same"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
@@ -237,8 +237,8 @@ func (f *DB) rejectStatusIRI(
 	ctx context.Context,
 	activityID string,
 	objectIRI string,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Lock on this potential status URI.
 	unlock := f.state.FedLocks.Lock(objectIRI)
@@ -272,7 +272,7 @@ func (f *DB) rejectStatusIRI(
 	// Make sure the creator of the original status
 	// is the same as the inbox processing the Reject;
 	// this also ensures the status is local.
-	if status.AccountID != receivingAcct.ID {
+	if status.AccountID != receiving.ID {
 		const text = "status author account and inbox account were not the same"
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
@@ -284,7 +284,7 @@ func (f *DB) rejectStatusIRI(
 	if status.InReplyToID != "" {
 		// Rejecting a Reply.
 		apObjectType = ap.ObjectNote
-		if status.InReplyToAccountID != requestingAcct.ID {
+		if status.InReplyToAccountID != requesting.ID {
 			const text = "status reply to account and requesting account were not the same"
 			return gtserror.NewErrorForbidden(errors.New(text), text)
 		}
@@ -299,7 +299,7 @@ func (f *DB) rejectStatusIRI(
 	} else {
 		// Rejecting an Announce.
 		apObjectType = ap.ActivityAnnounce
-		if status.BoostOfAccountID != requestingAcct.ID {
+		if status.BoostOfAccountID != requesting.ID {
 			const text = "status boost of account and requesting account were not the same"
 			return gtserror.NewErrorForbidden(errors.New(text), text)
 		}
@@ -318,10 +318,10 @@ func (f *DB) rejectStatusIRI(
 		// status, create a pre-rejected request now.
 		req = &gtsmodel.InteractionRequest{
 			ID:                   id.NewULID(),
-			TargetAccountID:      requestingAcct.ID,
-			TargetAccount:        requestingAcct,
-			InteractingAccountID: receivingAcct.ID,
-			InteractingAccount:   receivingAcct,
+			TargetAccountID:      requesting.ID,
+			TargetAccount:        requesting,
+			InteractingAccountID: receiving.ID,
+			InteractingAccount:   receiving,
 			InteractionURI:       status.URI,
 			Polite:               util.Ptr(false),
 			ResponseURI:          activityID,
@@ -381,8 +381,8 @@ func (f *DB) rejectStatusIRI(
 		APObjectType:   apObjectType,
 		APActivityType: ap.ActivityReject,
 		GTSModel:       req,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -392,8 +392,8 @@ func (f *DB) rejectLikeIRI(
 	ctx context.Context,
 	activityID string,
 	objectIRI string,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 ) error {
 	// Lock on this potential Like
 	// URI as we may be updating it.
@@ -427,14 +427,14 @@ func (f *DB) rejectLikeIRI(
 	// Make sure the creator of the original Like
 	// is the same as the inbox processing the Reject;
 	// this also ensures the Like is local.
-	if fave.AccountID != receivingAcct.ID {
+	if fave.AccountID != receiving.ID {
 		const text = "fave creator account and inbox account were not the same"
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
 	// Make sure the target of the Like is the
 	// same as the account doing the Reject.
-	if fave.TargetAccountID != requestingAcct.ID {
+	if fave.TargetAccountID != requesting.ID {
 		const text = "status fave target account and requesting account were not the same"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
@@ -452,10 +452,10 @@ func (f *DB) rejectLikeIRI(
 		// fave, create a pre-rejected request now.
 		req = &gtsmodel.InteractionRequest{
 			ID:                    id.NewULID(),
-			TargetAccountID:       requestingAcct.ID,
-			TargetAccount:         requestingAcct,
-			InteractingAccountID:  receivingAcct.ID,
-			InteractingAccount:    receivingAcct,
+			TargetAccountID:       requesting.ID,
+			TargetAccount:         requesting,
+			InteractingAccountID:  receiving.ID,
+			InteractingAccount:    receiving,
 			InteractionRequestURI: fave.URI + gtsmodel.ImpoliteLikeRequestSuffix,
 			InteractionURI:        fave.URI,
 			InteractionType:       gtsmodel.InteractionLike,
@@ -502,8 +502,8 @@ func (f *DB) rejectLikeIRI(
 		APObjectType:   ap.ActivityLike,
 		APActivityType: ap.ActivityReject,
 		GTSModel:       req,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil

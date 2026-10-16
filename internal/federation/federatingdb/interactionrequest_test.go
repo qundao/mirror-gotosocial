@@ -21,11 +21,9 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	"code.superseriousbusiness.org/activity/streams"
 	"code.superseriousbusiness.org/activity/streams/vocab"
-	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
@@ -36,12 +34,13 @@ type InteractionRequestTestSuite struct {
 }
 
 func (suite *InteractionRequestTestSuite) intReq(
-	receiving *gtsmodel.Account,
+	ctx context.Context,
 	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	jsonStr string,
 	dbF func(ctx context.Context, req vocab.Type) error,
 ) error {
-	ctx := createTestContext(suite.T(), receiving, requesting)
+	ctx = createTestContext(ctx, requesting, receiving)
 
 	raw := make(map[string]interface{})
 	if err := json.Unmarshal([]byte(jsonStr), &raw); err != nil {
@@ -57,8 +56,15 @@ func (suite *InteractionRequestTestSuite) intReq(
 }
 
 func (suite *InteractionRequestTestSuite) TestReplyRequest() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	var (
-		ctx        = suite.T().Context()
 		receiving  = suite.testAccounts["admin_account"]
 		requesting = suite.testAccounts["remote_account_1"]
 		testStatus = suite.testStatuses["admin_account_status_1"]
@@ -95,12 +101,13 @@ func (suite *InteractionRequestTestSuite) TestReplyRequest() {
 
 	// Call the federatingDB function.
 	err := suite.intReq(
-		receiving,
+		ctx,
 		requesting,
+		receiving,
 		jsonStr,
 		func(ctx context.Context, req vocab.Type) error {
 			replyReq := req.(vocab.GoToSocialReplyRequest)
-			return suite.federatingDB.ReplyRequest(ctx, replyReq)
+			return testStructs.Federator.FederatingDB().ReplyRequest(ctx, replyReq)
 		},
 	)
 	if err != nil {
@@ -110,7 +117,7 @@ func (suite *InteractionRequestTestSuite) TestReplyRequest() {
 	// There should be an interaction request in the DB now.
 	var intReq *gtsmodel.InteractionRequest
 	if !testrig.WaitFor(func() bool {
-		intReq, err = suite.state.DB.GetInteractionRequestByInteractionURI(ctx, intURI)
+		intReq, err = testStructs.State.DB.GetInteractionRequestByInteractionURI(ctx, intURI)
 		return err == nil && intReq != nil
 	}) {
 		suite.FailNow("timed out waiting for int req to appear in the db")
@@ -122,19 +129,25 @@ func (suite *InteractionRequestTestSuite) TestReplyRequest() {
 	suite.Equal(intURI, intReq.InteractionURI)
 	suite.Equal(gtsmodel.InteractionReply, intReq.InteractionType)
 
-	// Should be a message heading to the processor.
-	msg, _ := suite.getFederatorMsg(5 * time.Second)
-	suite.Equal(ap.ActivityCreate, msg.APActivityType)
-	suite.Equal(ap.ActivityReplyRequest, msg.APObjectType)
-	suite.NotNil(msg.GTSModel)
-	suite.NotNil(msg.APObject)
-	suite.NotNil(msg.Receiving)
-	suite.NotNil(msg.Requesting)
+	// Wait for approval or perish.
+	if !testrig.WaitFor(func() bool {
+		reply, err := testStructs.State.DB.GetStatusByURI(ctx, intURI)
+		return err == nil && reply != nil && reply.ApprovedByURI != ""
+	}) {
+		suite.FailNow("waiting for approval")
+	}
 }
 
 func (suite *InteractionRequestTestSuite) TestLikeRequest() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	var (
-		ctx        = suite.T().Context()
 		receiving  = suite.testAccounts["admin_account"]
 		requesting = suite.testAccounts["remote_account_1"]
 		testStatus = suite.testStatuses["admin_account_status_1"]
@@ -164,12 +177,13 @@ func (suite *InteractionRequestTestSuite) TestLikeRequest() {
 
 	// Call the federatingDB function.
 	err := suite.intReq(
-		receiving,
+		ctx,
 		requesting,
+		receiving,
 		jsonStr,
 		func(ctx context.Context, req vocab.Type) error {
 			likeReq := req.(vocab.GoToSocialLikeRequest)
-			return suite.federatingDB.LikeRequest(ctx, likeReq)
+			return testStructs.Federator.FederatingDB().LikeRequest(ctx, likeReq)
 		},
 	)
 	if err != nil {
@@ -179,7 +193,7 @@ func (suite *InteractionRequestTestSuite) TestLikeRequest() {
 	// There should be an interaction request in the DB now.
 	var intReq *gtsmodel.InteractionRequest
 	if !testrig.WaitFor(func() bool {
-		intReq, err = suite.state.DB.GetInteractionRequestByInteractionURI(ctx, intURI)
+		intReq, err = testStructs.State.DB.GetInteractionRequestByInteractionURI(ctx, intURI)
 		return err == nil && intReq != nil
 	}) {
 		suite.FailNow("timed out waiting for int req to appear in the db")
@@ -191,33 +205,25 @@ func (suite *InteractionRequestTestSuite) TestLikeRequest() {
 	suite.Equal(intURI, intReq.InteractionURI)
 	suite.Equal(gtsmodel.InteractionLike, intReq.InteractionType)
 
-	// The like should be in the DB now (unapproved).
-	var statusFave *gtsmodel.StatusFave
+	// Wait for approval or perish.
 	if !testrig.WaitFor(func() bool {
-		statusFave, err = suite.state.DB.GetStatusFaveByURI(ctx, intURI)
-		return err == nil && intReq != nil
+		fave, err := testStructs.State.DB.GetStatusFaveByURI(ctx, intURI)
+		return err == nil && fave != nil && fave.ApprovedByURI != ""
 	}) {
-		suite.FailNow("timed out waiting for fave to appear in the db")
+		suite.FailNow("waiting for approval")
 	}
-	suite.Equal(requesting.ID, statusFave.AccountID)
-	suite.Equal(receiving.ID, statusFave.TargetAccountID)
-	suite.Equal(testStatus.ID, statusFave.StatusID)
-	suite.Equal(intURI, statusFave.URI)
-	suite.True(*statusFave.PendingApproval)
-	suite.Empty(statusFave.ApprovedByURI)
-
-	// Should be a message heading to the processor.
-	msg, _ := suite.getFederatorMsg(5 * time.Second)
-	suite.Equal(ap.ActivityCreate, msg.APActivityType)
-	suite.Equal(ap.ActivityLikeRequest, msg.APObjectType)
-	suite.NotNil(msg.GTSModel)
-	suite.NotNil(msg.Receiving)
-	suite.NotNil(msg.Requesting)
 }
 
 func (suite *InteractionRequestTestSuite) TestAnnounceRequest() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	var (
-		ctx        = suite.T().Context()
 		receiving  = suite.testAccounts["admin_account"]
 		requesting = suite.testAccounts["remote_account_1"]
 		testStatus = suite.testStatuses["admin_account_status_1"]
@@ -248,12 +254,13 @@ func (suite *InteractionRequestTestSuite) TestAnnounceRequest() {
 
 	// Call the federatingDB function.
 	err := suite.intReq(
-		receiving,
+		ctx,
 		requesting,
+		receiving,
 		jsonStr,
 		func(ctx context.Context, req vocab.Type) error {
 			announceReq := req.(vocab.GoToSocialAnnounceRequest)
-			return suite.federatingDB.AnnounceRequest(ctx, announceReq)
+			return testStructs.Federator.FederatingDB().AnnounceRequest(ctx, announceReq)
 		},
 	)
 	if err != nil {
@@ -263,7 +270,7 @@ func (suite *InteractionRequestTestSuite) TestAnnounceRequest() {
 	// There should be an interaction request in the DB now.
 	var intReq *gtsmodel.InteractionRequest
 	if !testrig.WaitFor(func() bool {
-		intReq, err = suite.state.DB.GetInteractionRequestByInteractionURI(ctx, intURI)
+		intReq, err = testStructs.State.DB.GetInteractionRequestByInteractionURI(ctx, intURI)
 		return err == nil && intReq != nil
 	}) {
 		suite.FailNow("timed out waiting for int req to appear in the db")
@@ -275,13 +282,13 @@ func (suite *InteractionRequestTestSuite) TestAnnounceRequest() {
 	suite.Equal(intURI, intReq.InteractionURI)
 	suite.Equal(gtsmodel.InteractionAnnounce, intReq.InteractionType)
 
-	// Should be a message heading to the processor.
-	msg, _ := suite.getFederatorMsg(5 * time.Second)
-	suite.Equal(ap.ActivityCreate, msg.APActivityType)
-	suite.Equal(ap.ActivityAnnounceRequest, msg.APObjectType)
-	suite.NotNil(msg.GTSModel)
-	suite.NotNil(msg.Receiving)
-	suite.NotNil(msg.Requesting)
+	// Wait for approval or perish.
+	if !testrig.WaitFor(func() bool {
+		boost, err := testStructs.State.DB.GetStatusByURI(ctx, intURI)
+		return err == nil && boost != nil && boost.ApprovedByURI != ""
+	}) {
+		suite.FailNow("waiting for approval")
+	}
 }
 
 func TestInteractionRequestTestSuite(t *testing.T) {

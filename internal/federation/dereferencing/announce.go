@@ -86,8 +86,10 @@ func (d *Dereferencer) EnrichAnnounce(
 	boost.Flags.SetFederated(target.Flags.Federated())
 
 	// Ensure this Announce is permitted by the Announcee.
-	permit, err := d.isPermittedStatus(ctx, requestUser,
-		nil, boost, true)
+	permit, err := d.isPermittedStatus(ctx,
+		requestUser,
+		boost,
+	)
 	if err != nil {
 		return nil, gtserror.Newf("error checking permitted status %s: %w", boost.URI, err)
 	}

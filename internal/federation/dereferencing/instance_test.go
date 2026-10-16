@@ -18,6 +18,7 @@
 package dereferencing_test
 
 import (
+	"context"
 	"net/url"
 	"testing"
 
@@ -27,7 +28,7 @@ import (
 )
 
 type InstanceTestSuite struct {
-	DereferencerStandardTestSuite
+	DereferencerTestSuite
 }
 
 func (suite *InstanceTestSuite) TestDerefInstance() {
@@ -35,6 +36,14 @@ func (suite *InstanceTestSuite) TestDerefInstance() {
 		instanceIRI      *url.URL
 		expectedSoftware string
 	}
+
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
 
 	for _, tc := range []testCase{
 		{
@@ -75,8 +84,8 @@ func (suite *InstanceTestSuite) TestDerefInstance() {
 			expectedSoftware: "",
 		},
 	} {
-		instance, err := suite.dereferencer.GetRemoteInstance(
-			gtscontext.SetFastFail(suite.T().Context()),
+		instance, err := testStructs.Federator.Dereferencer.GetRemoteInstance(
+			gtscontext.SetFastFail(ctx),
 			suite.testAccounts["admin_account"].Username,
 			tc.instanceIRI,
 		)

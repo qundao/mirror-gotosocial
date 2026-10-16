@@ -73,13 +73,13 @@ type preppedMention struct {
 //  7. Statusable contains non-mention, non-hashtag links. Return Spam.
 func (f *Filter) StatusableOK(
 	ctx context.Context,
-	receiver *gtsmodel.Account,
-	requester *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	statusable ap.Statusable,
 ) error {
 	// HEURISTIC 1: Check whether receiving account follows the requesting account.
 	// If so, we know it's OK and don't need to do any other checks.
-	follows, err := f.state.DB.IsFollowing(ctx, receiver.ID, requester.ID)
+	follows, err := f.state.DB.IsFollowing(ctx, receiving.ID, requesting.ID)
 	if err != nil {
 		return gtserror.Newf("db error checking follow status: %w", err)
 	}
@@ -93,7 +93,7 @@ func (f *Filter) StatusableOK(
 	// receiver. If not, we don't want to process this message.
 	rawMentions, _ := ap.ExtractMentions(statusable)
 	mentions := prepMentions(ctx, rawMentions)
-	mentioned := f.isMentioned(ctx, receiver, mentions)
+	mentioned := f.isMentioned(ctx, receiving, mentions)
 	if !mentioned {
 		// This is a random message fired
 		// into our inbox, just drop it.
@@ -113,7 +113,7 @@ func (f *Filter) StatusableOK(
 	// More granular spam filtering time!
 	//
 	// HEURISTIC 3: Does requester follow locked receiver?
-	followedBy, err := f.lockedFollowedBy(ctx, receiver, requester)
+	followedBy, err := f.lockedFollowedBy(ctx, receiving, requesting)
 	if err != nil {
 		return gtserror.Newf("db error checking follow status: %w", err)
 	}
@@ -136,7 +136,7 @@ func (f *Filter) StatusableOK(
 	// HEURISTIC 5: Four or fewer people are mentioned,
 	// do we follow (request) at least one of them?
 	// If so, we're probably interested in the message.
-	knowsOne := f.knowsOneMentioned(ctx, receiver, mentions)
+	knowsOne := f.knowsOneMentioned(ctx, receiving, mentions)
 	if knowsOne {
 		return nil
 	}

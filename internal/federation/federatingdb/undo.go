@@ -40,8 +40,8 @@ func (f *DB) Undo(ctx context.Context, undo vocab.ActivityStreamsUndo) error {
 		return nil // Already processed.
 	}
 
-	requestingAcct := activityContext.requestingAcct
-	receivingAcct := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	for _, object := range ap.ExtractObjects(undo) {
 		// Try to get object as vocab.Type,
@@ -58,8 +58,8 @@ func (f *DB) Undo(ctx context.Context, undo vocab.ActivityStreamsUndo) error {
 		case ap.ActivityFollow:
 			if err := f.undoFollow(
 				ctx,
-				receivingAcct,
-				requestingAcct,
+				requesting,
+				receiving,
 				undo,
 				asType,
 			); err != nil {
@@ -70,8 +70,8 @@ func (f *DB) Undo(ctx context.Context, undo vocab.ActivityStreamsUndo) error {
 		case ap.ActivityLike:
 			if err := f.undoLike(
 				ctx,
-				receivingAcct,
-				requestingAcct,
+				requesting,
+				receiving,
 				undo,
 				asType,
 			); err != nil {
@@ -82,8 +82,8 @@ func (f *DB) Undo(ctx context.Context, undo vocab.ActivityStreamsUndo) error {
 		case ap.ActivityBlock:
 			if err := f.undoBlock(
 				ctx,
-				receivingAcct,
-				requestingAcct,
+				requesting,
+				receiving,
 				undo,
 				asType,
 			); err != nil {
@@ -94,8 +94,8 @@ func (f *DB) Undo(ctx context.Context, undo vocab.ActivityStreamsUndo) error {
 		case ap.ActivityAnnounce:
 			if err := f.undoAnnounce(
 				ctx,
-				receivingAcct,
-				requestingAcct,
+				requesting,
+				receiving,
 				undo,
 				asType,
 			); err != nil {
@@ -113,8 +113,8 @@ func (f *DB) Undo(ctx context.Context, undo vocab.ActivityStreamsUndo) error {
 
 func (f *DB) undoFollow(
 	ctx context.Context,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	undo vocab.ActivityStreamsUndo,
 	t vocab.Type,
 ) error {
@@ -134,6 +134,19 @@ func (f *DB) undoFollow(
 		return nil
 	}
 
+	if receiving.IsRelayActor() {
+		// If the receiver is a relay actor
+		// and object of the Follow is the
+		// Public URI, rewrite this with the
+		// AP URI of the actor instead.
+		if _, err := f.redirectObjectToActorURI(
+			asFollow, receiving,
+		); err != nil {
+			// Already wrapped.
+			return err
+		}
+	}
+
 	// Convert AS Follow to barebones *gtsmodel.Follow,
 	// retrieving origin + target accts from the db.
 	follow, err := f.converter.ASFollowToFollow(ctx, asFollow)
@@ -150,14 +163,14 @@ func (f *DB) undoFollow(
 	}
 
 	// Ensure addressee is follow target.
-	if follow.TargetAccountID != receivingAcct.ID {
-		const text = "receivingAcct was not Follow target"
+	if follow.TargetAccountID != receiving.ID {
+		const text = "receiver was not Follow target"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
 
 	// Ensure requester is follow origin.
-	if follow.AccountID != requestingAcct.ID {
-		const text = "requestingAcct was not Follow origin"
+	if follow.AccountID != requesting.ID {
+		const text = "requester was not Follow origin"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
 
@@ -181,8 +194,8 @@ func (f *DB) undoFollow(
 		APObjectType:   ap.ActivityFollow,
 		APActivityType: ap.ActivityUndo,
 		GTSModel:       follow,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -190,8 +203,8 @@ func (f *DB) undoFollow(
 
 func (f *DB) undoLike(
 	ctx context.Context,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	undo vocab.ActivityStreamsUndo,
 	t vocab.Type,
 ) error {
@@ -230,14 +243,14 @@ func (f *DB) undoLike(
 	}
 
 	// Ensure addressee is fave target.
-	if fave.TargetAccountID != receivingAcct.ID {
-		const text = "receivingAcct was not Fave target"
+	if fave.TargetAccountID != receiving.ID {
+		const text = "receiver was not Fave target"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
 
 	// Ensure requester is fave origin.
-	if fave.AccountID != requestingAcct.ID {
-		const text = "requestingAcct was not Fave origin"
+	if fave.AccountID != requesting.ID {
+		const text = "requester was not Fave origin"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
 
@@ -281,8 +294,8 @@ func (f *DB) undoLike(
 		APObjectType:   ap.ActivityLike,
 		APActivityType: ap.ActivityUndo,
 		GTSModel:       fave,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -290,8 +303,8 @@ func (f *DB) undoLike(
 
 func (f *DB) undoBlock(
 	ctx context.Context,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	undo vocab.ActivityStreamsUndo,
 	t vocab.Type,
 ) error {
@@ -327,14 +340,14 @@ func (f *DB) undoBlock(
 	}
 
 	// Ensure addressee is block target.
-	if block.TargetAccountID != receivingAcct.ID {
-		const text = "receivingAcct was not Block target"
+	if block.TargetAccountID != receiving.ID {
+		const text = "receiver was not Block target"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
 
 	// Ensure requester is block origin.
-	if block.AccountID != requestingAcct.ID {
-		const text = "requestingAcct was not Block origin"
+	if block.AccountID != requesting.ID {
+		const text = "requester was not Block origin"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
 
@@ -351,8 +364,8 @@ func (f *DB) undoBlock(
 		APObjectType:   ap.ActivityBlock,
 		APActivityType: ap.ActivityUndo,
 		GTSModel:       block,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
@@ -360,8 +373,8 @@ func (f *DB) undoBlock(
 
 func (f *DB) undoAnnounce(
 	ctx context.Context,
-	receivingAcct *gtsmodel.Account,
-	requestingAcct *gtsmodel.Account,
+	requesting *gtsmodel.Account,
+	receiving *gtsmodel.Account,
 	undo vocab.ActivityStreamsUndo,
 	t vocab.Type,
 ) error {
@@ -410,8 +423,8 @@ func (f *DB) undoAnnounce(
 	}
 
 	// Ensure requester == announcer.
-	if boost.AccountID != requestingAcct.ID {
-		const text = "requestingAcct was not Block origin"
+	if boost.AccountID != requesting.ID {
+		const text = "requesting account was not Announce origin"
 		return gtserror.NewErrorForbidden(errors.New(text), text)
 	}
 
@@ -420,8 +433,8 @@ func (f *DB) undoAnnounce(
 		APObjectType:   ap.ActivityAnnounce,
 		APActivityType: ap.ActivityUndo,
 		GTSModel:       boost,
-		Receiving:      receivingAcct,
-		Requesting:     requestingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil

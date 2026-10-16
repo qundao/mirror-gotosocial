@@ -75,18 +75,22 @@ func (a *ActivityPub) Route(r *router.Router, m ...httputil.Middleware) {
 func (a *ActivityPub) RoutePublicKey(r *router.Router, m ...httputil.Middleware) {
 
 	// Create grouping for the
-	// 'users/[username]/main-key' prefix.
-	publicKeyGroup := r.Group(publickey.PublicKeyPath)
+	// '{users|relays}/[username]/main-key' prefixes
+	usersPublicKeyGroup := r.Group(publickey.UsersPublicKeyPath)
+	relaysPublicKeyGroup := r.Group(publickey.RelaysPublicKeyPath)
 
 	// Attach middleware allowing public cacheing of main-key.
 	ccMiddleware := middleware.CacheControl(middleware.CacheControlConfig{
 		Directives: []string{"public", "max-age=604800"},
 		Vary:       []string{"Accept", "Accept-Encoding"},
 	})
-	publicKeyGroup.Use(m...)
-	publicKeyGroup.Use(a.sigcheck, ccMiddleware)
+	usersPublicKeyGroup.Use(m...)
+	relaysPublicKeyGroup.Use(m...)
+	usersPublicKeyGroup.Use(a.sigcheck, ccMiddleware)
+	relaysPublicKeyGroup.Use(a.sigcheck, ccMiddleware)
 
-	a.publicKey.Route(publicKeyGroup)
+	a.publicKey.Route(usersPublicKeyGroup)
+	a.publicKey.Route(relaysPublicKeyGroup)
 }
 
 func NewActivityPub(db db.DB, processor *processing.Processor, templates *templates.Templates) *ActivityPub {

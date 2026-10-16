@@ -26,7 +26,10 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
 )
 
-const PublicKeyPath = "users/:" + apiutil.UsernameKey + "/" + uris.PublicKeyPath
+const (
+	UsersPublicKeyPath  = "users/:" + apiutil.UsernameKey + "/" + uris.PublicKeyPath
+	RelaysPublicKeyPath = "relays/:" + apiutil.UsernameKey + "/" + uris.PublicKeyPath
+)
 
 type Module struct {
 	templates *templates.Templates

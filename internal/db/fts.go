@@ -129,7 +129,7 @@ type Fts struct {
 // Match1 performs applies a single-column FTS match against string to SelectQuery.
 func (fts Fts) Match1(q *bun.SelectQuery, query string) *bun.SelectQuery {
 	if len(fts.Columns) != 1 {
-		panic("selected fts search does not support Match1()")
+		panic("selected fts search does not support Match2()")
 	}
 	switch q.Dialect().Name() {
 	case dialect.SQLite:
@@ -235,21 +235,22 @@ func joinSQLiteFts5Queries(queries ...fts5Query) string {
 		buf.B = append(buf.B, '"')
 		appendDoubleUnquoted(buf, queries[0].Query)
 		buf.B = append(buf.B, '"')
-	} else {
-
-		// Append query for each column.
-		for _, query := range queries {
-			buf.B = append(buf.B, `( `...)
-			buf.B = append(buf.B, query.Column...)
-			buf.B = append(buf.B, ` : "`...)
-			appendDoubleUnquoted(buf, query.Query)
-			buf.B = append(buf.B, `" ) AND `...)
-		}
-
-		// Drop the last conjoiner.
-		buf.Truncate(len(" AND "))
+		goto end
 	}
 
+	for _, query := range queries {
+		// Append query on given column.
+		buf.B = append(buf.B, `( `...)
+		buf.B = append(buf.B, query.Column...)
+		buf.B = append(buf.B, ` : "`...)
+		appendDoubleUnquoted(buf, query.Query)
+		buf.B = append(buf.B, `" ) AND `...)
+	}
+
+	// Drop the last conjoiner.
+	buf.Truncate(len(" AND "))
+
+end:
 	// Replace buffer.
 	s := string(buf.B)
 	buffers.Put1k(buf)

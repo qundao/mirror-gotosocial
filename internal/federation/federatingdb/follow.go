@@ -41,8 +41,8 @@ func (f *DB) Follow(ctx context.Context, followable vocab.ActivityStreamsFollow)
 		return nil // Already processed.
 	}
 
-	requesting := activityContext.requestingAcct
-	receiving := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	if requesting.IsMoving() {
 		// A Moving account
@@ -56,12 +56,34 @@ func (f *DB) Follow(ctx context.Context, followable vocab.ActivityStreamsFollow)
 		return nil
 	}
 
-	// Convert received AS block type to internal follow request model.
+	// True if the Follow object is the ActivityPub
+	// Public URI as opposed to the actor ID/URI;
+	// Mastodon and *key do this with relay actors.
+	var usePublicURI bool
+	if receiving.IsRelayActor() {
+		// If the receiver is a relay actor
+		// and object of the Follow is the
+		// Public URI, rewrite this with the
+		// AP URI of the actor instead.
+		var err error
+		usePublicURI, err = f.redirectObjectToActorURI(
+			followable, receiving,
+		)
+		if err != nil {
+			// Already wrapped.
+			return err
+		}
+	}
+
+	// Convert received AS follow type to internal follow request model.
 	followreq, err := f.converter.ASFollowToFollowRequest(ctx, followable)
 	if err != nil {
 		err := gtserror.Newf("error converting from AS type: %w", err)
 		return gtserror.WrapWithCode(http.StatusBadRequest, err)
 	}
+
+	// Flag whether public URI was used.
+	followreq.Flags.SetUsePublicURI(usePublicURI)
 
 	// Ensure follow enacted by correct account.
 	if followreq.AccountID != requesting.ID {
@@ -88,8 +110,8 @@ func (f *DB) Follow(ctx context.Context, followable vocab.ActivityStreamsFollow)
 		APObjectType:   ap.ActivityFollow,
 		APActivityType: ap.ActivityCreate,
 		GTSModel:       followreq,
-		Receiving:      receiving,
 		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil
