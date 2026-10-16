@@ -43,8 +43,8 @@ func ParseCommon(c *httputil.Context) (
 
 	// If this is a relay path, prefix the username with
 	// `relay.` to differentiate it from an ordinary user.
-	pathTrimmed := strings.TrimPrefix(c.R.URL.Path, "/")
-	if strings.HasPrefix(pathTrimmed, uris.RelaysPath) {
+	const relayPrefix = "/" + uris.RelaysPath
+	if strings.HasPrefix(c.R.URL.Path, relayPrefix) {
 		relay = true
 		username = uris.RelayUsernamePrefix + username
 	}
