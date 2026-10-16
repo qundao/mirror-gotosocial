@@ -19,12 +19,10 @@ package publickey
 
 import (
 	"net/http"
-	"strings"
 
 	"code.superseriousbusiness.org/gopkg/httputil"
+	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
-	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/uris"
 )
 
 // PublicKeyGETHandler should be served at eg https://example.org/{users|relays}/:username/main-key.
@@ -33,23 +31,9 @@ import (
 // in the form of a vocab.ActivityStreamsPerson. The account will only contain the id,
 // public key, username, and type of the account.
 func (m *Module) PublicKeyGETHandler(c *httputil.Context) {
-
-	// Get username from request params.
-	username, errWithCode := apiutil.ParseUsername(c.PathValue(apiutil.UsernameKey))
+	_, username, contentType, errWithCode := activitypub.ParseCommon(c)
 	if errWithCode != nil {
-		return
-	}
-
-	// If this is a relay path, prefix the username with
-	// `relay.` to differentiate it from an ordinary user.
-	pathTrimmed := strings.TrimPrefix(c.R.URL.Path, "/")
-	if strings.HasPrefix(pathTrimmed, uris.RelaysPath) {
-		username = uris.RelayUsernamePrefix + username
-	}
-
-	contentType, err := apiutil.NegotiateAccept(c, apiutil.ActivityPubOrHTMLHeaders...)
-	if err != nil {
-		apiutil.ErrorHandler(c, m.templates, gtserror.NewErrorNotAcceptable(err, err.Error()))
+		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return
 	}
 

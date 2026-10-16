@@ -21,12 +21,13 @@ import (
 	"net/http"
 
 	"code.superseriousbusiness.org/gopkg/httputil"
+	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 )
 
 // StatusGETHandler serves the target status as an activitystreams NOTE so that other AP servers can parse it.
 func (m *Module) StatusGETHandler(c *httputil.Context) {
-	_, username, statusID, contentType, errWithCode := m.parseCommonWithID(c)
+	_, username, statusID, contentType, errWithCode := activitypub.ParseCommonWithID(c)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return

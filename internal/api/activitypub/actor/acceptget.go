@@ -21,13 +21,14 @@ import (
 	"net/http"
 
 	"code.superseriousbusiness.org/gopkg/httputil"
+	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 )
 
 // AcceptGETHandler serves an approved interaction
 // request as an ActivityStreams Accept activity.
 func (m *Module) AcceptGETHandler(c *httputil.Context) {
-	_, username, id, contentType, errWithCode := m.parseCommonWithID(c)
+	_, username, id, contentType, errWithCode := activitypub.ParseCommonWithID(c)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return

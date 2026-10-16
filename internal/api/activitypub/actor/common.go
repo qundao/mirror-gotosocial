@@ -17,15 +17,6 @@
 
 package actor
 
-import (
-	"strings"
-
-	"code.superseriousbusiness.org/gopkg/httputil"
-	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
-	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
-	"code.superseriousbusiness.org/gotosocial/internal/uris"
-)
-
 // SwaggerCollection represents an ActivityPub Collection.
 // swagger:model swaggerCollection
 type SwaggerCollection struct {
@@ -86,57 +77,4 @@ type SwaggerFeaturedCollection struct {
 	// Number of items in this collection.
 	// example: 2
 	TotalItems int
-}
-
-func (m *Module) parseCommon(c *httputil.Context) (
-	relay bool,
-	username string,
-	contentType string,
-	errWithCode gtserror.WithCode,
-) {
-	// Get username from request params.
-	username, errWithCode = apiutil.ParseUsername(c.PathValue(apiutil.UsernameKey))
-	if errWithCode != nil {
-		return
-	}
-
-	// If this is a relay path, prefix the username with
-	// `relay.` to differentiate it from an ordinary user.
-	pathTrimmed := strings.TrimPrefix(c.R.URL.Path, "/")
-	if strings.HasPrefix(pathTrimmed, uris.RelaysPath) {
-		relay = true
-		username = uris.RelayUsernamePrefix + username
-	}
-
-	// Get content type.
-	var err error
-	contentType, err = apiutil.NegotiateAccept(c, apiutil.ActivityPubOrHTMLHeaders...)
-	if err != nil {
-		errWithCode = gtserror.NewErrorNotAcceptable(err, err.Error())
-		return
-	}
-
-	return
-}
-
-func (m *Module) parseCommonWithID(c *httputil.Context) (
-	relay bool,
-	username string,
-	id string,
-	contentType string,
-	errWithCode gtserror.WithCode,
-) {
-	// Do parsecommon to get username + content type.
-	relay, username, contentType, errWithCode = m.parseCommon(c)
-	if errWithCode != nil {
-		return
-	}
-
-	// Additionally get ID from request params.
-	id, errWithCode = apiutil.ParseID(c.PathValue(apiutil.IDKey))
-	if errWithCode != nil {
-		return
-	}
-
-	return
 }

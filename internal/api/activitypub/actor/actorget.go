@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"code.superseriousbusiness.org/gopkg/httputil"
+	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 )
@@ -28,7 +29,7 @@ import (
 // ActorGETHandler should be served at https://example.org/{users|relays}/:username.
 // It returns the AP model of the given actor, requiring signed GET.
 func (m *Module) ActorGETHandler(c *httputil.Context) {
-	_, username, contentType, errWithCode := m.parseCommon(c)
+	_, username, contentType, errWithCode := activitypub.ParseCommon(c)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return

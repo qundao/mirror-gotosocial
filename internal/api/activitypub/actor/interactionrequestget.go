@@ -21,11 +21,12 @@ import (
 	"net/http"
 
 	"code.superseriousbusiness.org/gopkg/httputil"
+	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 )
 
 func (m *Module) LikeRequestsGETHandler(c *httputil.Context) {
-	_, username, id, contentType, errWithCode := m.parseCommonWithID(c)
+	_, username, id, contentType, errWithCode := activitypub.ParseCommonWithID(c)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return
@@ -47,7 +48,7 @@ func (m *Module) LikeRequestsGETHandler(c *httputil.Context) {
 }
 
 func (m *Module) ReplyRequestsGETHandler(c *httputil.Context) {
-	_, username, id, contentType, errWithCode := m.parseCommonWithID(c)
+	_, username, id, contentType, errWithCode := activitypub.ParseCommonWithID(c)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return
@@ -69,7 +70,7 @@ func (m *Module) ReplyRequestsGETHandler(c *httputil.Context) {
 }
 
 func (m *Module) AnnounceRequestsGETHandler(c *httputil.Context) {
-	_, username, id, contentType, errWithCode := m.parseCommonWithID(c)
+	_, username, id, contentType, errWithCode := activitypub.ParseCommonWithID(c)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return
