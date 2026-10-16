@@ -101,8 +101,9 @@ type Relay interface {
 	// DeleteRelayMatcher deletes relay matcher with the given ID.
 	DeleteRelayMatcher(ctx context.Context, id string) error
 
-	// PutRelayedURI inserts the given relayedURI into the db.
-	PutRelayedURI(ctx context.Context, relayedURI *gtsmodel.RelayedURI) error
+	// PutRelayedURI inserts the given relayedURI into the db, returning
+	// true if it was inserted or false if the relayedURI already existed.
+	PutRelayedURI(ctx context.Context, relayedURI *gtsmodel.RelayedURI) (bool, error)
 
 	// GetRelayedURI gets one relayedURI model by the given relay actor URI and status URI, if it exists.
 	GetRelayedURI(ctx context.Context, relayURI string, statusURI string) (*gtsmodel.RelayedURI, error)

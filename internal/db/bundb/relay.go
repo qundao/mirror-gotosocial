@@ -721,9 +721,21 @@ func (r *relayDB) DeleteRelayMatcher(ctx context.Context, id string) error {
 	return nil
 }
 
-func (r *relayDB) PutRelayedURI(ctx context.Context, relayedURI *gtsmodel.RelayedURI) error {
-	_, err := r.db.NewInsert().Model(relayedURI).Exec(ctx)
-	return err
+func (r *relayDB) PutRelayedURI(ctx context.Context, relayedURI *gtsmodel.RelayedURI) (bool, error) {
+	res, err := r.db.
+		NewInsert().
+		Model(relayedURI).
+		On(
+			"CONFLICT (?, ?) DO NOTHING",
+			bun.Ident("relay_uri"), bun.Ident("status_uri"),
+		).
+		Exec(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	ra, err := res.RowsAffected()
+	return ra != 0, err
 }
 
 func (r *relayDB) GetRelayedURI(ctx context.Context, relayURI string, statusURI string) (*gtsmodel.RelayedURI, error) {

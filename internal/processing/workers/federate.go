@@ -236,25 +236,28 @@ func (f *federate) PushFromRelay(ctx context.Context, boost *gtsmodel.Status) er
 	relayURI := relayActorAcct.URI
 	statusURI := boost.BoostOf.URI
 
-	// Lock on the target status URI.
-	unlock := f.state.ProcessingLocks.Lock(statusURI)
-	defer unlock()
+	// Store the relayedURI.
+	// ID reflects when we relayed it.
+	relayedURI := &gtsmodel.RelayedURI{
+		ID:        id.NewULID(),
+		RelayURI:  relayURI,
+		StatusURI: statusURI,
+		BoostURI:  boost.URI,
+	}
+	inserted, err := f.state.DB.PutRelayedURI(ctx, relayedURI)
+	if err != nil {
+		return gtserror.Newf("error putting relayed URI: %w", err)
+	}
+
+	if !inserted {
+		// We've already relayed this! Nothing to do.
+		log.Tracef(ctx, "already relayed %s with %s", statusURI, relayURI)
+		return nil
+	}
 
 	// Populate model.
 	if err := f.state.DB.PopulateStatus(ctx, boost); err != nil {
 		return gtserror.Newf("error populating status: %w", err)
-	}
-
-	// Make sure we haven't already relayed this status with this actor.
-	relayedURI, err := f.state.DB.GetRelayedURI(ctx, relayURI, statusURI)
-	if err != nil && !errors.Is(err, db.ErrNoEntries) {
-		return gtserror.Newf("db error getting relayedURI: %w", err)
-	}
-
-	if relayedURI != nil {
-		// We've already relayed this! Nothing to do.
-		log.Tracef(ctx, "already relayed %s with %s", statusURI, relayURI)
-		return nil
 	}
 
 	// Get all followers of this relay.
@@ -335,15 +338,7 @@ func (f *federate) PushFromRelay(ctx context.Context, boost *gtsmodel.Status) er
 		return gtserror.Newf("error preparing delivery: %w", err)
 	}
 
-	// Store the relayedURI.
-	// ID reflects when we relayed it.
-	relayedURI = &gtsmodel.RelayedURI{
-		ID:        id.NewULID(),
-		RelayURI:  relayURI,
-		StatusURI: statusURI,
-		BoostURI:  boost.URI,
-	}
-	return f.state.DB.PutRelayedURI(ctx, relayedURI)
+	return nil
 }
 
 func (f *federate) DeleteAccount(ctx context.Context, account *gtsmodel.Account) error {
