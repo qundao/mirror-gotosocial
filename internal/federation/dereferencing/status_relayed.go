@@ -27,6 +27,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
 	"code.superseriousbusiness.org/gotosocial/internal/transport"
+	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // function for checking whether a
@@ -101,6 +102,15 @@ func (d *Dereferencer) matchesRelayActorAcct(
 	), nil
 }
 
+// relayableF is called by safelyGetOrDerefRelayableStatus, after
+// matcher checks, to evaluate whether a status should be relayed.
+//
+// If an error is returned, the status will not be relayed or stored.
+type relayableF func(
+	ctx context.Context,
+	status *gtsmodel.Status,
+) error
+
 // GetStatusFromRelaySubscription dereferences and returns
 // a status with the given URI only if it is permitted to be
 // relayed by matching at least one active relay subscription.
@@ -124,74 +134,17 @@ func (d *Dereferencer) GetStatusFromRelaySubscription(
 	relaySubAcct *gtsmodel.Account,
 	uri *url.URL,
 ) (*gtsmodel.Status, error) {
-	// Get relayed status from DB or fetch it from remote.
-	status, statusable, isNew, err := d.safelyGetOrDerefRelayableStatus(
+	return d.safelyGetOrDerefRelayableStatus(
 		ctx,
 		instanceAcct,
 		relaySubAcct,
 		uri,
 		d.matchesRelaySubscription,
-		// Within the lock, enrich
-		// and store relayed status.
-		func(
-			ctx context.Context,
-			status *gtsmodel.Status,
-			statusable ap.Statusable,
-			_ string,
-			isNew bool,
-		) error {
-			if !isNew {
-				// Nothing
-				// to do.
-				return nil
-			}
-
-			// Note: set a new status ID first as some
-			// of the peripherals need to refer to it
-			// (eg., mention/attachment.status_id etc).
-			status.ID = id.NewULIDFromTime(status.CreatedAt)
-			if _, err := d.handleStatusPeripherals(ctx,
-				instanceAcct.Username,
-				uri,
-				&gtsmodel.Status{URI: status.URI},
-				status,
-			); err != nil {
-				err := gtserror.Newf("error handling peripheral dereferencing: %w", err)
-				return err
-			}
-
-			// Store the enriched status.
-			if err := d.state.DB.PutStatus(ctx, status); err != nil {
-				err := gtserror.Newf("error inserting new status %s: %w", uri, err)
-				return err
-			}
-
-			return nil
-		},
+		// No need to do any further checks
+		// here, if it matches the relay
+		// subscription that's good enough.
+		nil,
 	)
-	if err != nil {
-		// Couldn't deref or get;
-		// error already wrapped.
-		return nil, err
-	}
-
-	// Deref parents + children.
-	d.dereferenceThread(ctx,
-		instanceAcct.Username,
-		uri,
-		status,
-		statusable,
-		isNew,
-	)
-
-	// Pass status to dereferencer
-	// hook for timelining etc.
-	d.onStatusDereference(ctx,
-		status,
-		isNew,
-	)
-
-	return status, nil
 }
 
 // GetBoostedStatusFromRelaySubscription is like GetStatusFromRelaySubscription,
@@ -202,98 +155,32 @@ func (d *Dereferencer) GetBoostedStatusFromRelaySubscription(
 	relaySubAcct *gtsmodel.Account,
 	boostWrapper *gtsmodel.Status,
 ) (*gtsmodel.Status, error) {
-	boostOfURI := boostWrapper.BoostOfURI
-	boostOfURIStr := boostWrapper.BoostOfURIStr
-
-	// Get boosted status from DB or fetch it from remote.
-	status, statusable, isNew, err := d.safelyGetOrDerefRelayableStatus(
+	return d.safelyGetOrDerefRelayableStatus(
 		ctx,
 		instanceAcct,
 		relaySubAcct,
-		boostOfURI,
+		boostWrapper.BoostOfURI,
 		d.matchesRelaySubscription,
-		// Within the lock, check the boost
-		// wrapper status for permissivity,
-		// and enrich + store boosted status.
 		func(
 			ctx context.Context,
 			status *gtsmodel.Status,
-			statusable ap.Statusable,
-			_ string,
-			isNew bool,
 		) error {
-			if !isNew {
-				// Nothing
-				// to do.
-				return nil
-			}
-
 			// Add the dereffed status to the
 			// incoming boost wrapper we were passed,
-			// and then check whether relaySubAcct
+			// and then check whether relayingAcct
 			// had permission to do the boost.
+			//
+			// Any error here is already wrapped.
 			boostWrapper.BoostOf = status
-			if err := d.allowedIncomingBoost(ctx,
+			return d.allowedIncomingBoost(ctx,
 				boostWrapper,
 				instanceAcct,
-			); err != nil {
-				// Already
-				// wrapped.
-				return err
-			}
-
-			// Note: set a new status ID first as some
-			// of the peripherals need to refer to it
-			// (eg., mention/attachment.status_id etc).
-			status.ID = id.NewULIDFromTime(status.CreatedAt)
-			if _, err := d.handleStatusPeripherals(ctx,
-				instanceAcct.Username,
-				boostOfURI,
-				&gtsmodel.Status{URI: boostOfURIStr},
-				status,
-			); err != nil {
-				err := gtserror.Newf("error handling peripheral dereferencing: %w", err)
-				return err
-			}
-
-			// Store the enriched status.
-			//
-			// Note: we don't bother storing
-			// the boost wrapper from relays.
-			if err := d.state.DB.PutStatus(ctx, status); err != nil {
-				err := gtserror.Newf("error inserting new status %s: %w", boostOfURIStr, err)
-				return err
-			}
-
-			return nil
+			)
 		},
 	)
-	if err != nil {
-		// Couldn't deref or get;
-		// error already wrapped.
-		return nil, err
-	}
-
-	// Deref parents + children.
-	d.dereferenceThread(ctx,
-		instanceAcct.Username,
-		boostOfURI,
-		status,
-		statusable,
-		isNew,
-	)
-
-	// Pass status to dereferencer
-	// hook for timelining etc.
-	d.onStatusDereference(ctx,
-		status,
-		isNew,
-	)
-
-	return status, nil
 }
 
-// GetStatusForRelayActor retrieves status with the given URI
+// GetStatusForRelaying retrieves status with the given URI
 // only if it is permitted to be relayed by matching the given
 // local relay actor account, and passing permissivity checks.
 // This includes a check on whether our relayActorAcct would
@@ -305,13 +192,13 @@ func (d *Dereferencer) GetBoostedStatusFromRelaySubscription(
 //
 // If a matching relay subscription exists on this instance targeting
 // our own relay actor, then the status will be stored locally too.
-func (d *Dereferencer) GetStatusForRelayActor(
+func (d *Dereferencer) GetStatusForRelaying(
 	ctx context.Context,
 	relayActorAcct *gtsmodel.Account,
 	relayingAcct *gtsmodel.Account,
 	uri *url.URL,
-) (*gtsmodel.Status, ap.Statusable, error) {
-	status, statusable, _, err := d.safelyGetOrDerefRelayableStatus(ctx,
+) (*gtsmodel.Status, error) {
+	return d.safelyGetOrDerefRelayableStatus(ctx,
 		relayActorAcct,
 		relayingAcct,
 		uri,
@@ -319,56 +206,28 @@ func (d *Dereferencer) GetStatusForRelayActor(
 		func(
 			ctx context.Context,
 			status *gtsmodel.Status,
-			statusable ap.Statusable,
-			inReplyToAccountURI string,
-			isNew bool,
 		) error {
-			// Make sure we have permission to
-			// boost the status as well, since
-			// we're going to try to relay it.
-			if err := d.allowedOutgoingBoost(ctx,
+			// Make sure we'll have permission to boost
+			// the status, since we're going to relay it.
+			//
+			// Any error here is already wrapped.
+			return d.allowedOutgoingBoost(ctx,
 				status,
-				relayActorAcct,
-			); err != nil {
-				// Already
-				// wrapped.
-				return err
-			}
-
-			if !isNew {
-				// Nothing
-				// else to do.
-				return nil
-			}
-
-			// Since this is a new status, check if
-			// we're subscribed to our own relay
-			// actor and therefore need to store it.
-			return d.handleLocalSubscriptionMatch(ctx,
-				status,
-				inReplyToAccountURI,
 				relayActorAcct,
 			)
 		},
 	)
-	if err != nil {
-		// Couldn't deref or get;
-		// error already wrapped.
-		return nil, nil, err
-	}
-
-	return status, statusable, nil
 }
 
-// GetBoostedStatusForRelayActor is like GetStatusForRelayActor,
+// GetBoostedStatusForRelaying is like GetStatusForRelaying,
 // but for Announces sent to us, instead of Creates forwarded to us.
-func (d *Dereferencer) GetBoostedStatusForRelayActor(
+func (d *Dereferencer) GetBoostedStatusForRelaying(
 	ctx context.Context,
 	relayActorAcct *gtsmodel.Account,
 	relayingAcct *gtsmodel.Account,
 	boostWrapper *gtsmodel.Status,
-) (*gtsmodel.Status, ap.Statusable, error) {
-	status, statusable, _, err := d.safelyGetOrDerefRelayableStatus(ctx,
+) (*gtsmodel.Status, error) {
+	return d.safelyGetOrDerefRelayableStatus(ctx,
 		relayActorAcct,
 		relayingAcct,
 		boostWrapper.BoostOfURI,
@@ -376,59 +235,31 @@ func (d *Dereferencer) GetBoostedStatusForRelayActor(
 		func(
 			ctx context.Context,
 			status *gtsmodel.Status,
-			statusable ap.Statusable,
-			inReplyToAccountURI string,
-			isNew bool,
 		) error {
 			// Add the dereffed status to the
 			// incoming boost wrapper we were passed,
 			// and then check whether relayingAcct
 			// had permission to do the boost.
+			//
+			// Any error here is already wrapped.
 			boostWrapper.BoostOf = status
 			if err := d.allowedIncomingBoost(ctx,
 				boostWrapper,
 				relayActorAcct,
 			); err != nil {
-				// Already
-				// wrapped.
 				return err
 			}
 
-			// Make sure we have permission to
-			// boost the status as well, since
-			// we're going to try to relay it.
-			if err := d.allowedOutgoingBoost(ctx,
+			// Make sure we'll have permission to boost
+			// the status, since we're going to relay it.
+			//
+			// Any error here is already wrapped.
+			return d.allowedOutgoingBoost(ctx,
 				status,
-				relayActorAcct,
-			); err != nil {
-				// Already
-				// wrapped.
-				return err
-			}
-
-			if !isNew {
-				// Nothing
-				// else to do.
-				return nil
-			}
-
-			// Since this is a new status, check if
-			// we're subscribed to our own relay
-			// actor and therefore need to store it.
-			return d.handleLocalSubscriptionMatch(ctx,
-				status,
-				inReplyToAccountURI,
 				relayActorAcct,
 			)
 		},
 	)
-	if err != nil {
-		// Couldn't deref or get;
-		// error already wrapped.
-		return nil, nil, err
-	}
-
-	return status, statusable, nil
 }
 
 // allowedIncomingBoost checks if the given boostWrapper
@@ -495,8 +326,8 @@ func (d *Dereferencer) allowedOutgoingBoost(
 	}
 
 	// For relay actors we want straight up automatic
-	// approval without any fannying around as we don't
-	// bother sending AnnounceRequests from relay actors.
+	// approval without any fannying around as we don't want
+	// to bother sending AnnounceRequests from relay actors.
 	if ok := outgoingBoostPermit.AutomaticApproval() &&
 		!outgoingBoostPermit.MatchedOnCollection(); !ok {
 		err := gtserror.Newf(
@@ -509,147 +340,86 @@ func (d *Dereferencer) allowedOutgoingBoost(
 	return nil
 }
 
-// handleLocalSubscription match checks if the given *new*
-// status matches a local subscription to *our own* relay
-// actor account. If so, it will be enriched + stored in the db.
-//
-// DO NOT PASS STATUSES TO THIS FUNCTION IF THEY'RE NOT NEW.
-func (d *Dereferencer) handleLocalSubscriptionMatch(
-	ctx context.Context,
-	newStatus *gtsmodel.Status,
-	inReplyToAccountURI string,
-	relayActorAcct *gtsmodel.Account,
-) error {
-	localSubMatch, err := d.matchesRelaySubscription(ctx,
-		nil, // not relevant.
-		relayActorAcct,
-		newStatus,
-		inReplyToAccountURI,
-	)
-	if err != nil {
-		// Already
-		// wrapped.
-		return err
-	}
-
-	if !localSubMatch {
-		return nil
-	}
-
-	// We have a subscription to our own relay actor, woah.
-	// We need the instance account to do further processing.
-	instanceAcct, err := d.state.DB.GetInstanceAccount(ctx, "")
-	if err != nil {
-		return gtserror.Newf("db error getting instance account: %w", err)
-	}
-
-	// Make sure the instance account -- which we use
-	// to do relay subscriptions -- follows our own
-	// relay actor, ie., the subscription is approved.
-	follows, err := d.state.DB.IsFollowing(ctx,
-		instanceAcct.ID,
-		relayActorAcct.ID,
-	)
-	if err != nil {
-		err := gtserror.Newf("db error checking follow: %w", err)
-		return err
-	}
-
-	if !follows {
-		// Doesn't follow,
-		// so don't store.
-		return nil
-	}
-
-	// Need to reparse the status
-	// URI for handleStatusPeripherals.
-	newStatusURI, err := url.Parse(newStatus.URI)
-	if err != nil {
-		err := gtserror.Newf("error parsing new status URI: %w", err)
-		return err
-	}
-
-	// Note: set a new status ID first as some
-	// of the peripherals need to refer to it
-	// (eg., mention/attachment.status_id etc).
-	newStatus.ID = id.NewULIDFromTime(newStatus.CreatedAt)
-	if _, err := d.handleStatusPeripherals(ctx,
-		instanceAcct.Username,
-		newStatusURI,
-		&gtsmodel.Status{URI: newStatus.URI},
-		newStatus,
-	); err != nil {
-		err := gtserror.Newf("error handling peripheral dereferencing: %w", err)
-		return err
-	}
-
-	// Store the enriched status.
-	if err := d.state.DB.PutStatus(ctx, newStatus); err != nil {
-		err := gtserror.Newf("error inserting new status %s: %w", newStatus.URI, err)
-		return err
-	}
-
-	return nil
-}
-
 // safelyGetOrDerefRelayableStatus dereferences or retrieves a
 // relayable status from the db using a lock on the status's URI
 // and performing permissivity and relay relevance checks.
-//
-// This function specifically does *not* store the status in the db.
-// If necessary, the callback function can be used for that.
 func (d *Dereferencer) safelyGetOrDerefRelayableStatus(
 	ctx context.Context,
 	receiver *gtsmodel.Account,
 	relayingAcct *gtsmodel.Account,
 	uri *url.URL,
 	matchesRelay matchesRelayF,
-	inLockCallback func(
-		ctx context.Context,
-		status *gtsmodel.Status,
-		statusable ap.Statusable,
-		inReplyToAccountURI string,
-		isNew bool,
-	) error,
-) (
-	status *gtsmodel.Status,
-	statusable ap.Statusable,
-	isNew bool,
-	err error,
-) {
+	relayable relayableF,
+) (*gtsmodel.Status, error) {
 	// Stringify URI once.
 	uriStr := uri.String()
 
-	// Acquire per-URI deref lock.
+	// Acquire per-URI deref lock, wrapping
+	// it in doOnce to allow early unlock.
 	unlock := d.state.FedLocks.Lock(uriStr)
+	unlock = util.DoOnce(unlock)
 	defer unlock()
 
-	// Get relay status from
-	// DB or fetch from remote.
-	var inReplyToAccountURI string
-	status, statusable, inReplyToAccountURI, isNew, err = d.getOrDerefRelayableStatus(
+	// Get status from DB or fetch from remote.
+	status, statusable, isNew, err := d.getOrDerefRelayableStatus(
 		ctx,
 		receiver,
 		relayingAcct,
 		uri, uriStr,
 		matchesRelay,
+		relayable,
 	)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	// Execute callback within
-	// the lock if it's provided.
-	if inLockCallback != nil {
-		err = inLockCallback(ctx,
+	// If this is a new
+	// status, store it.
+	if isNew {
+		// Note: set a new status ID first as some
+		// of the peripherals need to refer to it
+		// (eg., mention/attachment.status_id etc).
+		status.ID = id.NewULIDFromTime(status.CreatedAt)
+		if _, err := d.handleStatusPeripherals(ctx,
+			receiver.Username,
+			uri,
+			&gtsmodel.Status{URI: uriStr},
 			status,
-			statusable,
-			inReplyToAccountURI,
-			isNew,
-		)
+		); err != nil {
+			err := gtserror.Newf("error handling peripheral dereferencing: %w", err)
+			return nil, err
+		}
+
+		// Store the enriched status.
+		if err := d.state.DB.PutStatus(ctx, status); err != nil {
+			err := gtserror.Newf("error inserting new status %s: %w", uriStr, err)
+			return nil, err
+		}
 	}
 
-	return
+	// We're done getting,
+	// dereffing, and/or
+	// storing this status.
+	unlock()
+
+	// Outside of the lock,
+	// deref parents + children.
+	d.dereferenceThread(ctx,
+		receiver.Username,
+		uri,
+		status,
+		statusable,
+		isNew,
+	)
+
+	// Pass status to dereferencer
+	// hook for timelining etc.
+	d.onStatusDereference(ctx,
+		status,
+		isNew,
+	)
+
+	return status, nil
 }
 
 // getOrDerefRelayableStatus gets a status from the db
@@ -665,10 +435,10 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 	uri *url.URL,
 	uriStr string,
 	matchesRelay matchesRelayF,
+	relayable relayableF,
 ) (
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
-	inReplyToAccountURI string,
 	isNew bool,
 	err error,
 ) {
@@ -768,6 +538,7 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 	// For match checks we have to
 	// know the author of the parent
 	// status (if there is one).
+	var inReplyToAccountURI string
 	if status.InReplyToURI != "" {
 		if status.InReplyTo != nil {
 			// Parent already dereffed, use it.
@@ -783,8 +554,9 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 		}
 	}
 
-	// Ensure this status matches
-	// appropriate relay entity.
+	// Ensure this status matches appropriate
+	// relay entity, taking account of matchers,
+	// visibility, reply status etc.
 	var match bool
 	match, err = matchesRelay(ctx,
 		receiver,
@@ -832,6 +604,17 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 		err = gtserror.Newf("status %s pending approval", uriStr)
 		err = gtserror.SetNotRelevant(err)
 		return
+	}
+
+	// Do any further relayable checks,
+	// eg., was status allowed to be boosted
+	// to us, can we boost it out again, etc.
+	if relayable != nil {
+		if err = relayable(ctx, status); err != nil {
+			// Already
+			// wrapped.
+			return
+		}
 	}
 
 	// Everything

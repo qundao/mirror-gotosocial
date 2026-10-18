@@ -21,7 +21,6 @@ import (
 	"context"
 	"testing"
 
-	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/testrig"
@@ -105,7 +104,7 @@ func (suite *StatusRelayedTestSuite) TestGetStatusFromRelaySubscription() {
 	suite.Equal(status.ID, dbStatus.ID)
 }
 
-func (suite *StatusRelayedTestSuite) TestGetStatusForRelayActor() {
+func (suite *StatusRelayedTestSuite) TestGetStatusToRelay() {
 	// Set up our test structs + tear down on finish.
 	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
 	defer testrig.TearDownTestStructs(testStructs)
@@ -123,7 +122,7 @@ func (suite *StatusRelayedTestSuite) TestGetStatusForRelayActor() {
 
 	// Try to deref the given status URI as
 	// though it was forwarded to our relay actor.
-	_, _, err := testStructs.Federator.Dereferencer.GetStatusForRelayActor(ctx,
+	_, err := testStructs.Federator.Dereferencer.GetStatusForRelaying(ctx,
 		relayActorAcct, relayingAcct, uri,
 	)
 
@@ -134,7 +133,7 @@ func (suite *StatusRelayedTestSuite) TestGetStatusForRelayActor() {
 
 	// Relay a status to us from the same domain as the relayer.
 	uri = testrig.URLMustParse("http://fossbros-anonymous.io/users/foss_satan/statuses/106221634728637552")
-	status, _, err := testStructs.Federator.Dereferencer.GetStatusForRelayActor(ctx,
+	status, err := testStructs.Federator.Dereferencer.GetStatusForRelaying(ctx,
 		relayActorAcct, relayingAcct, uri,
 	)
 	if err != nil {
@@ -144,10 +143,12 @@ func (suite *StatusRelayedTestSuite) TestGetStatusForRelayActor() {
 	// Status should be defined.
 	suite.NotNil(status)
 
-	// But status should NOT be in the database,
-	// as we're only relaying it, not storing it.
-	_, err = testStructs.State.DB.GetStatusByURI(ctx, status.URI)
-	suite.ErrorIs(err, db.ErrNoEntries)
+	// Status should be in the database.
+	dbStatus, err := testStructs.State.DB.GetStatusByURI(ctx, status.URI)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.Equal(status.ID, dbStatus.ID)
 }
 
 func TestStatusRelayedTestSuite(t *testing.T) {

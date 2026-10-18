@@ -478,9 +478,8 @@ func (p *fediAPI) createStatusFromRelay(ctx context.Context, fMsg *messages.From
 }
 
 func (p *fediAPI) createStatusToRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
-	// Retrieve the relayed status, possibly storing and timelining
-	// it if we have a matching subscription to our own relay actor.
-	status, statusable, err := p.federate.GetStatusForRelayActor(ctx,
+	// Retrieve the relayed status.
+	status, err := p.federate.GetStatusForRelaying(ctx,
 		fMsg.Receiving,  // Our relay actor account.
 		fMsg.Requesting, // Relaying account.
 		fMsg.APIRI,      // Relayed status ID/URI.
@@ -513,7 +512,7 @@ func (p *fediAPI) createStatusToRelay(ctx context.Context, fMsg *messages.FromFe
 
 	// Handle boost for any local followers of the relay actor.
 	if err := p.storeOutgoingRelayActorBoostForLocalFollowers(ctx,
-		fMsg.Receiving, boostOut, statusable,
+		fMsg.Receiving, boostOut,
 	); err != nil {
 		return gtserror.Newf("error handling outgoing boost for local followers: %w", err)
 	}
@@ -525,7 +524,6 @@ func (p *fediAPI) storeOutgoingRelayActorBoostForLocalFollowers(
 	ctx context.Context,
 	relayActorAcct *gtsmodel.Account,
 	boostOut *gtsmodel.Status,
-	statusable ap.Statusable,
 ) error {
 	// If any local accounts follow the relay apart
 	// from the instance account, store + timeline
@@ -545,21 +543,6 @@ func (p *fediAPI) storeOutgoingRelayActorBoostForLocalFollowers(
 		// Nothing
 		// to do.
 		return nil
-	}
-
-	// If we haven't fully dereffed and stored
-	// the relayed status yet, do so now.
-	if boostOut.BoostOf.ID == "" {
-		boostOut.BoostOf, _, err = p.federate.Dereferencer.RefreshStatus(ctx,
-			relayActorAcct.Username,
-			boostOut.BoostOf,
-			statusable,
-			&dereferencing.Fresh,
-		)
-		if err != nil {
-			return gtserror.Newf("error enriching boosted status: %w", err)
-		}
-		boostOut.BoostOfID = boostOut.BoostOf.ID
 	}
 
 	// Store the boost wrapper itself in the db.
@@ -1252,9 +1235,8 @@ func (p *fediAPI) createAnnounceToRelay(ctx context.Context, fMsg *messages.From
 		return gtserror.Newf("%T not parseable as *gtsmodel.Status", fMsg.GTSModel)
 	}
 
-	// Retrieve the relayed status, possibly storing and timelining
-	// it if we have a matching subscription to our own relay actor.
-	status, statusable, err := p.federate.GetBoostedStatusForRelayActor(ctx,
+	// Retrieve the relayed status.
+	status, err := p.federate.GetBoostedStatusForRelaying(ctx,
 		fMsg.Receiving,  // Our relay actor account.
 		fMsg.Requesting, // Relaying account.
 		boost,           // Boost wrapper status.
@@ -1287,7 +1269,7 @@ func (p *fediAPI) createAnnounceToRelay(ctx context.Context, fMsg *messages.From
 
 	// Handle boost for any local followers of the relay actor.
 	if err := p.storeOutgoingRelayActorBoostForLocalFollowers(ctx,
-		fMsg.Receiving, boostOut, statusable,
+		fMsg.Receiving, boostOut,
 	); err != nil {
 		return gtserror.Newf("error handling outgoing boost for local followers: %w", err)
 	}
