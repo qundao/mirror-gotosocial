@@ -65,7 +65,7 @@ func (p *Processor) DebugVisibilityGet(
 
 	// Now we know we've been provided a valid URI, try fetch status.
 	status, _, err := p.federator.Dereferencer.GetStatusByURI(ctx,
-		requester.Username,
+		requester,
 		uri,
 	)
 	if err != nil {

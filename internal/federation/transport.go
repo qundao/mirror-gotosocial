@@ -59,11 +59,13 @@ func (f *Federator) NewTransport(ctx context.Context, actorBoxIRI *url.URL, _ st
 		if err != nil {
 			return nil, fmt.Errorf("couldn't parse path %s as an inbox: %s", actorBoxIRI.String(), err)
 		}
+
 	case uris.IsOutboxPath(actorBoxIRI):
 		_, username, err = uris.ParseOutboxPath(actorBoxIRI)
 		if err != nil {
 			return nil, fmt.Errorf("couldn't parse path %s as an outbox: %s", actorBoxIRI.String(), err)
 		}
+
 	default:
 		return nil, fmt.Errorf("id %s was neither an inbox path nor an outbox path", actorBoxIRI.String())
 	}

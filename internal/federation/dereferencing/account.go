@@ -105,13 +105,17 @@ func accountFresh(
 // ie., when it's not important that an exact account is returned.
 func (d *Dereferencer) GetAccountByURI(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 	tryURL bool,
-) (*gtsmodel.Account, ap.Accountable, error) {
+) (
+	*gtsmodel.Account,
+	ap.Accountable,
+	error,
+) {
 	// Fetch and dereference account if necessary.
 	account, accountable, err := d.getAccountByURI(ctx,
-		requestUser,
+		requester,
 		uri,
 		tryURL,
 	)
@@ -120,12 +124,12 @@ func (d *Dereferencer) GetAccountByURI(
 	}
 
 	if accountable != nil {
-		// This account was updated, enqueue re-dereference featured posts + stats.
+		// Account was updated, enqueue re-dereference featured posts + stats.
 		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-			if err := d.dereferenceAccountFeatured(ctx, requestUser, account); err != nil {
+			if err := d.dereferenceAccountFeatured(ctx, requester, account); err != nil {
 				log.Errorf(ctx, "error fetching account featured collection: %v", err)
 			}
-			if err := d.dereferenceAccountStats(ctx, requestUser, account); err != nil {
+			if err := d.dereferenceAccountStats(ctx, requester, account); err != nil {
 				log.Errorf(ctx, "error fetching account stats: %v", err)
 			}
 		})
@@ -134,15 +138,18 @@ func (d *Dereferencer) GetAccountByURI(
 	return account, accountable, nil
 }
 
-// getAccountByURI is a package internal form of
-// .GetAccountByURI() that doesn't bother dereferencing
-// featured posts on update.
+// getAccountByURI is a package internal form of .GetAccountByURI()
+// that doesn't bother dereferencing featured posts on update.
 func (d *Dereferencer) getAccountByURI(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 	tryURL bool,
-) (*gtsmodel.Account, ap.Accountable, error) {
+) (
+	*gtsmodel.Account,
+	ap.Accountable,
+	error,
+) {
 	var uriStr = uri.String()
 
 	// Search the database for existing account with URI.
@@ -179,11 +186,13 @@ func (d *Dereferencer) getAccountByURI(
 		}
 
 		// Create and pass-through a new bare-bones model for dereferencing.
-		account, accountable, err := d.enrichAccountSafely(ctx, requestUser, uri, &gtsmodel.Account{
-			ID:     id.NewULID(),
-			Domain: uri.Host,
-			URI:    uriStr,
-		}, nil)
+		account, accountable, err := d.enrichAccountSafely(ctx, requester, uri,
+			&gtsmodel.Account{
+				ID:     id.NewULID(),
+				Domain: uri.Host,
+				URI:    uriStr,
+			},
+			nil)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -209,7 +218,7 @@ func (d *Dereferencer) getAccountByURI(
 
 	// Try to update existing account model.
 	latest, accountable, err := d.enrichAccountSafely(ctx,
-		requestUser,
+		requester,
 		uri,
 		account,
 		nil,
@@ -227,10 +236,19 @@ func (d *Dereferencer) getAccountByURI(
 // GetAccountByUsernameDomain will attempt to fetch an accounts by its username@domain, first checking the database. In the case of a newly-met remote model,
 // or a remote model whose last_fetched date is beyond a certain interval, the account will be dereferenced. In the case of dereferencing, some low-priority
 // account information may be enqueued for asynchronous fetching, e.g. featured account statuses (pins). An ActivityPub object indicates the account was dereferenced.
-func (d *Dereferencer) GetAccountByUsernameDomain(ctx context.Context, requestUser string, username string, domain string) (*gtsmodel.Account, ap.Accountable, error) {
+func (d *Dereferencer) GetAccountByUsernameDomain(
+	ctx context.Context,
+	requester *gtsmodel.Account,
+	username string,
+	domain string,
+) (
+	*gtsmodel.Account,
+	ap.Accountable,
+	error,
+) {
 	account, accountable, err := d.getAccountByUsernameDomain(
 		ctx,
-		requestUser,
+		requester,
 		username,
 		domain,
 	)
@@ -241,11 +259,10 @@ func (d *Dereferencer) GetAccountByUsernameDomain(ctx context.Context, requestUs
 	if accountable != nil {
 		// This account was updated, enqueue re-dereference featured posts + stats.
 		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-			if err := d.dereferenceAccountFeatured(ctx, requestUser, account); err != nil {
+			if err := d.dereferenceAccountFeatured(ctx, requester, account); err != nil {
 				log.Errorf(ctx, "error fetching account featured collection: %v", err)
 			}
-
-			if err := d.dereferenceAccountStats(ctx, requestUser, account); err != nil {
+			if err := d.dereferenceAccountStats(ctx, requester, account); err != nil {
 				log.Errorf(ctx, "error fetching account stats: %v", err)
 			}
 		})
@@ -258,10 +275,14 @@ func (d *Dereferencer) GetAccountByUsernameDomain(ctx context.Context, requestUs
 // GetAccountByUsernameDomain() that doesn't bother deref of featured posts.
 func (d *Dereferencer) getAccountByUsernameDomain(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	username string,
 	domain string,
-) (*gtsmodel.Account, ap.Accountable, error) {
+) (
+	*gtsmodel.Account,
+	ap.Accountable,
+	error,
+) {
 	if domain == config.GetHost() || domain == config.GetAccountDomain() {
 		// We do local lookups using an empty domain,
 		// else it will fail the db search below.
@@ -288,7 +309,7 @@ func (d *Dereferencer) getAccountByUsernameDomain(
 		}
 
 		// Create and pass-through a new bare-bones model for dereferencing.
-		account, accountable, err := d.enrichAccountSafely(ctx, requestUser, nil, &gtsmodel.Account{
+		account, accountable, err := d.enrichAccountSafely(ctx, requester, nil, &gtsmodel.Account{
 			ID:       id.NewULID(),
 			Domain:   domain,
 			Username: username,
@@ -308,7 +329,7 @@ func (d *Dereferencer) getAccountByUsernameDomain(
 
 	// Try to update existing account model.
 	latest, accountable, err := d.RefreshAccount(ctx,
-		requestUser,
+		requester,
 		account,
 		nil,
 		nil,
@@ -341,11 +362,16 @@ func (d *Dereferencer) getAccountByUsernameDomain(
 // dereferenced (i.e. updated).
 func (d *Dereferencer) RefreshAccount(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	account *gtsmodel.Account,
 	accountable ap.Accountable,
 	window *FreshnessWindow,
-) (*gtsmodel.Account, ap.Accountable, error) {
+) (
+	*gtsmodel.Account,
+	ap.Accountable,
+	error,
+) {
+
 	// If no incoming data is provided,
 	// check whether account needs refresh.
 	if accountable == nil &&
@@ -361,7 +387,7 @@ func (d *Dereferencer) RefreshAccount(
 
 	// Try to update + deref passed account model.
 	latest, accountable, err := d.enrichAccountSafely(ctx,
-		requestUser,
+		requester,
 		uri,
 		account,
 		accountable,
@@ -374,11 +400,11 @@ func (d *Dereferencer) RefreshAccount(
 	if accountable != nil {
 		// This account was updated, enqueue re-dereference featured posts + stats.
 		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-			if err := d.dereferenceAccountFeatured(ctx, requestUser, latest); err != nil {
+			if err := d.dereferenceAccountFeatured(ctx, requester, latest); err != nil {
 				log.Errorf(ctx, "error fetching account featured collection: %v", err)
 			}
 
-			if err := d.dereferenceAccountStats(ctx, requestUser, latest); err != nil {
+			if err := d.dereferenceAccountStats(ctx, requester, latest); err != nil {
 				log.Errorf(ctx, "error fetching account stats: %v", err)
 			}
 		})
@@ -397,7 +423,7 @@ func (d *Dereferencer) RefreshAccount(
 // only enqueues update if necessary.
 func (d *Dereferencer) RefreshAccountAsync(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	account *gtsmodel.Account,
 	accountable ap.Accountable,
 	window *FreshnessWindow,
@@ -418,7 +444,7 @@ func (d *Dereferencer) RefreshAccountAsync(
 
 	// Enqueue a worker function to enrich this account async.
 	d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-		latest, accountable, err := d.enrichAccountSafely(ctx, requestUser, uri, account, accountable)
+		latest, accountable, err := d.enrichAccountSafely(ctx, requester, uri, account, accountable)
 		if err != nil {
 			log.Errorf(ctx, "error enriching remote account: %v", err)
 			return
@@ -426,11 +452,11 @@ func (d *Dereferencer) RefreshAccountAsync(
 
 		if accountable != nil {
 			// This account was updated, enqueue re-dereference featured posts + stats.
-			if err := d.dereferenceAccountFeatured(ctx, requestUser, latest); err != nil {
+			if err := d.dereferenceAccountFeatured(ctx, requester, latest); err != nil {
 				log.Errorf(ctx, "error fetching account featured collection: %v", err)
 			}
 
-			if err := d.dereferenceAccountStats(ctx, requestUser, latest); err != nil {
+			if err := d.dereferenceAccountStats(ctx, requester, latest); err != nil {
 				log.Errorf(ctx, "error fetching account stats: %v", err)
 			}
 		}
@@ -442,11 +468,15 @@ func (d *Dereferencer) RefreshAccountAsync(
 // dereferencing actions with per-URI mutex locks.
 func (d *Dereferencer) enrichAccountSafely(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 	account *gtsmodel.Account,
 	accountable ap.Accountable,
-) (*gtsmodel.Account, ap.Accountable, error) {
+) (
+	*gtsmodel.Account,
+	ap.Accountable,
+	error,
+) {
 	// Noop if account suspended;
 	// we don't want to deref it.
 	if account.IsSuspended() {
@@ -472,7 +502,7 @@ func (d *Dereferencer) enrichAccountSafely(
 
 	// Perform status enrichment with passed vars.
 	latest, apubAcc, err := d.enrichAccount(ctx,
-		requestUser,
+		requester,
 		uri,
 		account,
 		accountable,
@@ -530,7 +560,7 @@ func (d *Dereferencer) enrichAccountSafely(
 // It handles necessary dereferencing, webfingering etc.
 func (d *Dereferencer) enrichAccount(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 	account *gtsmodel.Account,
 	apubAcc ap.Accountable,
@@ -544,7 +574,7 @@ func (d *Dereferencer) enrichAccount(
 	}
 
 	// Pre-fetch a transport for requesting username, used by later deref procedures.
-	tsport, err := d.transportController.NewTransportForUsername(ctx, requestUser)
+	tsport, err := d.transportController.NewTransportForUsername(ctx, accountUsername(requester))
 	if err != nil {
 		return nil, nil, gtserror.Newf("couldn't create transport: %w", err)
 	}
@@ -635,8 +665,8 @@ func (d *Dereferencer) enrichAccount(
 	}
 
 	// Mark deref+update handshake start.
-	d.startHandshake(requestUser, uri)
-	defer d.stopHandshake(requestUser, uri)
+	d.startHandshake(requester, uri)
+	defer d.stopHandshake(requester, uri)
 
 	var resolve bool
 
@@ -856,9 +886,8 @@ func (d *Dereferencer) enrichAccount(
 	// Ensure the account's avatar media
 	// is populated (if appropriate), passing
 	// in existing to check for chages.
-	if err := d.fetchAccountAvatar(
-		ctx,
-		requestUser,
+	if err := d.fetchAccountAvatar(ctx,
+		requester,
 		account,
 		latestAcc,
 		apubAcc,
@@ -870,9 +899,8 @@ func (d *Dereferencer) enrichAccount(
 	// Ensure the account's header media
 	// is populated (if appropriate), passing
 	// in existing to check for chages.
-	if err := d.fetchAccountHeader(
-		ctx,
-		requestUser,
+	if err := d.fetchAccountHeader(ctx,
+		requester,
 		account,
 		latestAcc,
 		apubAcc,
@@ -883,8 +911,7 @@ func (d *Dereferencer) enrichAccount(
 
 	// Fetch the latest remote emoji
 	// used in account display name/bio.
-	if err = d.fetchAccountEmojis(
-		ctx,
+	if err = d.fetchAccountEmojis(ctx,
 		account,
 		latestAcc,
 		rejectReason,
@@ -922,7 +949,7 @@ func (d *Dereferencer) enrichAccount(
 
 func (d *Dereferencer) fetchAccountAvatar(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	existingAcc *gtsmodel.Account,
 	latestAcc *gtsmodel.Account,
 	apubAcc ap.Accountable,
@@ -976,7 +1003,7 @@ func (d *Dereferencer) fetchAccountAvatar(
 			// likely only changing metadata.
 			existing, err := d.RefreshMedia(
 				ctx,
-				requestUser,
+				requester,
 				existing,
 				info,
 				false, // force
@@ -1019,7 +1046,7 @@ func (d *Dereferencer) fetchAccountAvatar(
 
 	// Fetch newly changed avatar.
 	attachment, err := d.GetMedia(ctx,
-		requestUser,
+		requester,
 		latestAcc.ID,
 		latestAvatarURL,
 		info,
@@ -1050,7 +1077,7 @@ func (d *Dereferencer) fetchAccountAvatar(
 
 func (d *Dereferencer) fetchAccountHeader(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	existingAcc *gtsmodel.Account,
 	latestAcc *gtsmodel.Account,
 	apubAcc ap.Accountable,
@@ -1104,7 +1131,7 @@ func (d *Dereferencer) fetchAccountHeader(
 			// likely only changing metadata.
 			existing, err := d.RefreshMedia(
 				ctx,
-				requestUser,
+				requester,
 				existing,
 				info,
 				false, // force
@@ -1147,7 +1174,7 @@ func (d *Dereferencer) fetchAccountHeader(
 
 	// Fetch newly changed header.
 	attachment, err := d.GetMedia(ctx,
-		requestUser,
+		requester,
 		latestAcc.ID,
 		latestHeaderURL,
 		info,
@@ -1213,11 +1240,12 @@ func (d *Dereferencer) fetchAccountEmojis(
 
 func (d *Dereferencer) dereferenceAccountStats(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	account *gtsmodel.Account,
 ) error {
-	// Ensure we have a stats model for this account.
-	if err := d.state.DB.PopulateAccountStats(ctx, account); err != nil {
+	// Ensure we have stats model for this account.
+	if err := d.state.DB.PopulateAccountStats(ctx,
+		account); err != nil {
 		return gtserror.Newf("db error getting account stats: %w", err)
 	}
 
@@ -1229,10 +1257,9 @@ func (d *Dereferencer) dereferenceAccountStats(
 	// it will just fall back to counting local.
 
 	// Followers first.
-	followersCount, err := d.countCollection(
-		ctx,
+	followersCount, err := d.countCollection(ctx,
+		requester,
 		account.FollowersURI,
-		requestUser,
 	)
 	if err != nil {
 		// Log this but don't bail.
@@ -1246,10 +1273,9 @@ func (d *Dereferencer) dereferenceAccountStats(
 	}
 
 	// Now following.
-	followingCount, err := d.countCollection(
-		ctx,
+	followingCount, err := d.countCollection(ctx,
+		requester,
 		account.FollowingURI,
-		requestUser,
 	)
 	if err != nil {
 		// Log this but don't bail.
@@ -1263,10 +1289,9 @@ func (d *Dereferencer) dereferenceAccountStats(
 	}
 
 	// Now statuses count.
-	statusesCount, err := d.countCollection(
-		ctx,
+	statusesCount, err := d.countCollection(ctx,
+		requester,
 		account.OutboxURI,
-		requestUser,
 	)
 	if err != nil {
 		// Log this but don't bail.
@@ -1303,8 +1328,8 @@ func (d *Dereferencer) dereferenceAccountStats(
 // URIs or dereferencing isses.
 func (d *Dereferencer) countCollection(
 	ctx context.Context,
+	requester *gtsmodel.Account,
 	uriStr string,
-	requestUser string,
 ) (int, error) {
 	if uriStr == "" {
 		return -1, nil
@@ -1315,7 +1340,7 @@ func (d *Dereferencer) countCollection(
 		return -1, err
 	}
 
-	collect, err := d.dereferenceCollection(ctx, requestUser, uri)
+	collect, err := d.dereferenceCollection(ctx, requester, uri)
 	if err != nil {
 		return -1, err
 	}
@@ -1325,13 +1350,17 @@ func (d *Dereferencer) countCollection(
 
 // dereferenceAccountFeatured dereferences an account's featuredCollectionURI (if not empty). For each discovered status, this status will
 // be dereferenced (if necessary) and marked as pinned (if necessary). Then, old pins will be removed if they're not included in new pins.
-func (d *Dereferencer) dereferenceAccountFeatured(ctx context.Context, requestUser string, account *gtsmodel.Account) error {
+func (d *Dereferencer) dereferenceAccountFeatured(
+	ctx context.Context,
+	requester *gtsmodel.Account,
+	account *gtsmodel.Account,
+) error {
 	uri, err := url.Parse(account.FeaturedCollectionURI)
 	if err != nil {
 		return err
 	}
 
-	collect, err := d.dereferenceCollection(ctx, requestUser, uri)
+	collect, err := d.dereferenceCollection(ctx, requester, uri)
 	if err != nil {
 		return err
 	}
@@ -1369,9 +1398,11 @@ func (d *Dereferencer) dereferenceAccountFeatured(ctx context.Context, requestUs
 		// we still know it was *meant* to be pinned.
 		statusURIs = append(statusURIs, itemIRI)
 
+		const derefctx = dereferencedStatus
+
 		// Search for status by URI. Note this may return an existing model
 		// we have stored with an error from attempted update, so check both.
-		status, _, _, err := d.getStatusByURI(ctx, requestUser, itemIRI)
+		status, _, _, err := d.getStatusByURI(ctx, derefctx, requester, itemIRI)
 		if err != nil {
 			log.Errorf(ctx, "error getting status from featured collection %s: %v", itemIRI, err)
 

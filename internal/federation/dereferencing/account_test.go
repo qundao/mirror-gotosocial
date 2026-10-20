@@ -65,7 +65,7 @@ func (suite *AccountTestSuite) TestDereferenceGroup() {
 	groupURL := testrig.URLMustParse("https://unknown-instance.com/groups/some_group")
 	group, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		groupURL,
 		false,
 	)
@@ -99,7 +99,7 @@ func (suite *AccountTestSuite) TestDereferenceService() {
 	serviceURL := testrig.URLMustParse("https://owncast.example.org/federation/user/rgh")
 	service, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		serviceURL,
 		false,
 	)
@@ -142,7 +142,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountAsRemoteURL() {
 
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testrig.URLMustParse(targetAccount.URI),
 		false,
 	)
@@ -172,7 +172,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountAsRemoteURLNoSharedInb
 
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testrig.URLMustParse(targetAccount.URI),
 		false,
 	)
@@ -197,7 +197,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountAsUsername() {
 
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testrig.URLMustParse(targetAccount.URI),
 		false,
 	)
@@ -222,7 +222,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountAsUsernameDomain() {
 
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testrig.URLMustParse(targetAccount.URI),
 		false,
 	)
@@ -247,7 +247,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountAsUsernameDomainAndURL
 
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByUsernameDomain(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		targetAccount.Username,
 		config.GetHost(),
 	)
@@ -270,7 +270,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountWithUnknownUsername() 
 
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByUsernameDomain(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		"thisaccountdoesnotexist",
 		config.GetHost(),
 	)
@@ -293,7 +293,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountWithUnknownUsernameDom
 
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByUsernameDomain(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		"thisaccountdoesnotexist",
 		"localhost:8080",
 	)
@@ -316,7 +316,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountWithUnknownUserURI() {
 
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testrig.URLMustParse("http://localhost:8080/users/thisaccountdoesnotexist"),
 		false,
 	)
@@ -381,7 +381,7 @@ func (suite *AccountTestSuite) TestDereferenceLocalAccountByRedirect() {
 	uri := testrig.URLMustParse("https://this-will-be-redirected.butts/")
 
 	// Try dereference the test URI, since it correctly redirects to us it should return our account.
-	account, accountable, err := testStructs.Federator.Dereferencer.GetAccountByURI(ctx, fetchingAccount.Username, uri, false)
+	account, accountable, err := testStructs.Federator.Dereferencer.GetAccountByURI(ctx, fetchingAccount, uri, false)
 	suite.NoError(err)
 	suite.Nil(accountable)
 	suite.NotNil(account)
@@ -442,7 +442,7 @@ func (suite *AccountTestSuite) TestDereferenceMasqueradingLocalAccount() {
 	)
 
 	// Try dereference the test URI, since it correctly redirects to us it should return our account.
-	account, accountable, err := testStructs.Federator.Dereferencer.GetAccountByURI(ctx, fetchingAccount.Username, uri, false)
+	account, accountable, err := testStructs.Federator.Dereferencer.GetAccountByURI(ctx, fetchingAccount, uri, false)
 	suite.NotNil(err)
 	suite.Nil(account)
 	suite.Nil(accountable)
@@ -472,7 +472,7 @@ func (suite *AccountTestSuite) TestDereferenceRemoteAccountWithNonMatchingURI() 
 	// Attempt to fetch account at alternative URI, it should fail!
 	fetchedAccount, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testrig.URLMustParse(remoteAltURI),
 		false,
 	)
@@ -494,7 +494,7 @@ func (suite *AccountTestSuite) TestDereferenceRemoteAccountWithUnexpectedKeyChan
 
 	// Fetch the remote account to load into the database.
 	remoteAcc, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(ctx,
-		fetchingAcc.Username,
+		fetchingAcc,
 		testrig.URLMustParse(remoteURI),
 		false,
 	)
@@ -516,7 +516,7 @@ func (suite *AccountTestSuite) TestDereferenceRemoteAccountWithUnexpectedKeyChan
 
 	// Force refresh account expecting key change error.
 	_, _, err = testStructs.Federator.Dereferencer.RefreshAccount(ctx,
-		fetchingAcc.Username,
+		fetchingAcc,
 		remoteAcc,
 		nil,
 		nil,
@@ -538,7 +538,7 @@ func (suite *AccountTestSuite) TestDereferenceRemoteAccountWithExpectedKeyChange
 
 	// Fetch the remote account to load into the database.
 	remoteAcc, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(ctx,
-		fetchingAcc.Username,
+		fetchingAcc,
 		testrig.URLMustParse(remoteURI),
 		false,
 	)
@@ -561,7 +561,7 @@ func (suite *AccountTestSuite) TestDereferenceRemoteAccountWithExpectedKeyChange
 
 	// Refresh account expecting a succesful refresh with changed keys!
 	updatedAcc, apAcc, err := testStructs.Federator.Dereferencer.RefreshAccount(ctx,
-		fetchingAcc.Username,
+		fetchingAcc,
 		remoteAcc,
 		nil,
 		nil,
@@ -585,7 +585,7 @@ func (suite *AccountTestSuite) TestRefreshFederatedRemoteAccountWithKeyChange() 
 
 	// Fetch the remote account to load into the database.
 	remoteAcc, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(ctx,
-		fetchingAcc.Username,
+		fetchingAcc,
 		testrig.URLMustParse(remoteURI),
 		false,
 	)
@@ -604,7 +604,7 @@ func (suite *AccountTestSuite) TestRefreshFederatedRemoteAccountWithKeyChange() 
 	// By passing in the remote person model this indicates that the data
 	// was received via the federator, which should trust any key change.
 	updatedAcc, apAcc, err := testStructs.Federator.Dereferencer.RefreshAccount(ctx,
-		fetchingAcc.Username,
+		fetchingAcc,
 		remoteAcc,
 		remotePerson,
 		nil,
@@ -629,7 +629,7 @@ func (suite *AccountTestSuite) TestDereferenceRemoteAccountWithAvatarDescription
 
 	// Fetch the remote account to load into the database.
 	remoteAcc, _, err := testStructs.Federator.Dereferencer.GetAccountByURI(ctx,
-		fetchingAcc.Username,
+		fetchingAcc,
 		testrig.URLMustParse(remoteURI),
 		false,
 	)
@@ -651,7 +651,7 @@ func (suite *AccountTestSuite) TestDereferenceRemoteAccountWithAvatarDescription
 	remotePerson.SetActivityStreamsIcon(icon)
 
 	updatedAcc, apAcc, err := testStructs.Federator.Dereferencer.RefreshAccount(ctx,
-		fetchingAcc.Username,
+		fetchingAcc,
 		remoteAcc,
 		remotePerson,
 		nil,

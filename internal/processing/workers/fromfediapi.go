@@ -284,7 +284,7 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		//
 		// NOTE: dereferencer hook will handle surfacing logic.
 		status, statusable, err = p.federate.RefreshStatus(ctx,
-			fMsg.Receiving.Username,
+			fMsg.Receiving,
 			bareStatus,
 			statusable,
 
@@ -302,7 +302,7 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		//
 		// NOTE: dereferencer hook will handle surfacing logic.
 		status, statusable, err = p.federate.GetStatusByURI(ctx,
-			fMsg.Receiving.Username,
+			fMsg.Receiving,
 			fMsg.APIRI,
 		)
 		if err != nil {
@@ -574,7 +574,7 @@ func (p *fediAPI) CreateReplyRequest(ctx context.Context, fMsg *messages.FromFed
 	// statusable. This will also check permissions.
 	replyURI := ap.GetJSONLDId(statusable).String()
 	reply, _, err := p.federate.RefreshStatus(ctx,
-		fMsg.Receiving.Username,
+		fMsg.Receiving,
 		&gtsmodel.Status{URI: replyURI},
 		statusable,
 
@@ -1099,8 +1099,8 @@ func (p *fediAPI) CreateAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 	// the db, and dereferencing the target status
 	// ancestors / descendants where appropriate.
 	boost, err := p.federate.EnrichAnnounce(ctx,
+		fMsg.Receiving,
 		boost,
-		fMsg.Receiving.Username,
 	)
 	if err != nil {
 		if gtserror.IsUnretrievable(err) ||
@@ -1289,8 +1289,8 @@ func (p *fediAPI) CreateAnnounceRequest(ctx context.Context, fMsg *messages.From
 	// We can check permissions for the announce *and*
 	// put it in the db (if acceptable) by doing Enrich.
 	boost, err := p.federate.EnrichAnnounce(ctx,
+		fMsg.Receiving,
 		req.Announce,
-		fMsg.Receiving.Username,
 	)
 
 	switch {
@@ -1467,9 +1467,8 @@ func (p *fediAPI) UpdateAccount(ctx context.Context, fMsg *messages.FromFediAPI)
 	}
 
 	// Fetch up-to-date bio, avatar, header, etc.
-	_, _, err := p.federate.RefreshAccount(
-		ctx,
-		fMsg.Receiving.Username,
+	_, _, err := p.federate.RefreshAccount(ctx,
+		fMsg.Receiving,
 		account,
 		apubAcc,
 
@@ -1543,7 +1542,7 @@ func (p *fediAPI) AcceptRemoteStatus(ctx context.Context, fMsg *messages.FromFed
 	// This will also check whether the given approvedByURI
 	// actually grants permission for this status.
 	_, _, err := p.federate.RefreshStatus(ctx,
-		fMsg.Receiving.Username,
+		fMsg.Receiving,
 		bareStatus,
 		nil,
 		nil,
@@ -1637,7 +1636,7 @@ func (p *fediAPI) UpdateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 	// Fetch up-to-date attach status attachments.
 	// NOTE: dereferencer hook handles surfacing.
 	_, _, err := p.federate.RefreshStatus(ctx,
-		fMsg.Receiving.Username,
+		fMsg.Receiving,
 		existing,
 		apStatus,
 		freshness,

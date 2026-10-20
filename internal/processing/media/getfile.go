@@ -171,14 +171,6 @@ func (p *Processor) getAttachmentContent(
 		return handleUnknown(attach)
 	}
 
-	// If requester was provided, use their username
-	// to create a transport to potentially re-fetch
-	// the media. Else falls back to instance account.
-	var requestUser string
-	if requester != nil {
-		requestUser = requester.Username
-	}
-
 	// Media path depends on requested size type string.
 	var mediaPath func(*gtsmodel.MediaAttachment) string
 	switch sizeStr {
@@ -235,7 +227,7 @@ func (p *Processor) getAttachmentContent(
 
 		// Attempt to recache this remote media.
 		attach, err = p.federator.RefreshMedia(ctx,
-			requestUser,
+			requester,
 			attach,
 			media.AdditionalMediaInfo{},
 			force, // force

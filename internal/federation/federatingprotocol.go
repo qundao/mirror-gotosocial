@@ -190,7 +190,7 @@ func (f *Federator) AuthenticatePostInbox(ctx context.Context, w http.ResponseWr
 	}
 
 	// Check who's trying to deliver to us by inspecting the http signature.
-	pubKeyAuth, errWithCode := f.AuthenticateFederatedRequest(ctx, receiver.Username)
+	pubKeyAuth, errWithCode := f.AuthenticateFederatedRequest(ctx, receiver)
 	if errWithCode != nil {
 
 		// Check if we got code 410 Gone from a remote

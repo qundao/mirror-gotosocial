@@ -311,6 +311,80 @@ func (d *Dereferencer) RecacheEmoji(
 	)
 }
 
+// WaitOnEmoji blocks until all given emoji have finished processing, finally updating the slice model ptrs.
+func (d *Dereferencer) WaitOnEmoji(ctx context.Context, emojis []*gtsmodel.Emoji) {
+	type uncachedEmoji struct {
+		// Ptr to currently processing
+		// emoji to block on, if any.
+		Ptr *media.ProcessingEmoji
+
+		// Database ID.
+		ID string
+
+		// shortcode@dommain key.
+		ShortcodeDomain string
+
+		// Index in status
+		// attachment slice.
+		Idx int
+	}
+
+	// Append emoji in status emoji that isn't yet cached.
+	uncached := make([]uncachedEmoji, 0, len(emojis))
+	for i, emoji := range emojis {
+		if !emoji.Cached() {
+			uncached = append(uncached, uncachedEmoji{
+				ID:              emoji.ID,
+				ShortcodeDomain: emoji.ShortcodeDomain(),
+				Idx:             i,
+			})
+		}
+	}
+
+	// Check if any uncached.
+	if len(uncached) == 0 {
+		return
+	}
+
+	// Acquire processing
+	// emojis slice lock.
+	d.derefEmojisMu.Lock()
+
+	for i, entry := range uncached {
+		// Check for processing emoji by its shortcode@domain.
+		processing := d.derefEmojis.get(entry.ShortcodeDomain)
+		uncached[i].Ptr = processing
+	}
+
+	// Done with mutex lock.
+	d.derefEmojisMu.Unlock()
+
+	for _, entry := range uncached {
+		if entry.Ptr != nil {
+			// If emoji was processing, block
+			// until finished loading. We don't
+			// care about error return as async
+			// thread will handle logging it,
+			// and emoji is always non-nil.
+			emoji, _ := entry.Ptr.Load(ctx)
+
+			// Set latest emoji model.
+			emojis[entry.Idx] = emoji
+		} else {
+
+			// Emoji had finished processing, get latest from db.
+			emoji, err := d.state.DB.GetEmojiByID(ctx, entry.ID)
+			if err != nil {
+				log.Errorf(ctx, "error getting latest emoji %s: %v", entry.ShortcodeDomain, err)
+				continue
+			}
+
+			// Set latest emoji model.
+			emojis[entry.Idx] = emoji
+		}
+	}
+}
+
 // processingEmojiSafely provides concurrency-safe processing of
 // an emoji with given shortcode+domain. if a copy of the emoji is
 // not already being processed, the given 'process' callback will

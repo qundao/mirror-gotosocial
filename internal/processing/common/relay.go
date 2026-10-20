@@ -38,6 +38,7 @@ import (
 // FollowRelayActor checks if a follow or follow request exists from our instance account towards
 // the given relayActor account. If not, it creates a follow request and instigates side effects.
 func (p *Processor) FollowRelayActor(ctx context.Context, relayActor *gtsmodel.Account) error {
+
 	// Get our instance account from the db.
 	iAcct, err := p.state.DB.GetInstanceAccount(ctx, "")
 	if err != nil {
@@ -209,15 +210,12 @@ func (p *Processor) DereferenceRelayActorURI(
 	}
 
 	relayActor, _, err := p.federator.Dereferencer.GetAccountByURI(ctx,
-		instanceAcct.Username,
+		instanceAcct,
 		relayActorURI,
 		true, // tryURL
 	)
 	if err != nil {
-		err := fmt.Errorf(
-			"error dereferencing relay_actor_uri (%s) account: %w",
-			relayActorURI.String(), err,
-		)
+		err := fmt.Errorf("error dereferencing relay_actor_uri (%s) account: %w", relayActorURI.String(), err)
 		return nil, gtserror.NewErrorUnprocessableEntity(err, err.Error())
 	}
 

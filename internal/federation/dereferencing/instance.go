@@ -25,12 +25,19 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 )
 
-func (d *Dereferencer) GetRemoteInstance(ctx context.Context, username string, remoteInstanceURI *url.URL) (*gtsmodel.Instance, error) {
+func (d *Dereferencer) GetRemoteInstance(
+	ctx context.Context,
+	requester *gtsmodel.Account,
+	remoteInstanceURI *url.URL,
+) (
+	*gtsmodel.Instance,
+	error,
+) {
 	if blocked, err := d.state.DB.IsDomainBlocked(ctx, remoteInstanceURI.Host); blocked || err != nil {
 		return nil, gtserror.Newf("domain %s is blocked", remoteInstanceURI.Host)
 	}
 
-	transport, err := d.transportController.NewTransportForUsername(ctx, username)
+	transport, err := d.transportController.NewTransportForUsername(ctx, accountUsername(requester))
 	if err != nil {
 		return nil, gtserror.Newf("transport err: %w", err)
 	}

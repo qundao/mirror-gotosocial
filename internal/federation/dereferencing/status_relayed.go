@@ -272,7 +272,7 @@ func (d *Dereferencer) allowedIncomingBoost(
 	receiver *gtsmodel.Account,
 ) error {
 	boostPermit, err := d.isPermittedStatus(ctx,
-		receiver.Username,
+		receiver,
 		boostWrapper,
 	)
 	if err != nil {
@@ -376,12 +376,13 @@ func (d *Dereferencer) safelyGetOrDerefRelayableStatus(
 	// If this is a new
 	// status, store it.
 	if isNew {
+
 		// Note: set a new status ID first as some
 		// of the peripherals need to refer to it
 		// (eg., mention/attachment.status_id etc).
 		status.ID = id.NewULIDFromTime(status.CreatedAt)
 		if _, err := d.handleStatusPeripherals(ctx,
-			receiver.Username,
+			receiver,
 			uri,
 			&gtsmodel.Status{URI: uriStr},
 			status,
@@ -405,7 +406,7 @@ func (d *Dereferencer) safelyGetOrDerefRelayableStatus(
 	// Outside of the lock,
 	// deref parents + children.
 	d.dereferenceThread(ctx,
-		receiver.Username,
+		receiver,
 		uri,
 		status,
 		statusable,
@@ -442,14 +443,15 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 	isNew bool,
 	err error,
 ) {
-	// Check whether the URI is a
-	// blocked domain / subdomain.
 	var blocked bool
+
+	// Check whether the URI is a blocked domain / subdomain.
 	blocked, err = d.state.DB.IsDomainBlocked(ctx, uri.Host)
 	if err != nil {
 		err = gtserror.Newf("error checking blocked domain: %w", err)
 		return
 	}
+
 	if blocked {
 		err = gtserror.Newf("%s is blocked", uri.Host)
 		err = gtserror.SetUnretrievable(err)
@@ -467,9 +469,10 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 		return
 	}
 
+	var existing *gtsmodel.Status
+
 	// Search the database for an
 	// existing status under URI / URL.
-	var existing *gtsmodel.Status
 	existing, err = d.getStatusFromDB(ctx, uriStr)
 	if err != nil {
 		// Err already
@@ -478,12 +481,12 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 	}
 
 	if existing != nil {
-		// We had it stored in the
-		// db already, populate it.
+		// We had it stored in the db already, populate it.
 		err = d.state.DB.PopulateStatus(ctx, existing)
 		if err != nil {
 			return
 		}
+
 		status = existing
 	}
 
@@ -511,7 +514,7 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 
 			// Convert the statusable to GtS format.
 			status, err = d.convertStatusable(ctx,
-				receiver.Username,
+				receiver,
 				uri,
 				statusable,
 			)
@@ -576,12 +579,13 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 		return
 	}
 
+	var permit bool
+
 	// Check if this is a permitted status,
 	// bearing in mind interaction policy
 	// of replied-to status (if present).
-	var permit bool
 	permit, err = d.isPermittedStatus(ctx,
-		receiver.Username,
+		receiver,
 		status,
 	)
 	if err != nil {

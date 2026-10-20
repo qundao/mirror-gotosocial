@@ -53,7 +53,7 @@ func (suite *StatusTestSuite) TestDereferenceSimpleStatus() {
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	statusURL := testrig.URLMustParse("https://unknown-instance.com/users/brand_new_person/statuses/01FE4NTHKWW7THT67EF10EB839")
-	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount.Username, statusURL)
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount, statusURL)
 	suite.NoError(err)
 	suite.NotNil(status)
 
@@ -100,7 +100,7 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithMention() {
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	statusURL := testrig.URLMustParse("https://unknown-instance.com/users/brand_new_person/statuses/01FE5Y30E3W4P7TRE0R98KAYQV")
-	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount.Username, statusURL)
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount, statusURL)
 	suite.NoError(err)
 	suite.NotNil(status)
 
@@ -158,7 +158,7 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithTag() {
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	statusURL := testrig.URLMustParse("https://unknown-instance.com/users/brand_new_person/statuses/01H641QSRS3TCXSVC10X4GPKW7")
-	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount.Username, statusURL)
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount, statusURL)
 	suite.NoError(err)
 	suite.NotNil(status)
 
@@ -215,7 +215,7 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithImageAndNoContent() {
 	fetchingAccount := suite.testAccounts["local_account_1"]
 
 	statusURL := testrig.URLMustParse("https://turnip.farm/users/turniplover6969/statuses/70c53e54-3146-42d5-a630-83c8b6c7c042")
-	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount.Username, statusURL)
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx, fetchingAccount, statusURL)
 	suite.NoError(err)
 	suite.NotNil(status)
 
@@ -279,7 +279,7 @@ func (suite *StatusTestSuite) TestDereferenceStatusWithNonMatchingURI() {
 	// Attempt to fetch account at alternative URI, it should fail!
 	fetchedStatus, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(
 		ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testrig.URLMustParse(remoteAltURI),
 	)
 	expectErrStr := fmt.Sprintf(
@@ -309,7 +309,7 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusUpdated() {
 
 	// Fetch the remote status first to load it into instance.
 	testStatus, statusable, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testURI,
 	)
 	suite.NotNil(statusable)
@@ -355,7 +355,7 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusUpdated() {
 
 		// Refresh with a given statusable to updated to edited copy.
 		latest, statusable, err := testStructs.Federator.Dereferencer.RefreshStatus(ctx,
-			fetchingAccount.Username,
+			fetchingAccount,
 			testStatus,
 			nil, // NOTE: can provide testStatusable here to test as being received (not deref'd)
 			instantFreshness,
@@ -420,7 +420,7 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusRace() {
 
 	// Fetch the remote status first to load it into instance.
 	testStatus, statusable, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testURI,
 	)
 	suite.NotNil(statusable)
@@ -444,7 +444,7 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusRace() {
 
 	// Refresh with a given statusable to updated to edited copy.
 	afterEdit, statusable, err := testStructs.Federator.Dereferencer.RefreshStatus(ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		testStatus,
 		testStatusable,
 		instantFreshness,
@@ -493,7 +493,7 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusRace() {
 	// freshness window, but it *should* refetch the provided status to
 	// check for race shenanigans and realize that no edit has occurred.
 	afterBodge, statusable, err := testStructs.Federator.Dereferencer.RefreshStatus(ctx,
-		fetchingAccount.Username,
+		fetchingAccount,
 		beforeEdit,
 		testStatusable,
 		instantFreshness,

@@ -69,7 +69,7 @@ func (p *Processor) GetMultiple(ctx context.Context, requester *gtsmodel.Account
 	// Enqueue refresh of all statuses.
 	for _, status := range statuses {
 		p.federator.Dereferencer.RefreshStatusAsync(ctx,
-			requester.Username, status, nil, nil)
+			requester, status, nil, nil)
 	}
 
 	// Perform visibility checks and return appropriate API models.

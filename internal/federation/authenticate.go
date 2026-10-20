@@ -42,9 +42,7 @@ import (
 	"codeberg.org/gruf/go-kv/v2"
 )
 
-var (
-	errUnsigned = errors.New("http request wasn't signed or http signature was invalid")
-)
+var errUnsigned = errors.New("http request wasn't signed or http signature was invalid")
 
 // PubKeyAuth models authorization information for a remote
 // Actor making a signed HTTP request to this GtS instance
@@ -107,7 +105,8 @@ type PubKeyAuth struct {
 //
 // The caller of this function MUST CHECK AT SOME POINT WHETHER THE PUB KEY OWNER
 // HAS BEEN SUSPENDED, and handle it appropriately, as this function will not do so!
-func (f *Federator) AuthenticateFederatedRequest(ctx context.Context, requestedUser string) (*PubKeyAuth, gtserror.WithCode) {
+func (f *Federator) AuthenticateFederatedRequest(ctx context.Context, receiver *gtsmodel.Account) (*PubKeyAuth, gtserror.WithCode) {
+
 	// Thanks to the signature check middleware,
 	// we should already have an http signature
 	// verifier set on the context. If we don't,
@@ -145,19 +144,25 @@ func (f *Federator) AuthenticateFederatedRequest(ctx context.Context, requestedU
 		errWithCode gtserror.WithCode
 	)
 
+	var username string
+	if receiver != nil {
+		// Receiving username, if any.
+		username = receiver.Username
+	}
+
 	l := log.
 		WithContext(ctx).
 		WithFields(kv.Fields{
-			{"requestedUser", requestedUser},
+			{"receiver", username},
 			{"pubKeyID", pubKeyIDStr},
 		}...)
 
 	if isLocal {
 		l.Trace("public key is local, no dereference needed")
-		pubKeyAuth, errWithCode = f.derefPubKeyDBOnly(ctx, pubKeyIDStr)
+		pubKeyAuth, errWithCode = f.getPublicKeyDB(ctx, pubKeyIDStr)
 	} else {
 		l.Trace("public key is remote, checking if we need to dereference")
-		pubKeyAuth, errWithCode = f.derefPubKey(ctx, requestedUser, pubKeyIDStr, pubKeyID)
+		pubKeyAuth, errWithCode = f.dereferencePublicKey(ctx, &l, receiver, pubKeyID, pubKeyIDStr)
 	}
 
 	if errWithCode != nil {
@@ -186,7 +191,7 @@ func (f *Federator) AuthenticateFederatedRequest(ctx context.Context, requestedU
 		// Ensure we have instance stored in
 		// database for the account at URI.
 		err := f.fetchAccountInstance(ctx,
-			requestedUser,
+			receiver,
 			pubKeyAuth.OwnerURI,
 		)
 		if err != nil {
@@ -196,18 +201,17 @@ func (f *Federator) AuthenticateFederatedRequest(ctx context.Context, requestedU
 		// If we're currently handshaking with another instance, return
 		// without derefing the owner, the only possible time we do this.
 		// This prevents deadlocks when GTS instances mutually deref.
-		if f.Handshaking(requestedUser, pubKeyAuth.OwnerURI) {
+		if f.Handshaking(receiver, pubKeyAuth.OwnerURI) {
 			log.Warnf(ctx, "network race during %s handshake", pubKeyAuth.OwnerURI)
 			pubKeyAuth.Handshaking = true
 			return pubKeyAuth, nil
 		}
 
 		// Dereference the account located at owner URI.
-		// Use exact URI match, not URL match.
 		pubKeyAuth.Owner, _, err = f.GetAccountByURI(ctx,
-			requestedUser,
+			receiver,
 			pubKeyAuth.OwnerURI,
-			false,
+			false, // tryURL: use exact URI match
 		)
 		if err != nil {
 			// If we couldn't fetch the pub key owner either from
@@ -291,14 +295,11 @@ func keyOwnerFetchError(
 	return gtserror.NewErrorUnauthorized(newErr)
 }
 
-// derefPubKeyDBOnly tries to dereference the given
-// pubKey using only entries already in the database.
+// getPublicKeyDB attempts to fetch public key from
+// an account we already have stored in the database.
 //
-// In case of a db or URL error, will return the error.
-//
-// In case an entry for the pubKey owner just doesn't
-// exist in the db (yet), will return nil, nil.
-func (f *Federator) derefPubKeyDBOnly(
+// if account does not exist, (nil, nil) is returned.
+func (f *Federator) getPublicKeyDB(
 	ctx context.Context,
 	pubKeyIDStr string,
 ) (
@@ -306,7 +307,8 @@ func (f *Federator) derefPubKeyDBOnly(
 	gtserror.WithCode,
 ) {
 	// Look for pubkey ID owner in the database.
-	owner, err := f.db.GetAccountByPubkeyID(ctx, pubKeyIDStr)
+	owner, err := f.db.GetAccountByPubkeyID(ctx,
+		pubKeyIDStr)
 	if err != nil && !errors.Is(err, db.ErrNoEntries) {
 		err = gtserror.Newf("db error getting account with pubKeyID %s: %w", pubKeyIDStr, err)
 		return nil, gtserror.NewErrorInternalError(err)
@@ -336,22 +338,16 @@ func (f *Federator) derefPubKeyDBOnly(
 // checking in the database, and then (if no entry found, or entry
 // found but pubKey expired) calling the remote pub key URI and
 // extracting the key.
-func (f *Federator) derefPubKey(
+func (f *Federator) dereferencePublicKey(
 	ctx context.Context,
-	requestedUser string,
-	pubKeyIDStr string,
+	l *log.Entry,
+	receiver *gtsmodel.Account,
 	pubKeyID *url.URL,
+	pubKeyIDStr string,
 ) (
 	*PubKeyAuth,
 	gtserror.WithCode,
 ) {
-	l := log.
-		WithContext(ctx).
-		WithFields(kv.Fields{
-			{"requestedUser", requestedUser},
-			{"pubKeyID", pubKeyIDStr},
-		}...)
-
 	// If we've tried to get this pub key before and we
 	// now have a tombstone for it (ie., it's been deleted
 	// from remote), don't try to dereference it again.
@@ -371,7 +367,8 @@ func (f *Federator) derefPubKey(
 
 	// Try a database only deref first. We may already
 	// have the requesting account cached locally.
-	pubKeyAuth, errWithCode := f.derefPubKeyDBOnly(ctx, pubKeyIDStr)
+	pubKeyAuth, errWithCode := f.getPublicKeyDB(ctx,
+		pubKeyIDStr)
 	if errWithCode != nil {
 		return nil, errWithCode
 	}
@@ -393,22 +390,21 @@ func (f *Federator) derefPubKey(
 		l.Trace("public key cached and up to date, no dereference needed")
 		return pubKeyAuth, nil
 	case expired:
-		// This is fairly rare and it may be helpful for
-		// admins to see what's going on, so log at info.
-		l.Infof(
-			"public key was cached, but expired at %s, trying dereference of new public key",
-			pubKeyAuth.Owner.PublicKeyExpiresAt,
-		)
+		// This is fairly rare and it may be helpful for admins to see what's going on, so log at info.
+		l.Infof("public key was cached, but expired at %s, trying dereference of new public key",
+			pubKeyAuth.Owner.PublicKeyExpiresAt)
 	}
 
 	// Make an http call to get the (refreshed) pubkey.
-	pubKeyBytes, errWithCode := f.callForPubKey(ctx, requestedUser, pubKeyID)
+	pubKeyBytes, errWithCode := f.callForPubKey(ctx,
+		receiver, pubKeyID)
 	if errWithCode != nil {
 		return nil, errWithCode
 	}
 
 	// Extract the key and the owner from the response.
-	pubKey, pubKeyOwner, err := parsePubKeyBytes(ctx, pubKeyBytes, pubKeyID)
+	pubKey, pubKeyOwner, err := parsePubKeyBytes(ctx,
+		pubKeyBytes, pubKeyID)
 	if err != nil {
 		err := gtserror.Newf("error parsing public key (%s): %w", pubKeyID, err)
 		return nil, gtserror.NewErrorUnauthorized(err)
@@ -431,12 +427,10 @@ func (f *Federator) derefPubKey(
 	// had an owner stored for it locally. Since
 	// we now successfully refreshed the pub key,
 	// we should update the account to reflect that.
-	owner := pubKeyAuth.Owner
-	owner.PublicKey = pubKeyAuth.FetchedPubKey
-	owner.PublicKeyExpiresAt = time.Time{}
-	if err := f.db.UpdateAccount(
-		ctx,
-		owner,
+	pubKeyAuth.Owner.PublicKey = pubKeyAuth.FetchedPubKey
+	pubKeyAuth.Owner.PublicKeyExpiresAt = time.Time{}
+	if err := f.db.UpdateAccount(ctx,
+		pubKeyAuth.Owner,
 		"public_key",
 		"public_key_expires_at",
 	); err != nil {
@@ -458,18 +452,27 @@ func (f *Federator) derefPubKey(
 // and handling any http errors received in response.
 func (f *Federator) callForPubKey(
 	ctx context.Context,
-	requestedUser string,
+	receiver *gtsmodel.Account,
 	pubKeyID *url.URL,
-) ([]byte, gtserror.WithCode) {
+) (
+	[]byte,
+	gtserror.WithCode,
+) {
+	var username string
+	if receiver != nil {
+		username = receiver.Username
+	}
+
 	// Use a transport to dereference the remote.
 	trans, err := f.transport.NewTransportForUsername(
 
-		// We're on a hot path: don't retry if req fails.
+		// We're on a hot path:
+		// don't retry if req fails.
 		gtscontext.SetFastFail(ctx),
-		requestedUser,
+		username,
 	)
 	if err != nil {
-		err = gtserror.Newf("error creating transport for %s: %w", requestedUser, err)
+		err = gtserror.Newf("error creating transport for %s: %w", username, err)
 		return nil, gtserror.NewErrorInternalError(err)
 	}
 
@@ -509,12 +512,11 @@ func (f *Federator) callForPubKey(
 		// 410 indicates remote public key no longer exists
 		// (account deleted, moved, etc). Add a tombstone to
 		// the db so we can avoid trying to deref it again.
-		tombstone := &gtsmodel.Tombstone{
+		if err := f.db.PutTombstone(ctx, &gtsmodel.Tombstone{
 			ID:     id.NewULID(),
 			Domain: pubKeyID.Host,
 			URI:    pubKeyIDStr,
-		}
-		if err := f.db.PutTombstone(ctx, tombstone); err != nil && !errors.Is(err, db.ErrAlreadyExists) {
+		}); err != nil && !errors.Is(err, db.ErrAlreadyExists) {
 			err := gtserror.Newf("db error adding tombstone for pub key %s: %w", pubKeyIDStr, err)
 			return nil, gtserror.NewErrorInternalError(err)
 		}
@@ -526,13 +528,8 @@ func (f *Federator) callForPubKey(
 		err = gtserror.WithStatusCode(err, http.StatusGone)
 
 	case code != 0:
-		// Other non-zero codes could be
-		// due to some kind of temporary
-		// error so don't insert tombstone.
-		safe = fmt.Sprintf(
-			"error dereferencing public key %s: received HTTP code %d from remote",
-			pubKeyIDStr, code,
-		)
+		// Other non-zero codes could be due to some kind of temporary error so don't insert tombstone.
+		safe = fmt.Sprintf("error dereferencing public key %s: received HTTP code %d from remote", pubKeyIDStr, code)
 		err = gtserror.Newf("%s: %w", safe, err)
 
 	default:
@@ -548,7 +545,7 @@ func (f *Federator) callForPubKey(
 // the database for the given account URI, deref'ing if necessary.
 func (f *Federator) fetchAccountInstance(
 	ctx context.Context,
-	requestedUser string,
+	requester *gtsmodel.Account,
 	accountURI *url.URL,
 ) error {
 	// Look for an existing entry
@@ -571,7 +568,7 @@ func (f *Federator) fetchAccountInstance(
 	// instance yet; go dereference it.
 	instance, err = f.GetRemoteInstance(
 		gtscontext.SetFastFail(ctx),
-		requestedUser,
+		requester,
 		&url.URL{
 			Scheme: accountURI.Scheme,
 			Host:   accountURI.Host,

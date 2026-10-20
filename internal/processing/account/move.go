@@ -120,15 +120,11 @@ func (p *Processor) MoveSelf(
 	unlock := p.state.ProcessingLocks.Lock(lockKey)
 	defer unlock()
 
-	// Ensure we have a valid, up-to-date
-	// representation of the target account.
-	//
-	// Match by uri only.
-	targetAcct, targetAcctable, err = p.federator.GetAccountByURI(
-		ctx,
-		originAcct.Username,
+	// Ensure we have a valid, up-to-date target account dereferenced.
+	targetAcct, targetAcctable, err = p.federator.GetAccountByURI(ctx,
+		originAcct,
 		targetAcctURI,
-		false,
+		false, // tryURL
 	)
 	if err != nil {
 		const text = "error dereferencing moved_to_uri"
@@ -137,11 +133,8 @@ func (p *Processor) MoveSelf(
 	}
 
 	if !targetAcct.SuspendedAt.IsZero() {
-		text := fmt.Sprintf(
-			"target account %s is suspended from this instance; "+
-				"you will not be able to Move to that account",
-			targetAcct.URI,
-		)
+		text := fmt.Sprintf("target account %s is suspended from this instance; "+
+			"you will not be able to Move to that account", targetAcct.URI)
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
@@ -150,7 +143,7 @@ func (p *Processor) MoveSelf(
 		// force refresh Move target account to ensure we
 		// have most up-to-date version (non remote = no-op).
 		targetAcct, _, err = p.federator.RefreshAccount(ctx,
-			originAcct.Username,
+			originAcct,
 			targetAcct,
 			targetAcctable,
 			&dereferencing.Freshest,
@@ -166,32 +159,24 @@ func (p *Processor) MoveSelf(
 	// this move reattempt is to the same account.
 	if originAcct.IsMoving() &&
 		originAcct.MovedToURI != targetAcct.URI {
-		text := fmt.Sprintf(
-			"your account is already Moving or has Moved to %s; you cannot also Move to %s",
-			originAcct.MovedToURI, targetAcct.URI,
-		)
+		text := fmt.Sprintf("your account is already Moving or has Moved to %s; you cannot also Move to %s",
+			originAcct.MovedToURI, targetAcct.URI)
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
 	// Target account MUST be aliased to this
 	// account for this to be a valid Move.
 	if !slices.Contains(targetAcct.AlsoKnownAsURIs, originAcct.URI) {
-		text := fmt.Sprintf(
-			"target account %s is not aliased to this account via alsoKnownAs; "+
-				"if you just changed it, please wait a few minutes and try the Move again",
-			targetAcct.URI,
-		)
+		text := fmt.Sprintf("target account %s is not aliased to this account via alsoKnownAs; "+
+			"if you just changed it, please wait a few minutes and try the Move again", targetAcct.URI)
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
 	// Target account cannot itself have
 	// already Moved somewhere else.
 	if targetAcct.MovedToURI != "" {
-		text := fmt.Sprintf(
-			"target account %s has already Moved somewhere else (%s); "+
-				"you will not be able to Move to that account",
-			targetAcct.URI, targetAcct.MovedToURI,
-		)
+		text := fmt.Sprintf("target account %s has already Moved somewhere else (%s); "+
+			"you will not be able to Move to that account", targetAcct.URI, targetAcct.MovedToURI)
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
@@ -210,20 +195,15 @@ func (p *Processor) MoveSelf(
 		ctx, originAcct.URI, targetAcct.URI,
 	)
 	if err != nil {
-		err := gtserror.Newf(
-			"error checking latest Move attempt involving origin %s and target %s: %w",
-			originAcct.URI, targetAcct.URI, err,
-		)
+		err := gtserror.Newf("error checking latest Move attempt involving origin %s and target %s: %w",
+			originAcct.URI, targetAcct.URI, err)
 		return gtserror.NewErrorInternalError(err)
 	}
 
 	if !latestMoveAttempt.IsZero() &&
 		time.Since(latestMoveAttempt) < 5*time.Minute {
-		text := fmt.Sprintf(
-			"your account or target account have been involved in a Move attempt within "+
-				"the last 5 minutes, will not process Move; please try again after %s",
-			latestMoveAttempt.Add(5*time.Minute),
-		)
+		text := fmt.Sprintf("your account or target account have been involved in a Move attempt within "+
+			"the last 5 minutes, will not process Move; please try again after %s", latestMoveAttempt.Add(5*time.Minute))
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 
@@ -234,20 +214,15 @@ func (p *Processor) MoveSelf(
 		ctx, originAcct.URI, targetAcct.URI,
 	)
 	if err != nil {
-		err := gtserror.Newf(
-			"error checking latest Move success involving origin %s and target %s: %w",
-			originAcct.URI, targetAcct.URI, err,
-		)
+		err := gtserror.Newf("error checking latest Move success involving origin %s and target %s: %w",
+			originAcct.URI, targetAcct.URI, err)
 		return gtserror.NewErrorInternalError(err)
 	}
 
 	if !latestMoveSuccess.IsZero() &&
 		time.Since(latestMoveSuccess) < 168*time.Hour {
-		text := fmt.Sprintf(
-			"your account or target account have been involved in a successful Move within "+
-				"the last 7 days, will not process Move; please try again after %s",
-			latestMoveSuccess.Add(168*time.Hour),
-		)
+		text := fmt.Sprintf("your account or target account have been involved in a successful Move within "+
+			"the last 7 days, will not process Move; please try again after %s", latestMoveSuccess.Add(168*time.Hour))
 		return gtserror.NewErrorUnprocessableEntity(errors.New(text), text)
 	}
 

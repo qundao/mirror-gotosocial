@@ -302,13 +302,10 @@ func (p *fediAPI) MoveAccount(ctx context.Context, fMsg *messages.FromFediAPI) e
 	}
 
 	// Account to which the Move is taking place.
-	//
-	// Match by uri only.
-	targetAcct, targetAcctable, err := p.federate.GetAccountByURI(
-		ctx,
-		fMsg.Receiving.Username,
+	targetAcct, targetAcctable, err := p.federate.GetAccountByURI(ctx,
+		fMsg.Receiving,
 		targetAcctURI,
-		false,
+		false, // tryURL
 	)
 	if err != nil {
 		return gtserror.Newf(
@@ -339,7 +336,7 @@ func (p *fediAPI) MoveAccount(ctx context.Context, fMsg *messages.FromFediAPI) e
 		// Force refresh Move target account
 		// to ensure we have up-to-date version.
 		targetAcct, _, err = p.federate.RefreshAccount(ctx,
-			fMsg.Receiving.Username,
+			fMsg.Receiving,
 			targetAcct,
 			targetAcctable,
 			&dereferencing.Freshest,

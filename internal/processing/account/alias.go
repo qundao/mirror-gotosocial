@@ -76,19 +76,14 @@ func (p *Processor) Alias(
 	for i, newAKAURIStr := range newAKAURIStrs {
 		newAKAURI, err := url.Parse(newAKAURIStr)
 		if err != nil {
-			err := fmt.Errorf(
-				"invalid also_known_as_uri (%s) provided in account alias request: %w",
-				newAKAURIStr, err,
-			)
+			err := fmt.Errorf("invalid also_known_as_uri (%s) provided in account alias request: %w", newAKAURIStr, err)
 			return nil, gtserror.NewErrorBadRequest(err, err.Error())
 		}
 
 		// We only deref http or https, so check this.
 		if newAKAURI.Scheme != "https" && newAKAURI.Scheme != "http" {
-			err := fmt.Errorf(
-				"invalid also_known_as_uri (%s) provided in account alias request: %w",
-				newAKAURIStr, errors.New("uri must not be empty and scheme must be http or https"),
-			)
+			err := fmt.Errorf("invalid also_known_as_uri (%s) provided in account alias request: %w",
+				newAKAURIStr, errors.New("uri must not be empty and scheme must be http or https"))
 			return nil, gtserror.NewErrorBadRequest(err, err.Error())
 		}
 
@@ -106,31 +101,21 @@ func (p *Processor) Alias(
 			continue
 		}
 
-		// Ensure we have account dereferenced.
-		//
-		// As this comes from user input, allow checking
-		// by URL to make things easier, not just to an
-		// exact AP URI (which a user might not even know).
+		// Ensure account is dereferenced, permitting URL lookup.
 		targetAccount, _, err := p.federator.GetAccountByURI(ctx,
-			account.Username,
+			account,
 			newAKA.uri,
-			true,
+			true, // tryURL
 		)
 		if err != nil {
-			err := fmt.Errorf(
-				"error dereferencing also_known_as_uri (%s) account: %w",
-				newAKA.str, err,
-			)
+			err := fmt.Errorf("error dereferencing also_known_as_uri (%s) account: %w", newAKA.str, err)
 			return nil, gtserror.NewErrorUnprocessableEntity(err, err.Error())
 		}
 
 		// Target must not be suspended.
 		if !targetAccount.SuspendedAt.IsZero() {
-			err := fmt.Errorf(
-				"target account %s is suspended from this instance; "+
-					"you will not be able to set alsoKnownAs to that account",
-				newAKA.str,
-			)
+			err := fmt.Errorf("target account %s is suspended from this instance; "+
+				"you will not be able to set alsoKnownAs to that account", newAKA.str)
 			return nil, gtserror.NewErrorUnprocessableEntity(err, err.Error())
 		}
 

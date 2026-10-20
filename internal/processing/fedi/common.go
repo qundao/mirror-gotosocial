@@ -36,8 +36,8 @@ type commonAuth struct {
 // authenticate is a util function for authenticating a signed GET
 // request to one of the AP/fedi resources handled in this package.
 func (p *Processor) authenticate(ctx context.Context, requestedUser string) (*commonAuth, gtserror.WithCode) {
-	// Get the requested local account
-	// with given username from database.
+
+	// Get the requested local account with given username from database.
 	receiver, err := p.state.DB.GetAccountByUsernameDomain(ctx, requestedUser, "")
 	if err != nil && !errors.Is(err, db.ErrNoEntries) {
 		err = gtserror.Newf("db error getting account %s: %w", requestedUser, err)
@@ -49,9 +49,8 @@ func (p *Processor) authenticate(ctx context.Context, requestedUser string) (*co
 		return nil, gtserror.NewErrorNotFound(err)
 	}
 
-	// Ensure request signed, and use signature URI to
-	// get requesting account, dereferencing if necessary.
-	pubKeyAuth, errWithCode := p.federator.AuthenticateFederatedRequest(ctx, requestedUser)
+	// Ensure request signed, and use signature URI to dereference requesting account.
+	pubKeyAuth, errWithCode := p.federator.AuthenticateFederatedRequest(ctx, receiver)
 	if errWithCode != nil {
 		return nil, errWithCode
 	}

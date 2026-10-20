@@ -86,7 +86,7 @@ func (suite *InstanceTestSuite) TestDerefInstance() {
 	} {
 		instance, err := testStructs.Federator.Dereferencer.GetRemoteInstance(
 			gtscontext.SetFastFail(ctx),
-			suite.testAccounts["admin_account"].Username,
+			suite.testAccounts["admin_account"],
 			tc.instanceIRI,
 		)
 		if err != nil {

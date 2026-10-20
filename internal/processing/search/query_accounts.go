@@ -169,7 +169,7 @@ func (p *Processor) getAccountByURI(
 	if resolve {
 		// Resolve was set, we can dereference by URI / URL.
 		account, _, err = p.federator.GetAccountByURI(ctx,
-			requester.Username,
+			requester,
 			uri,
 			true,
 		)
@@ -242,7 +242,7 @@ func (p *Processor) getAccountByUsernameDomain(
 	if resolve {
 		// Resolve was set, we can dereference by username @ domain.
 		account, _, err = p.federator.GetAccountByUsernameDomain(ctx,
-			requester.Username,
+			requester,
 			username,
 			domain,
 		)

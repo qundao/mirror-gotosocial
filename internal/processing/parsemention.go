@@ -79,18 +79,9 @@ func GetParseMentionFunc(state *state.State, federator *federation.Federator) gt
 				)
 			}
 		} else {
-			// If origin account is local, use
-			// it to do potential dereference.
-			// Else fallback to empty string,
-			// which uses instance account.
-			var requestUser string
-			if originAcct.IsLocal() {
-				requestUser = originAcct.Username
-			}
-
 			targetAcct, _, err = federator.GetAccountByUsernameDomain(
 				gtscontext.SetFastFail(ctx),
-				requestUser,
+				originAcct,
 				targetUsername,
 				targetHost,
 			)

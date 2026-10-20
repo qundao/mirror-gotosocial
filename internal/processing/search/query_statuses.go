@@ -163,7 +163,7 @@ func (p *Processor) getStatusByURI(
 	if resolve {
 		// Resolve was set, we can dereference by URI / URL.
 		status, _, err = p.federator.GetStatusByURI(ctx,
-			requester.Username,
+			requester,
 			url,
 		)
 		if err != nil {

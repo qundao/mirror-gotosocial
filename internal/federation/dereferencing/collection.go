@@ -25,15 +25,23 @@ import (
 	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 )
 
 // dereferenceCollectionPage returns the activitystreams Collection at the specified IRI, or an error if something goes wrong.
-func (d *Dereferencer) dereferenceCollection(ctx context.Context, username string, pageIRI *url.URL) (ap.CollectionIterator, error) {
+func (d *Dereferencer) dereferenceCollection(
+	ctx context.Context,
+	requester *gtsmodel.Account,
+	pageIRI *url.URL,
+) (
+	ap.CollectionIterator,
+	error,
+) {
 	if blocked, err := d.state.DB.IsDomainBlocked(ctx, pageIRI.Host); blocked || err != nil {
 		return nil, gtserror.Newf("domain %s is blocked", pageIRI.Host)
 	}
 
-	transport, err := d.transportController.NewTransportForUsername(ctx, username)
+	transport, err := d.transportController.NewTransportForUsername(ctx, requester.Username)
 	if err != nil {
 		return nil, gtserror.Newf("error creating transport: %w", err)
 	}
@@ -56,12 +64,19 @@ func (d *Dereferencer) dereferenceCollection(ctx context.Context, username strin
 }
 
 // dereferenceCollectionPage returns the activitystreams CollectionPage at the specified IRI, or an error if something goes wrong.
-func (d *Dereferencer) dereferenceCollectionPage(ctx context.Context, username string, pageIRI *url.URL) (ap.CollectionPageIterator, error) {
+func (d *Dereferencer) dereferenceCollectionPage(
+	ctx context.Context,
+	requester *gtsmodel.Account,
+	pageIRI *url.URL,
+) (
+	ap.CollectionPageIterator,
+	error,
+) {
 	if blocked, err := d.state.DB.IsDomainBlocked(ctx, pageIRI.Host); blocked || err != nil {
 		return nil, gtserror.Newf("domain %s is blocked", pageIRI.Host)
 	}
 
-	transport, err := d.transportController.NewTransportForUsername(ctx, username)
+	transport, err := d.transportController.NewTransportForUsername(ctx, requester.Username)
 	if err != nil {
 		return nil, gtserror.Newf("error creating transport: %w", err)
 	}
