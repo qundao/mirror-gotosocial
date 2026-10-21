@@ -5,7 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
@@ -102,7 +101,8 @@ func (suite *CleanerTestSuite) testEmojiUncacheRemote(ctx context.Context, emoji
 	t := suite.T()
 
 	// Get max remote cache days to keep.
-	olderThan := config.GetMediaRemoteCacheOlderThanTime(time.Now())
+	rtConf := suite.state.DB.RuntimeConfig(ctx)
+	olderThan := rtConf.GetMediaRemoteCacheOlderThanTime(time.Now())
 
 	for _, emoji := range emojis {
 		// Check whether this emoji should be uncached.

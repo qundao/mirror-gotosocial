@@ -304,7 +304,7 @@ func Start(ctx context.Context) error {
 	cleaner := cleaner.New(state)
 
 	// Schedule background cleaning tasks.
-	if err := cleaner.ScheduleJobs(); err != nil {
+	if err := cleaner.ScheduleJobs(ctx); err != nil {
 		return fmt.Errorf("error scheduling cleaner jobs: %w", err)
 	}
 
@@ -316,7 +316,7 @@ func Start(ctx context.Context) error {
 	)
 
 	// Schedule background subscriptions updating.
-	if err := subscriptions.ScheduleJobs(); err != nil {
+	if err := subscriptions.ScheduleJobs(ctx); err != nil {
 		return fmt.Errorf("error scheduling subscriptions jobs: %w", err)
 	}
 

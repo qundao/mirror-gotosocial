@@ -249,6 +249,9 @@ type DBCaches struct {
 	// RelaySubscription provides access to the gtsmodel RelaySubscription database cache.
 	RelaySubscription StructCache[*gtsmodel.RelaySubscription]
 
+	// RuntimeConfig gives access to this instance's runtime config pointer.
+	RuntimeConfig atomic.Pointer[gtsmodel.RuntimeConfig]
+
 	// ScheduledStatus provides access to the gtsmodel ScheduledStatus database cache.
 	ScheduledStatus StructCache[*gtsmodel.ScheduledStatus]
 

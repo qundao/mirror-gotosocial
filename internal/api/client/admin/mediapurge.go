@@ -51,10 +51,10 @@ import (
 //		- admin:write
 //
 //	responses:
-//		'200':
+//		'202':
 //			description: >-
-//				Echos the domain requested.
-//				The purge is performed asynchronously after the request completes.
+//				Request accepted and will be processed.
+//				Check the logs for progress / errors.
 //		'400':
 //			schema:
 //				"$ref": "#/definitions/error"
@@ -123,5 +123,5 @@ func (m *Module) MediaPurgePOSTHandler(c *httputil.Context) {
 		return
 	}
 
-	httputil.JSON(c, http.StatusOK, form.Domain)
+	httputil.Data(c, http.StatusAccepted, apiutil.AppJSON, apiutil.StatusAcceptedJSON)
 }

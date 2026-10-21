@@ -55,7 +55,8 @@ func PruneAll(ctx context.Context) error {
 	now := time.Now()
 
 	// Get media maximum remote cache duration.
-	dur := config.GetMediaRemoteCacheDuration()
+	rtConf := prune.state.DB.RuntimeConfig(ctx)
+	dur := rtConf.MediaRemoteCacheDuration
 
 	// Perform the actual pruning with logging.
 	prune.cleaner.Media().AllAndFix(ctx, now, dur)

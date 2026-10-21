@@ -17,8 +17,6 @@
 
 package config
 
-import "time"
-
 func GetHTTPClientOutgoingScheme() (schema string) {
 	if GetHTTPClientInsecureOutgoing() {
 		return "http://"
@@ -35,14 +33,4 @@ func GetInstanceDirectoryWebEnabled() bool {
 	default:
 		return false
 	}
-}
-
-func GetMediaRemoteCacheOlderThanTime(now time.Time) time.Time {
-	_, dur := GetMediaRemoteCacheDuration().Duration()
-	return now.Add(-dur)
-}
-
-func GetStatusesCleanupRemoteOlderThanTime(now time.Time) time.Time {
-	_, dur := GetStatusesCleanupRemoteOlderThan().Duration()
-	return now.Add(-dur)
 }

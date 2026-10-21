@@ -64,6 +64,10 @@ type DBService struct {
 	db.Relay
 	db.Report
 	db.Rule
+	// RuntimeConfigDB has a function
+	// called RuntimeConfig so we have
+	// to fudge the naming a bit here.
+	db.RuntimeConfigDB
 	db.ScheduledStatus
 	db.Search
 	db.Session
@@ -258,6 +262,10 @@ func NewBunDBService(ctx context.Context, state *state.State) (db.DB, error) {
 			state: state,
 		},
 		Rule: &ruleDB{
+			db:    db,
+			state: state,
+		},
+		RuntimeConfigDB: &runtimeConfigDB{
 			db:    db,
 			state: state,
 		},

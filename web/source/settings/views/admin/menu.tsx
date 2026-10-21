@@ -26,6 +26,7 @@ import { useHasPermission } from "../../lib/navigation/util";
 */
 
 /**
+ * - /settings/admin/config
  * - /settings/admin/instance/settings
  * - /settings/admin/instance/rules
  * - /settings/admin/instance/rules/:ruleId
@@ -60,6 +61,7 @@ export default function AdminMenu() {
 			defaultChild="actions"
 			permissions={permissions}
 		>
+			<AdminConfigMenu />
 			<AdminInstanceMenu />
 			<AdminEmojisMenu />
 			<AdminRelaySubscriptionsMenu />
@@ -75,6 +77,23 @@ export default function AdminMenu() {
 /*
 	INTERNAL COMPONENTS
 */
+
+function AdminConfigMenu() {
+	return (
+		<MenuItem
+			name="Config"
+			itemUrl="config"
+			defaultChild=""
+			icon="fa-cogs"
+		>
+			<MenuItem
+				name="Jobs"
+				itemUrl="jobs"
+				default
+			/>
+		</MenuItem>
+	)
+}
 
 function AdminInstanceMenu() {
 	return (

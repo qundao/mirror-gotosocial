@@ -19,10 +19,10 @@ cleanup() {
 trap cleanup INT TERM EXIT
 
 # Regenerate the Swagger spec and compare it to the working copy.
-swagger_cmd generate spec --scan-models --exclude-deps --output "${regenerated_swagger_spec}"
+swagger_cmd generate spec --scan-models --output "${regenerated_swagger_spec}"
 if ! diff -u "${swagger_spec}" "${regenerated_swagger_spec}" > /dev/null; then
   echo "${swagger_spec} is out of date. Please run the following command to update it:" >&2
-  echo "  go run ./vendor/github.com/go-swagger/go-swagger/cmd/swagger generate spec --scan-models --exclude-deps --output ${swagger_spec}" >&2
+  echo "  go run ./vendor/github.com/go-swagger/go-swagger/cmd/swagger generate spec --scan-models --output ${swagger_spec}" >&2
   exit 1
 fi
 

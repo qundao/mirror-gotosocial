@@ -19,13 +19,13 @@ package statuses
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/cmd/gotosocial/action"
 	"code.superseriousbusiness.org/gotosocial/internal/cleaner"
-	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/db/bundb"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 )
@@ -44,9 +44,10 @@ func PruneLeafStubs(ctx context.Context) error {
 
 func PruneOldRemote(ctx context.Context) error {
 	return do(ctx, func(p *pruner) error {
-		_, dur := config.GetStatusesCleanupRemoteOlderThan().Duration()
+		rtConf := p.state.DB.RuntimeConfig(ctx)
+		_, dur := rtConf.StatusesCleanupRemoteOlderThan.Duration()
 		if dur == 0 {
-			return fmt.Errorf("%s = 0, no statuses to cleanup", config.StatusesCleanupRemoteOlderThanFlag)
+			return errors.New("StatusesCleanupRemoteOlderThan = 0, no statuses to cleanup")
 		}
 		olderThan := time.Now().Add(-dur)
 		p.cleaner.Status().LogPruneOldRemote(ctx, olderThan, 0)

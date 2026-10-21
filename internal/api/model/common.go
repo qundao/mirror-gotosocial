@@ -19,31 +19,28 @@ package model
 
 import (
 	"errors"
-	"strconv"
 	"unsafe"
 
 	"codeberg.org/gruf/go-longdur"
 )
 
-// DurationOrDays wraps a longdur.Duration type to also
-// support unmarshaling direct integers as day counts.
-// The zero value is (un)marshaled as JSON null or empty.
+// HumanReadableDuration wraps a longdur.Duration
+// type to support marshalling and unmarshalling as
+// human-readable duration strings, eg., "10 days" etc.
 //
-// NOTE: this type largely exists as a transitionary type
-// to handle our older API calls requiring integer number
-// of days, while a "longdur" is much more flexible.
-type DurationOrDays struct{ longdur.Duration }
+// Important: marshalled HumanReadableDuration will
+// always use longdur.Duration.StringApprox() to avoid
+// cases where a caller provides a value like "1 month"
+// and the API returns "4 weeks 2 days" or similar.
+type HumanReadableDuration struct{ longdur.Duration }
 
 // MarshalJSON: implements json.Marshaler{}.
-func (d DurationOrDays) MarshalJSON() ([]byte, error) {
-	if d.Duration == 0 {
-		return []byte("null"), nil
-	}
-	return []byte("\"" + d.String() + "\""), nil
+func (d HumanReadableDuration) MarshalJSON() ([]byte, error) {
+	return []byte("\"" + d.StringApprox() + "\""), nil
 }
 
 // UnmarshalJSON: implements json.Unmarshaler{}.
-func (d *DurationOrDays) UnmarshalJSON(data []byte) error {
+func (d *HumanReadableDuration) UnmarshalJSON(data []byte) error {
 	if len(data) >= 2 && data[0] == '"' && data[len(data)-1] == '"' {
 		data = data[1 : len(data)-1]
 	}
@@ -51,25 +48,23 @@ func (d *DurationOrDays) UnmarshalJSON(data []byte) error {
 }
 
 // MarshalText: implements encoding.TextMarshaler{}.
-func (d DurationOrDays) MarshalText() ([]byte, error) {
-	if d.Duration == 0 {
-		return []byte(""), nil
-	}
-	return d.Duration.MarshalText()
+func (d HumanReadableDuration) MarshalText() ([]byte, error) {
+	return []byte(d.Duration.StringApprox()), nil
 }
 
 // UnmarshalText: implements encoding.TextUmarshaler{}.
-func (d *DurationOrDays) UnmarshalText(text []byte) error {
+func (d *HumanReadableDuration) UnmarshalText(text []byte) error {
 	return d.unmarshalb(text)
 }
 
 // UnmarshalParam: implements binding.BindUnmarshaler{}.
-func (d *DurationOrDays) UnmarshalParam(param string) error {
+func (d *HumanReadableDuration) UnmarshalParam(param string) error {
 	return d.unmarshal(param)
 }
 
-// unmarshalb converts byte slice to string (with length check) and calls d.unmarshal().
-func (d *DurationOrDays) unmarshalb(b []byte) error {
+// unmarshalb converts byte slice to string
+// (with length check) and calls d.unmarshal().
+func (d *HumanReadableDuration) unmarshalb(b []byte) error {
 	if len(b) == 0 {
 		return errors.New("invalid duration")
 	} else if string(b) == "null" {
@@ -79,19 +74,9 @@ func (d *DurationOrDays) unmarshalb(b []byte) error {
 	return d.unmarshal(unsafe.String(&b[0], len(b)))
 }
 
-// unmarshal attempts to unmarshal string as either integer, or string encoded duration.
-func (d *DurationOrDays) unmarshal(str string) error {
-
-	// Initially, try to parse as an integer.
-	i, err := strconv.ParseUint(str, 10, 64)
-	if err == nil {
-
-		// Set number of days from integer provided.
-		d.Duration = longdur.Duration(i) * longdur.Day
-		return nil
-	}
-
-	// Parse this as a duration.
+// unmarshal attempts to unmarshal
+// string as string encoded duration.
+func (d *HumanReadableDuration) unmarshal(str string) error {
 	return d.Duration.Set(str)
 }
 

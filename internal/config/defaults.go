@@ -23,7 +23,6 @@ import (
 
 	"code.superseriousbusiness.org/gotosocial/internal/language"
 	"codeberg.org/gruf/go-bytesize"
-	"codeberg.org/gruf/go-longdur"
 )
 
 // Defaults contains a populated Configuration with reasonable defaults. Note that
@@ -71,18 +70,17 @@ var Defaults = Configuration{
 	WebTemplateBaseDir: "./web/template/",
 	WebAssetBaseDir:    "./web/assets/",
 
-	InstanceFederationMode:           InstanceFederationModeDefault,
-	InstanceFederationSpamFilter:     false,
-	InstanceExposePeers:              false,
-	InstanceExposeBlocklist:          false,
-	InstanceExposeBlocklistWeb:       false,
-	InstanceExposeCustomEmojis:       false,
-	InstanceDeliverToSharedInboxes:   true,
-	InstanceLanguages:                make(language.Languages, 0),
-	InstanceSubscriptionsProcessCron: MustParseCron("0 23 * * *"), // daily at 11pm
-	InstanceAllowBackdatingStatuses:  true,
-	InstanceDirectoryMode:            InstanceDirectoryModeWebOnly,
-	InstanceRobotsAllowIndexing:      false,
+	InstanceFederationMode:          InstanceFederationModeDefault,
+	InstanceFederationSpamFilter:    false,
+	InstanceExposePeers:             false,
+	InstanceExposeBlocklist:         false,
+	InstanceExposeBlocklistWeb:      false,
+	InstanceExposeCustomEmojis:      false,
+	InstanceDeliverToSharedInboxes:  true,
+	InstanceLanguages:               make(language.Languages, 0),
+	InstanceAllowBackdatingStatuses: true,
+	InstanceDirectoryMode:           InstanceDirectoryModeWebOnly,
+	InstanceRobotsAllowIndexing:     false,
 
 	AccountsRegistrationOpen:         false,
 	AccountsReasonRequired:           true,
@@ -101,8 +99,6 @@ var Defaults = Configuration{
 		EmojiRemoteMaxSize:  100 * bytesize.KiB,
 		FfmpegPoolSize:      1,
 		ThumbMaxPixels:      512,
-		RemoteCacheDuration: 7 * longdur.Day,
-		CleanupCron:         MustParseCron("0 0 * * *"), // daily at 0am
 	},
 
 	StorageBackend:        "local",
@@ -112,12 +108,10 @@ var Defaults = Configuration{
 	StorageS3RedirectURL:  "",
 	StorageS3BucketLookup: "auto",
 
-	StatusesMaxChars:               5000,
-	StatusesPollMaxOptions:         6,
-	StatusesPollOptionMaxChars:     50,
-	StatusesMediaMaxFiles:          6,
-	StatusesCleanupCron:            MustParseCron("0 1 * * 0"), // weekly at 1am
-	StatusesCleanupRemoteOlderThan: 0,
+	StatusesMaxChars:           5000,
+	StatusesPollMaxOptions:     6,
+	StatusesPollOptionMaxChars: 50,
+	StatusesMediaMaxFiles:      6,
 
 	ScheduledStatusesMaxTotal: 300,
 	ScheduledStatusesMaxDaily: 25,

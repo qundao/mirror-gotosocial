@@ -193,9 +193,9 @@ type AdminActionResponse struct {
 //
 // swagger:parameters mediaCleanup
 type MediaCleanupRequest struct {
-	// Integer number of days, or duration string, of duration of remote media to keep.
-	// If value is not specified, the value of media-remote-cache-days in the server config will be used.
-	RemoteCacheDays DurationOrDays `form:"remote_cache_days" json:"remote_cache_days" xml:"remote_cache_days"`
+	// Duration for remote media cache.
+	// If value is not specified, the value of media_remote_cache_duration in the server runtime config will be used.
+	MediaRemoteCacheDuration HumanReadableDuration `form:"media_remote_cache_duration" json:"media_remote_cache_duration" xml:"media_remote_cache_duration"`
 }
 
 // MediaPurgeRequest models admin media purge parameters
@@ -330,4 +330,45 @@ type AdminInstanceDeliveryError struct {
 	// Message for this delivery error.
 	// example: boobs
 	Error string `json:"error"`
+}
+
+// AdminRuntimeConfig models runtime configuration
+// of the instance for use in the admin config API.
+//
+// swagger:model adminRuntimeConfig
+type AdminRuntimeConfig struct {
+	// Default every night at 11pm.
+	//
+	// swagger:parameters
+	// example: 0 23 * * *
+	InstanceSubscriptionsProcessCron *string `json:"instance_subscriptions_process_cron" form:"instance_subscriptions_process_cron"`
+
+	// Default every night at midnight.
+	//
+	// example: 0 0 * * *
+	MediaCleanupCron *string `json:"media_cleanup_cron" form:"media_cleanup_cron"`
+
+	// Duration defining how long to locally cache media from remote instances (zero keeps indefinitely).
+	//
+	// Default 1 day.
+	//
+	// example: 1 day
+	MediaRemoteCacheDuration *HumanReadableDuration `json:"media_remote_cache_duration" form:"media_remote_cache_duration"`
+
+	// Default every Sunday at 1am.
+	//
+	// example: 0 1 * * 0
+	StatusesCleanupCron *string `json:"statuses_cleanup_cron" form:"statuses_cleanup_cron"`
+
+	// Duration defining status age beyond which to clean.
+	//
+	// Default 0 (disabled).
+	//
+	// example: 0
+	StatusesCleanupRemoteOlderThan *HumanReadableDuration `json:"statuses_cleanup_remote_older_than" form:"statuses_cleanup_remote_older_than"`
+}
+
+// swagger:parameters adminRuntimeConfigUpdate
+type AdminRuntimeConfigUpdate struct {
+	AdminRuntimeConfig
 }

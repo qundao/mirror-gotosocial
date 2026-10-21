@@ -81,7 +81,6 @@ nano docker-compose.yaml
     config.yaml 文件中记录了许多其他配置选项，你可以使用这些选项进一步自定义你的 GoToSocial 实例的行为。尽可能使用合理的默认设置，因此不一定需要立即对它们进行更改，但以下几个可能会感兴趣：
     
     - `GTS_INSTANCE_LANGUAGES`：确定你实例首选语言的 [BCP47 语言标签](https://en.wikipedia.org/wiki/IETF_language_tag)数组。
-    - `GTS_MEDIA_REMOTE_CACHE_DAYS`：在存储中保持外站媒体缓存的天数。
     - `GTS_SMTP_*`：允许你的 GoToSocial 实例连接到电子邮件服务器并发送通知电子邮件的设置。
 
     如果你决定稍后设置/更改这些变量，请确保在更改后重新创建 GoToSocial 实例容器。

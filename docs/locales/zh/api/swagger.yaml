@@ -7504,7 +7504,7 @@ paths:
                     若未指定值，则将使用服务器配置中的 media-remote-cache-days 的值。
                   format: int64
                   in: query
-                  name: remote_cache_days
+                  name: media_remote_cache_duration
                   type: integer
                   x-go-name: RemoteCacheDays
             produces:

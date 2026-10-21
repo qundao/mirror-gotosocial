@@ -23,7 +23,6 @@ import (
 	"unsafe"
 
 	"code.superseriousbusiness.org/gopkg/log"
-	"code.superseriousbusiness.org/gotosocial/internal/config"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
@@ -117,35 +116,35 @@ func (c *Cleaner) removeFiles(ctx context.Context, files ...string) {
 
 // ScheduleJobs schedules cleaning
 // jobs using configured parameters.
-func (c *Cleaner) ScheduleJobs() error {
-	var expr config.CronExpression
+func (c *Cleaner) ScheduleJobs(ctx context.Context) error {
+	// Schedule media cleanup.
+	rtConf := c.state.DB.RuntimeConfig(ctx)
+	expr := rtConf.MediaCleanupCron
 
-	expr = config.GetMediaCleanupCron()
-	log.Infof(nil, "scheduling media cleanup: %s", expr.Expr)
+	// Cancel any existing job.
+	const mcTaskID = "@mediacleanup"
+	c.state.Workers.Scheduler.Cancel(mcTaskID)
 
-	// Schedule media cleaning by expr.
-	if !c.state.Workers.Scheduler.Add(
-		"@mediacleanup",
-		c.cleanMedia,
-		expr,
-	) {
-		panic("failed to schedule @mediacleanup")
+	// Schedule new job.
+	log.Infof(ctx, "scheduling media cleanup: %s", expr.Expr)
+	if !c.state.Workers.Scheduler.Add(mcTaskID, c.cleanMedia, expr) {
+		return gtserror.New("failed to schedule " + mcTaskID)
 	}
 
-	if _, dur := config.GetStatusesCleanupRemoteOlderThan().Duration(); dur > 0 {
-		expr = config.GetStatusesCleanupCron()
-		log.Infof(nil, "scheduling statuses cleanup: %s", expr.Expr)
+	// Schedule statuses cleanup.
+	// Cancel any existing job.
+	const scTaskID = "@statuscleanup"
+	c.state.Workers.Scheduler.Cancel(scTaskID)
+	if _, dur := rtConf.StatusesCleanupRemoteOlderThan.Duration(); dur <= 0 {
+		log.Infof(ctx, "skipping statuses cleanup scheduling, as statuses-cleanup-remote-older-than <= 0")
+		return nil
+	}
 
-		// Schedule status cleaning by expr.
-		if !c.state.Workers.Scheduler.Add(
-			"@statuscleanup",
-			c.cleanStatuses,
-			expr,
-		) {
-			panic("failed to schedule @statuscleanup")
-		}
-	} else {
-		log.Infof(nil, "skipping statuses cleanup scheduling, as statuses-cleanup-remote-older-than <= 0")
+	// Schedule new job.
+	expr = rtConf.StatusesCleanupCron
+	log.Infof(ctx, "scheduling statuses cleanup: %s", expr.Expr)
+	if !c.state.Workers.Scheduler.Add(scTaskID, c.cleanStatuses, expr) {
+		return gtserror.New("failed to schedule " + scTaskID)
 	}
 
 	return nil
@@ -153,14 +152,16 @@ func (c *Cleaner) ScheduleJobs() error {
 
 func (c *Cleaner) cleanMedia(ctx context.Context, start time.Time) {
 	log.Info(ctx, "starting")
-	c.Media().All(ctx, start, config.GetMediaRemoteCacheDuration())
-	c.Emoji().All(ctx, start, config.GetMediaRemoteCacheDuration())
+	rtConf := c.state.DB.RuntimeConfig(ctx)
+	c.Media().All(ctx, start, rtConf.MediaRemoteCacheDuration)
+	c.Emoji().All(ctx, start, rtConf.MediaRemoteCacheDuration)
 	log.Infof(ctx, "finished after %s", time.Since(start))
 }
 
 func (c *Cleaner) cleanStatuses(ctx context.Context, start time.Time) {
 	log.Info(ctx, "starting")
-	maxRemoteAge := config.GetStatusesCleanupRemoteOlderThan()
+	rtConf := c.state.DB.RuntimeConfig(ctx)
+	maxRemoteAge := rtConf.StatusesCleanupRemoteOlderThan
 	c.Status().All(ctx, start, 7*longdur.Day, maxRemoteAge)
 	log.Infof(ctx, "finished after %s", time.Since(start))
 }

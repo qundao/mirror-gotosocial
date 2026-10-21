@@ -26,6 +26,7 @@
 //   - admin: grants admin access to everything
 //   - admin:read: grants admin read access to everything
 //   - admin:read:accounts: grants admin read access to accounts
+//   - admin:read:config: grants admin read access to config
 //   - admin:read:custom_emojis: grants admin read access to custom emojis
 //   - admin:read:domain_allows: grants admin read access to domain allows
 //   - admin:read:domain_blocks: grants admin read access to domain blocks
@@ -34,7 +35,8 @@
 //   - admin:read:relays: grants admin read access to relays
 //   - admin:read:reports: grants admin read access to reports
 //   - admin:write: grants admin write access to everything
-//   - admin:write:accounts: grants write read access to accounts
+//   - admin:write:accounts: grants admin write access to accounts
+//   - admin:write:config: grants admin write access to config
 //   - admin:write:custom_emojis: grants admin write access to custom emojis
 //   - admin:write:domain_allows: grants admin write access to domain allows
 //   - admin:write:domain_blocks: grants admin write access to domain blocks
@@ -95,6 +97,7 @@
 //	      admin: grants admin access to everything
 //	      admin:read: grants admin read access to everything
 //	      admin:read:accounts: grants admin read access to accounts
+//	      admin:read:config: grants admin read access to config
 //	      admin:read:custom_emojis: grants admin read access to custom emojis
 //	      admin:read:domain_allows: grants admin read access to domain allows
 //	      admin:read:domain_blocks: grants admin read access to domain blocks
@@ -103,7 +106,8 @@
 //	      admin:read:relays: grants admin read access to relays
 //	      admin:read:reports: grants admin read access to reports
 //	      admin:write: grants admin write access to everything
-//	      admin:write:accounts: grants write read access to accounts
+//	      admin:write:accounts: grants admin write access to accounts
+//	      admin:write:config: grants admin write access to config
 //	      admin:write:custom_emojis: grants admin write access to custom emojis
 //	      admin:write:domain_allows: grants admin write access to domain allows
 //	      admin:write:domain_blocks: grants admin write access to domain blocks

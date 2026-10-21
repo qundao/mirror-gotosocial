@@ -44,6 +44,10 @@ type DB interface {
 	Relay
 	Report
 	Rule
+	// RuntimeConfigDB has a function
+	// called RuntimeConfig so we have
+	// to fudge the naming a bit here.
+	RuntimeConfigDB
 	ScheduledStatus
 	Search
 	Session
