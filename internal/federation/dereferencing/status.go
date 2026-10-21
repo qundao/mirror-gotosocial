@@ -597,7 +597,7 @@ func (d *Dereferencer) enrichAndStoreStatus(
 	}
 
 	if isNew {
-		// Simplest case, insert this new remote status into the database.
+		// Simplest case, insert this new remote status into database.
 		if err := d.state.DB.PutStatus(ctx, latestStatus); err != nil {
 			return nil, nil, isNew, gtserror.Newf("error inserting new status %s: %w", uri, err)
 		}

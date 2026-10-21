@@ -544,11 +544,12 @@ func (d *Dereferencer) getOrDerefRelayableStatus(
 	var inReplyToAccountURI string
 	if status.InReplyToURI != "" {
 		if status.InReplyTo != nil {
-			// Parent already dereffed, use it.
+			// Parent has already been dereferenced, use it.
 			inReplyToAccountURI = status.InReplyTo.AccountURI
 		} else {
-			// Parent not dereffed yet, try to get it.
-			inReplyToAccountURI, err = d.retrieveInReplyToAccountURI(ctx, tsport, status)
+			// Parent not yet dereferenced, try to fetch it from remote.
+			inReplyToAccountURI, err = d.retrieveInReplyToAccountURI(ctx,
+				tsport, status)
 			if err != nil {
 				err = gtserror.Newf("error retrieving inReplyToAccountURI: %w", err)
 				err = gtserror.SetUnretrievable(err)

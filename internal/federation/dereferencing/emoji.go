@@ -314,6 +314,7 @@ func (d *Dereferencer) RecacheEmoji(
 // WaitOnEmoji blocks until all given emoji have finished processing, finally updating the slice model ptrs.
 func (d *Dereferencer) WaitOnEmoji(ctx context.Context, emojis []*gtsmodel.Emoji) {
 	type uncachedEmoji struct {
+
 		// Ptr to currently processing
 		// emoji to block on, if any.
 		Ptr *media.ProcessingEmoji
