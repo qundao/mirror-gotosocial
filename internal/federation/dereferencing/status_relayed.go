@@ -309,9 +309,7 @@ func (d *Dereferencer) getRelayStatusByURI(
 	relaying *gtsmodel.Account,
 	uri *url.URL,
 
-	// ...
-	matches func(
-		ctx context.Context,
+	matches func(ctx context.Context,
 		relayActor *gtsmodel.Account,
 		relaying *gtsmodel.Account,
 		status *gtsmodel.Status,
@@ -321,7 +319,6 @@ func (d *Dereferencer) getRelayStatusByURI(
 		error,
 	),
 
-	// ...
 	relayable func(
 		ctx context.Context,
 		relayActor *gtsmodel.Account,
@@ -374,7 +371,7 @@ func (d *Dereferencer) getRelayStatusByURI(
 		// statusable
 		nil,
 
-		// retain hook: determines whether we actually
+		// keep hook: determines whether we actually
 		// end up storing the dereferenced status, if new.
 		func(ctx context.Context, status *gtsmodel.Status) (bool, error) {
 
@@ -407,7 +404,7 @@ func (d *Dereferencer) getRelayStatusByURI(
 					var err error
 					var tsport transport.Transport
 
-					// Get transport on behalf of our relay actor.
+					// Get transport on behalf of passed relay actor.
 					ctx, tsport, err = d.getTransport(ctx, relayActor)
 					if err != nil {
 						return false, err
@@ -424,7 +421,8 @@ func (d *Dereferencer) getRelayStatusByURI(
 			}
 
 			if matches != nil {
-				// ...
+				// Check if status matches
+				// defined matching for relay.
 				if ok, err := matches(ctx,
 					relayActor,
 					relaying,
@@ -436,7 +434,8 @@ func (d *Dereferencer) getRelayStatusByURI(
 			}
 
 			if relayable != nil {
-				// ...
+				// Check if status is
+				// actually relayable.
 				if ok, err := relayable(ctx,
 					relayActor,
 					status,
