@@ -133,13 +133,6 @@ func (d *Dereferencer) dereferenceStatusAncestors(
 		// Fetch parent status by current's reply URI, this handles
 		// case of existing (updating if necessary) or a new status.
 		parent, _, _, err := d.getStatusByURI(ctx,
-
-			// dereference context:
-			// later statuses in thread, regardless
-			// of initial context are handled as
-			// regular dereference events.
-			dereferencedStatus,
-
 			requester,
 			uri,
 		)
@@ -387,13 +380,6 @@ stackLoop:
 				//   - remote domain is blocked (will return unretrievable)
 				//   - any http type error for a new status returns unretrievable
 				_, statusable, _, err := d.getStatusByURI(ctx,
-
-					// dereference context:
-					// later statuses in thread, regardless
-					// of initial context are handled as
-					// regular dereference events.
-					dereferencedStatus,
-
 					requester,
 					itemIRI,
 				)

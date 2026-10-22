@@ -123,7 +123,6 @@ func (d *Dereferencer) retrieveStatusable(
 	finalURI := rsp.Request.URL
 	finalURIStr := finalURI.String()
 	redirected := finalURIStr != initialURIStr
-
 	if redirected {
 		var err error
 

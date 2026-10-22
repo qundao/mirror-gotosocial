@@ -194,7 +194,7 @@ func (d *Dereferencer) isPermittedReply(
 	// If parent is a local status
 	// check visibility to replyer.
 	if parent.Flags.Local() {
-		visible, err := d.visFilter.StatusVisible(ctx,
+		visible, err := d.visibility.StatusVisible(ctx,
 			reply.Account,
 			parent,
 		)
@@ -229,7 +229,7 @@ func (d *Dereferencer) isPermittedReply(
 	// Status doesn't claim to be approved.
 	// Check interaction policy of inReplyTo
 	// to see what we need to do with it.
-	replyable, err := d.intFilter.StatusReplyable(ctx,
+	replyable, err := d.interaction.StatusReplyable(ctx,
 		reply.Account,
 		parent,
 	)
@@ -534,7 +534,7 @@ func (d *Dereferencer) isPermittedBoost(
 	// Check visibility of local
 	// boostOf to boosting account.
 	if boostOf.Flags.Local() {
-		visible, err := d.visFilter.StatusVisible(ctx,
+		visible, err := d.visibility.StatusVisible(ctx,
 			status.Account,
 			boostOf,
 		)
@@ -551,7 +551,7 @@ func (d *Dereferencer) isPermittedBoost(
 	}
 
 	// Check interaction policy of boostOf.
-	boostable, err := d.intFilter.StatusBoostable(ctx,
+	boostable, err := d.interaction.StatusBoostable(ctx,
 		status.Account,
 		boostOf,
 	)

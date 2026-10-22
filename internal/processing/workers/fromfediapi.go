@@ -408,73 +408,17 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 	return nil
 }
 
-func relayableErrCheck(
-	ctx context.Context,
-	status *gtsmodel.Status,
-	err error,
-) error {
-	// Check for semi-expected errors
-	// encountered during dereferencing.
-	switch {
-	case err == nil && status != nil:
-		// No problem.
-		return nil
-
-	case gtserror.IsUnretrievable(err):
-		// Remote domain probably blocked.
-		log.Debugf(ctx, "not retrievable: %v", err)
-		return nil
-
-	case gtserror.IsNotPermitted(err):
-		// Status probably replies to a
-		// status it's not allowed to reply to.
-		log.Debugf(ctx, "not permitted: %v", err)
-		return nil
-
-	case gtserror.IsNotRelevant(err):
-		// Status probably doesn't match
-		// relay subscription or has funky
-		// visibility we don't care about.
-		log.Debugf(ctx, "not relevant: %v", err)
-		return nil
-
-	case gtserror.IsMalformed(err):
-		// Final URI probably borked.
-		log.Debugf(ctx, "malformed: %v", err)
-		return nil
-
-	case gtserror.IsWrongType(err):
-		// Probably Announce of Announce
-		// or something, we ignore these.
-		log.Debugf(ctx, "wrong type: %v", err)
-		return nil
-
-	case err == nil && status == nil:
-		// If status is nil that means it probably
-		// didn't match a relay subscription, or it
-		// wasn't permitted by interaction policy.
-		log.Debug(ctx, "status dropped as not relayable")
-		return nil
-
-	default:
-		// Some other actual error (db error, transport error, etc).
-		return gtserror.Newf("%w", err)
-	}
-}
-
 func (p *fediAPI) createStatusFromRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
 	// Retrieve the relayed status, and store it in
 	// the db if it's matched by a relay subscription.
 	//
 	// Surfacing, timelining etc will be done by deref hook.
-	status, err := p.federate.GetStatusFromRelaySubscription(ctx,
+	_, err := p.federate.GetStatusFromRelaySubscription(ctx,
 		fMsg.Receiving,  // Our instance account.
 		fMsg.Requesting, // Relaying account.
 		fMsg.APIRI,      // Relayed status ID/URI.
 	)
-
-	// Check returned status and possible error.
-	return relayableErrCheck(ctx, status, err)
+	return err
 }
 
 func (p *fediAPI) createStatusToRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
@@ -484,11 +428,6 @@ func (p *fediAPI) createStatusToRelay(ctx context.Context, fMsg *messages.FromFe
 		fMsg.Requesting, // Relaying account.
 		fMsg.APIRI,      // Relayed status ID/URI.
 	)
-
-	// Check returned status and possible error.
-	if err := relayableErrCheck(ctx, status, err); err != nil {
-		return err
-	}
 
 	if status == nil {
 		// Nothing to do.
@@ -1218,14 +1157,12 @@ func (p *fediAPI) createAnnounceFromRelay(ctx context.Context, fMsg *messages.Fr
 	//
 	// Note that this doesn't store the boost wrapper status
 	// itself as we don't really care about it that much.
-	status, err := p.federate.GetBoostedStatusFromRelaySubscription(ctx,
+	_, err := p.federate.GetBoostedStatusFromRelaySubscription(ctx,
 		fMsg.Receiving,  // Our instance account.
 		fMsg.Requesting, // Relaying account.
 		boost,           // Boost wrapper status.
 	)
-
-	// Check returned status and possible error.
-	return relayableErrCheck(ctx, status, err)
+	return err
 }
 
 func (p *fediAPI) createAnnounceToRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
@@ -1241,11 +1178,6 @@ func (p *fediAPI) createAnnounceToRelay(ctx context.Context, fMsg *messages.From
 		fMsg.Requesting, // Relaying account.
 		boost,           // Boost wrapper status.
 	)
-
-	// Check returned status and possible error.
-	if err := relayableErrCheck(ctx, status, err); err != nil {
-		return err
-	}
 
 	if status == nil {
 		// Nothing to do.

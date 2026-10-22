@@ -21,7 +21,6 @@ import (
 	"context"
 	"testing"
 
-	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/testrig"
 	"github.com/stretchr/testify/suite"
@@ -30,8 +29,6 @@ import (
 type StatusRelayedTestSuite struct {
 	DereferencerTestSuite
 }
-
-const irrelevantErrStr = "getOrDerefRelayableStatus: status https://unknown-instance.com/users/brand_new_person/statuses/01FE4NTHKWW7THT67EF10EB839 not matched"
 
 func (suite *StatusRelayedTestSuite) TestGetStatusFromRelaySubscription() {
 	// Set up our test structs + tear down on finish.
@@ -51,14 +48,14 @@ func (suite *StatusRelayedTestSuite) TestGetStatusFromRelaySubscription() {
 
 	// Try to deref the given status URI as though
 	// it was forwarded to us by a relay subscription.
-	_, err := testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
+	status, err := testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
 		instanceAcct, relaySubAcct, uri,
 	)
 
 	// Since we don't have a subscription
 	// targeting remote_account_1, this will not work.
-	suite.True(gtserror.IsNotRelevant(err))
-	suite.EqualError(err, irrelevantErrStr)
+	suite.Nil(status)
+	suite.NoError(err)
 
 	// Create a relay subscription targeting remote_account_1.
 	// This is obviously a bit silly but it'll do for now.
@@ -72,14 +69,14 @@ func (suite *StatusRelayedTestSuite) TestGetStatusFromRelaySubscription() {
 	}
 
 	// Try to deref the given status URI again.
-	_, err = testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
+	status, err = testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
 		instanceAcct, relaySubAcct, uri,
 	)
 
 	// This still won't work
 	// because there's no matcher!
-	suite.True(gtserror.IsNotRelevant(err))
-	suite.EqualError(err, irrelevantErrStr)
+	suite.Nil(status)
+	suite.NoError(err)
 
 	// Update the relay subscription
 	// to match everything by default.
@@ -89,7 +86,7 @@ func (suite *StatusRelayedTestSuite) TestGetStatusFromRelaySubscription() {
 	}
 
 	// Status should actually match now.
-	status, err := testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
+	status, err = testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
 		instanceAcct, relaySubAcct, uri,
 	)
 	if err != nil {
@@ -122,18 +119,18 @@ func (suite *StatusRelayedTestSuite) TestGetStatusToRelay() {
 
 	// Try to deref the given status URI as
 	// though it was forwarded to our relay actor.
-	_, err := testStructs.Federator.Dereferencer.GetStatusForRelaying(ctx,
+	status, err := testStructs.Federator.Dereferencer.GetStatusForRelaying(ctx,
 		relayActorAcct, relayingAcct, uri,
 	)
 
 	// This won't work since remote_account_1 is trying
 	// to relay a status to us from someone else's domain!
-	suite.True(gtserror.IsNotRelevant(err))
-	suite.EqualError(err, irrelevantErrStr)
+	suite.Nil(status)
+	suite.Nil(err)
 
 	// Relay a status to us from the same domain as the relayer.
 	uri = testrig.URLMustParse("http://fossbros-anonymous.io/users/foss_satan/statuses/106221634728637552")
-	status, err := testStructs.Federator.Dereferencer.GetStatusForRelaying(ctx,
+	status, err = testStructs.Federator.Dereferencer.GetStatusForRelaying(ctx,
 		relayActorAcct, relayingAcct, uri,
 	)
 	if err != nil {

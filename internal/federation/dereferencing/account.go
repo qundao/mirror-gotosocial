@@ -564,7 +564,11 @@ func (d *Dereferencer) enrichAccount(
 	uri *url.URL,
 	account *gtsmodel.Account,
 	apubAcc ap.Accountable,
-) (*gtsmodel.Account, ap.Accountable, error) {
+) (
+	*gtsmodel.Account,
+	ap.Accountable,
+	error,
+) {
 	// If provided, copy initial
 	// URI for later check.
 	var initialURI *url.URL
@@ -1398,11 +1402,9 @@ func (d *Dereferencer) dereferenceAccountFeatured(
 		// we still know it was *meant* to be pinned.
 		statusURIs = append(statusURIs, itemIRI)
 
-		const derefctx = dereferencedStatus
-
 		// Search for status by URI. Note this may return an existing model
 		// we have stored with an error from attempted update, so check both.
-		status, _, _, err := d.getStatusByURI(ctx, derefctx, requester, itemIRI)
+		status, _, _, err := d.getStatusByURI(ctx, requester, itemIRI)
 		if err != nil {
 			log.Errorf(ctx, "error getting status from featured collection %s: %v", itemIRI, err)
 
