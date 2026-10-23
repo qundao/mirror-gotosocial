@@ -93,8 +93,8 @@ func (d *Dereferencer) GetBoostedStatusFromRelaySubscription(
 			// Any error here is already wrapped.
 			boost.BoostOf = status
 			return d.allowedIncomingBoost(ctx,
-				boost,
 				instance,
+				boost,
 			)
 		},
 	)
@@ -132,8 +132,8 @@ func (d *Dereferencer) GetStatusForRelaying(
 			//
 			// Any error here is already wrapped.
 			return d.allowedOutgoingBoost(ctx,
-				status,
 				relayActor,
+				status,
 			)
 		},
 	)
@@ -164,8 +164,8 @@ func (d *Dereferencer) GetBoostedStatusForRelaying(
 			// Any error here is already wrapped.
 			boost.BoostOf = status
 			if ok, err := d.allowedIncomingBoost(ctx,
-				boost,
 				relayActor,
+				boost,
 			); !ok { // includes err != nil
 				return false, err
 			}
@@ -175,8 +175,8 @@ func (d *Dereferencer) GetBoostedStatusForRelaying(
 			//
 			// Any error here is already wrapped.
 			return d.allowedOutgoingBoost(ctx,
-				status,
 				relayActor,
+				status,
 			)
 		},
 	)
@@ -245,8 +245,8 @@ func (d *Dereferencer) matchesRelayActor(
 // or unwrapped error if something goes wrong.
 func (d *Dereferencer) allowedIncomingBoost(
 	ctx context.Context,
-	boost *gtsmodel.Status,
 	receiver *gtsmodel.Account,
+	boost *gtsmodel.Status,
 ) (
 	bool,
 	error,
@@ -277,8 +277,8 @@ func (d *Dereferencer) allowedIncomingBoost(
 // on presence in a followers/following collection.
 func (d *Dereferencer) allowedOutgoingBoost(
 	ctx context.Context,
-	status *gtsmodel.Status,
 	relayActor *gtsmodel.Account,
+	status *gtsmodel.Status,
 ) (
 	bool,
 	error,
@@ -339,6 +339,87 @@ func (d *Dereferencer) getRelayStatusByURI(
 		return nil, err
 	}
 
+	// isRelevant is the hook passed to enrichAndStoreStatus() below, and also used
+	// to check whether an existing up-to-date status is relevant for relay return.
+	isRelevant := func(ctx context.Context, status *gtsmodel.Status) (bool, error) {
+		if status.Flags.PendingApproval() {
+			// If the status is pending approval we don't really
+			// care about it, we'll get it from somewhere else at
+			// some point perhaps. We only care about relayed posts
+			// that are already approved or don't require approval.
+			log.Debugf(ctx, "status pending approval: %s", status.URI)
+			return false, nil
+		}
+
+		// For relay purposes we're only interested
+		// in statuses that are public or unlisted.
+		// Ignore followers-only + direct.
+		if vis := status.Visibility; //
+		!(vis == gtsmodel.VisibilityPublic ||
+			vis == gtsmodel.VisibilityUnlocked) {
+			log.Debugf(ctx, "status not public/unlisted: %s", status.URI)
+			return false, nil
+		}
+
+		// For match checks we have to
+		// know the author of the parent
+		// status (if there is one).
+		var inReplyToAccountURI string
+		if status.InReplyToURI != "" {
+			if status.InReplyTo != nil {
+
+				// Parent has already been dereferenced, use it.
+				inReplyToAccountURI = status.InReplyTo.AccountURI
+
+			} else {
+				var err error
+				var tsport transport.Transport
+
+				// Get transport on behalf of passed relay actor.
+				ctx, tsport, err = d.getTransport(ctx, relayActor)
+				if err != nil {
+					return false, err
+				}
+
+				// Parent not yet dereferenced, try to fetch it from remote.
+				inReplyToAccountURI, err = d.retrieveInReplyToAccountURI(ctx,
+					tsport, status)
+				if err != nil {
+					err := gtserror.Newf("error retrieving inReplyToAccountURI: %w", err)
+					return false, gtserror.SetUnretrievable(err)
+				}
+			}
+		}
+
+		if matches != nil {
+			// Check if status matches
+			// defined matching for relay.
+			if ok, err := matches(ctx,
+				relayActor,
+				relaying,
+				status,
+				inReplyToAccountURI,
+			); !ok { // includes err != nil
+				log.Debugf(ctx, "status does not match: %s", status.URI)
+				return false, err
+			}
+		}
+
+		if relayable != nil {
+			// Check if status is
+			// actually relayable.
+			if ok, err := relayable(ctx,
+				relayActor,
+				status,
+			); !ok { // includes err != nil
+				log.Debugf(ctx, "status not relayable: %s", status.URI)
+				return false, err
+			}
+		}
+
+		return true, nil
+	}
+
 	if status == nil {
 		// Ensure not a failed search for a local
 		// status, if so we know it doesn't exist.
@@ -358,95 +439,38 @@ func (d *Dereferencer) getRelayStatusByURI(
 			log.Errorf(ctx, "error populating existing status: %v", err)
 		}
 
+		// Before return, check if existing status
+		// is actually relevant for relay usage.
+		if ok, err := isRelevant(ctx, status); !ok {
+			return nil, err // includes err != nil
+		}
+
 		return status, nil
 	}
 
-	// Attempt to dereference and store the either
-	// existing status, or the newly prepared status stub.
-	status, _, _, err = d.enrichAndStoreStatusSafely(ctx,
+	// Attempt to enrich and store the existing / newly prepared status.
+	status, statusable, isNew, err := d.enrichAndStoreStatusSafely(ctx,
 		relayActor,
 		uri,
 		status,
-
-		// statusable
-		nil,
-
-		// keep hook: determines whether we actually
-		// end up storing the dereferenced status, if new.
-		func(ctx context.Context, status *gtsmodel.Status) (bool, error) {
-
-			if status.Flags.PendingApproval() {
-				// If the status is pending approval we don't really
-				// care about it, we'll get it from somewhere else at
-				// some point perhaps. We only care about relayed posts
-				// that are already approved or don't require approval.
-				return false, nil
-			}
-
-			// For relay purposes we're only interested
-			// in statuses that are public or unlisted.
-			// Ignore followers-only + direct.
-			if vis := status.Visibility; //
-			!(vis == gtsmodel.VisibilityPublic ||
-				vis == gtsmodel.VisibilityUnlocked) {
-				return false, nil
-			}
-
-			// For match checks we have to
-			// know the author of the parent
-			// status (if there is one).
-			var inReplyToAccountURI string
-			if status.InReplyToURI != "" {
-				if status.InReplyTo != nil {
-					// Parent has already been dereferenced, use it.
-					inReplyToAccountURI = status.InReplyTo.AccountURI
-				} else {
-					var err error
-					var tsport transport.Transport
-
-					// Get transport on behalf of passed relay actor.
-					ctx, tsport, err = d.getTransport(ctx, relayActor)
-					if err != nil {
-						return false, err
-					}
-
-					// Parent not yet dereferenced, try to fetch it from remote.
-					inReplyToAccountURI, err = d.retrieveInReplyToAccountURI(ctx,
-						tsport, status)
-					if err != nil {
-						err := gtserror.Newf("error retrieving inReplyToAccountURI: %w", err)
-						return false, gtserror.SetUnretrievable(err)
-					}
-				}
-			}
-
-			if matches != nil {
-				// Check if status matches
-				// defined matching for relay.
-				if ok, err := matches(ctx,
-					relayActor,
-					relaying,
-					status,
-					inReplyToAccountURI,
-				); !ok { // includes err != nil
-					return false, err
-				}
-			}
-
-			if relayable != nil {
-				// Check if status is
-				// actually relayable.
-				if ok, err := relayable(ctx,
-					relayActor,
-					status,
-				); !ok { // includes err != nil
-					return false, err
-				}
-			}
-
-			return true, nil
-		},
+		nil, // statusable
+		isRelevant,
 	)
+
+	if err != nil {
+		log.Errorf(ctx, "error getting status %s: %v", uri, err)
+
+	} else if statusable != nil {
+
+		// Deref parents + children.
+		d.dereferenceThread(ctx,
+			relayActor,
+			uri,
+			status,
+			statusable,
+			isNew,
+		)
+	}
 
 	return status, err
 }
@@ -457,7 +481,10 @@ func (d *Dereferencer) retrieveInReplyToAccountURI(
 	ctx context.Context,
 	tsport transport.Transport,
 	status *gtsmodel.Status,
-) (string, error) {
+) (
+	string,
+	error,
+) {
 	if status.InReplyTo != nil {
 		// Had parent stored already.
 		return status.InReplyTo.AccountURI, nil
@@ -467,8 +494,7 @@ func (d *Dereferencer) retrieveInReplyToAccountURI(
 	inReplyToURI := status.InReplyToURI
 	parentURI, err := url.Parse(inReplyToURI)
 	if err != nil {
-		err := gtserror.Newf("error parsing parent URI: %w", err)
-		return "", err
+		return "", gtserror.Newf("error parsing parent URI: %w", err)
 	}
 
 	// Make sure it's not replying to something on our
@@ -482,21 +508,19 @@ func (d *Dereferencer) retrieveInReplyToAccountURI(
 	// domain, we don't wanna be making requests to baddies.
 	blocked, err := d.state.DB.IsDomainBlocked(ctx, parentURI.Host)
 	if err != nil {
-		err := gtserror.Newf("db error checking blocked domain: %w", err)
-		return "", err
+		return "", gtserror.Newf("db error checking blocked domain: %w", err)
 	}
 
 	if blocked {
-		// Just return without
-		// dereffing, kiss my ass.
+		// Just return without dereffing, kiss my ass.
+		log.Debugf(ctx, "blocked domain: %s", parentURI.Host)
 		return "", nil
 	}
 
 	// We don't have the parent stored, try to fetch but *don't* store it, only check for now.
 	parentStatusable, parentStatus, _, err := d.retrieveStatusable(ctx, tsport, parentURI)
 	if err != nil {
-		err := gtserror.Newf("error retrieving %s: %w", inReplyToURI, err)
-		return "", err
+		return "", gtserror.Newf("error retrieving %s: %w", inReplyToURI, err)
 	}
 
 	if parentStatus != nil {

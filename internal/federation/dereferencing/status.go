@@ -306,7 +306,7 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 	uri *url.URL,
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
-	retain func(context.Context, *gtsmodel.Status) (bool, error),
+	relevant func(context.Context, *gtsmodel.Status) (bool, error),
 ) (
 	*gtsmodel.Status,
 	ap.Statusable,
@@ -346,7 +346,7 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 		uri,
 		status,
 		statusable,
-		retain,
+		relevant,
 	)
 
 	// Check for a returned HTTP code via error.
@@ -431,12 +431,12 @@ func (d *Dereferencer) enrichAndStoreStatus(
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
 
-	// keep is an optional function that can be passed to check
-	// whether the dereferenced and checked status should be
-	// stored. where an error return indicates it shouldn't be.
-	//
-	// NOTE: this will only be called for new (to us) statuses.
-	keep func(context.Context, *gtsmodel.Status) (bool, error),
+	// relevant is an optional function that can be passed to check
+	// whether the dereferenced status is relevant to the caller. a
+	// negative result indicates the status should *not* be returned
+	// to the caller, but if !isNew we will still store the updated
+	// version, to prevent wasting spent CPU and network resources.
+	relevant func(context.Context, *gtsmodel.Status) (bool, error),
 ) (
 	*gtsmodel.Status, // latestStatus
 	ap.Statusable, // statusable
@@ -547,20 +547,31 @@ func (d *Dereferencer) enrichAndStoreStatus(
 		}
 
 		// Return a checkable error type that can be ignored.
+		//
+		// TODO: stop using errors to indicate something isn't permitted. in
+		// terms of application and network protocol logic, this isn't an error.
 		err := gtserror.Newf("dropping unpermitted status: %s", uri)
 		return nil, nil, isNew, gtserror.SetNotPermitted(err)
 	}
 
-	if isNew && keep != nil {
-		// Check whether this new status should be stored.
-		if ok, err := keep(ctx, latestStatus); !ok {
+	isRelevant := true
+	if relevant != nil {
+		// Check if status is relevant to the caller.
+		isRelevant, err = relevant(ctx, latestStatus)
+		if err != nil {
 			return nil, nil, isNew, err
+		}
+
+		// New irrelevant statuses
+		// can simply be dropped here.
+		if !isRelevant && isNew {
+			return nil, nil, isNew, nil
 		}
 	}
 
 	// Handle all peripheral changes / new stuff
 	// for this status: polls, mentions, media, etc.
-	changes, err := d.handleStatusPeripherals(ctx,
+	changed, err := d.handleStatusPeripherals(ctx,
 		requester,
 		uri,
 		status,
@@ -582,7 +593,7 @@ func (d *Dereferencer) enrichAndStoreStatus(
 		cols, err := d.handleStatusEdit(ctx,
 			status,
 			latestStatus,
-			changes,
+			changed,
 		)
 		if err != nil {
 			return nil, nil, isNew, gtserror.Newf("error handling edit for status %s: %w", uri, err)
@@ -592,6 +603,12 @@ func (d *Dereferencer) enrichAndStoreStatus(
 		if err := d.state.DB.UpdateStatus(ctx, latestStatus, cols...); err != nil {
 			return nil, nil, isNew, gtserror.Newf("error updating existing status %s: %w", uri, err)
 		}
+	}
+
+	if isRelevant {
+		// Even if an update was stored, don't
+		// return irrelevant statuses to caller.
+		return nil, nil, isNew, nil
 	}
 
 	return latestStatus, statusable, isNew, nil
