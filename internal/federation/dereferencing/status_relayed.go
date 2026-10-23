@@ -218,8 +218,7 @@ func (d *Dereferencer) matchesRelayActor(
 	{
 		relayActor, err := d.state.DB.GetRelayActorByURI(ctx, relayActor.URI)
 		if err != nil {
-			err := gtserror.Newf("db error getting relay actor: %w", err)
-			return false, err
+			return false, gtserror.Newf("db error getting relay actor: %w", err)
 		}
 
 		// You can't relay a status to us from
@@ -339,9 +338,9 @@ func (d *Dereferencer) getRelayStatusByURI(
 		return nil, err
 	}
 
-	// isRelevant is the hook passed to enrichAndStoreStatus() below, and also used
+	// relevant is the hook passed to enrichAndStoreStatus() below, and also used
 	// to check whether an existing up-to-date status is relevant for relay return.
-	isRelevant := func(ctx context.Context, status *gtsmodel.Status) (bool, error) {
+	relevant := func(ctx context.Context, status *gtsmodel.Status) (bool, error) {
 		if status.Flags.PendingApproval() {
 			// If the status is pending approval we don't really
 			// care about it, we'll get it from somewhere else at
@@ -432,6 +431,7 @@ func (d *Dereferencer) getRelayStatusByURI(
 		status = &gtsmodel.Status{URI: uriStr}
 
 	} else if statusFresh(status, &DefaultStatusFreshness) {
+
 		// This is an existing status that is up-to-date,
 		// before returning ensure it is fully populated.
 		if err := d.state.DB.PopulateStatus(ctx, status); //
@@ -441,7 +441,7 @@ func (d *Dereferencer) getRelayStatusByURI(
 
 		// Before return, check if existing status
 		// is actually relevant for relay usage.
-		if ok, err := isRelevant(ctx, status); !ok {
+		if ok, err := relevant(ctx, status); !ok {
 			return nil, err // includes err != nil
 		}
 
@@ -454,11 +454,21 @@ func (d *Dereferencer) getRelayStatusByURI(
 		uri,
 		status,
 		nil, // statusable
-		isRelevant,
+		relevant,
 	)
 
 	if err != nil {
 		log.Errorf(ctx, "error getting status %s: %v", uri, err)
+
+		if status != nil {
+			err = nil
+
+			// Before return, check if existing status
+			// is actually relevant for relay usage.
+			if ok, err := relevant(ctx, status); !ok {
+				return nil, err // includes err != nil
+			}
+		}
 
 	} else if statusable != nil {
 

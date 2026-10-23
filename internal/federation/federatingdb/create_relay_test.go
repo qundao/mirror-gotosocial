@@ -170,7 +170,8 @@ func (suite *CreateRelayTestSuite) TestCreateNoteToRelayActorNoMatch() {
 	*relayActor = *suite.testRelayActors["relay_actor_1"]
 	relayActor.Flags.SetMatchByDefault(false)
 	if err := testStructs.State.DB.UpdateRelayActor(ctx,
-		relayActor, "flags",
+		relayActor,
+		"flags",
 	); err != nil {
 		suite.FailNow(err.Error())
 	}

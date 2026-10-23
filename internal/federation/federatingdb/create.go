@@ -168,6 +168,7 @@ func (f *DB) createViaInstanceAccount(
 	if err != nil {
 		return err
 	}
+
 	if !relaySubscribed {
 		// No relay subscription means we're not interested.
 		log.Debugf(ctx, "dropping delivery from %s (no relay subscription targeting this actor)", requesting.URI)
@@ -188,7 +189,11 @@ func (f *DB) createViaInstanceAccount(
 
 	// We subscribe to + follow this
 	// relay actor, so process the Create.
-	f.createStatusablesAsForwards(ctx, requesting, instanceAcct, asType)
+	f.createStatusablesAsForwards(ctx,
+		requesting,
+		instanceAcct,
+		asType,
+	)
 	return nil
 }
 
@@ -205,6 +210,7 @@ func (f *DB) createViaRelayActor(
 	if err != nil {
 		return gtserror.Newf("db error checking follow of actor URI %s: %w", requesting.URI, err)
 	}
+
 	if !following {
 		// No follow means we're not interested.
 		log.Debugf(ctx, "dropping delivery from %s (relay not connected to this actor)", requesting.URI)
@@ -213,7 +219,11 @@ func (f *DB) createViaRelayActor(
 
 	// We're connected to the
 	// sender, so process the Create.
-	f.createStatusablesAsForwards(ctx, requesting, relayActorAcct, asType)
+	f.createStatusablesAsForwards(ctx,
+		requesting,
+		relayActorAcct,
+		asType,
+	)
 	return nil
 }
 
@@ -450,11 +460,14 @@ func (f *DB) createStatusablesAsForwards(
 	// Extract statusable(s) from asType.
 	var statusables []ap.Statusable
 	if create, ok := asType.(vocab.ActivityStreamsCreate); ok {
+
 		// Create activity that may contain
 		// multiple statusables in object field.
 		objects := ap.ExtractObjects(create)
+
 		// Skim any poll optionables.
 		_, objects = ap.ExtractPollOptionables(objects)
+
 		// Extract just statusable types.
 		statusables, _ = ap.ExtractStatusables(objects)
 

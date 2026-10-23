@@ -49,7 +49,9 @@ func (suite *StatusRelayedTestSuite) TestGetStatusFromRelaySubscription() {
 	// Try to deref the given status URI as though
 	// it was forwarded to us by a relay subscription.
 	status, err := testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
-		instanceAcct, relaySubAcct, uri,
+		instanceAcct,
+		relaySubAcct,
+		uri,
 	)
 
 	// Since we don't have a subscription
@@ -70,7 +72,9 @@ func (suite *StatusRelayedTestSuite) TestGetStatusFromRelaySubscription() {
 
 	// Try to deref the given status URI again.
 	status, err = testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
-		instanceAcct, relaySubAcct, uri,
+		instanceAcct,
+		relaySubAcct,
+		uri,
 	)
 
 	// This still won't work
@@ -87,7 +91,9 @@ func (suite *StatusRelayedTestSuite) TestGetStatusFromRelaySubscription() {
 
 	// Status should actually match now.
 	status, err = testStructs.Federator.Dereferencer.GetStatusFromRelaySubscription(ctx,
-		instanceAcct, relaySubAcct, uri,
+		instanceAcct,
+		relaySubAcct,
+		uri,
 	)
 	if err != nil {
 		suite.FailNow(err.Error())
@@ -131,7 +137,9 @@ func (suite *StatusRelayedTestSuite) TestGetStatusToRelay() {
 	// Relay a status to us from the same domain as the relayer.
 	uri = testrig.URLMustParse("http://fossbros-anonymous.io/users/foss_satan/statuses/106221634728637552")
 	status, err = testStructs.Federator.Dereferencer.GetStatusForRelaying(ctx,
-		relayActorAcct, relayingAcct, uri,
+		relayActorAcct,
+		relayingAcct,
+		uri,
 	)
 	if err != nil {
 		suite.FailNow(err.Error())

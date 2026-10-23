@@ -428,6 +428,9 @@ func (p *fediAPI) createStatusToRelay(ctx context.Context, fMsg *messages.FromFe
 		fMsg.Requesting, // Relaying account.
 		fMsg.APIRI,      // Relayed status ID/URI.
 	)
+	if err != nil {
+		return gtserror.Newf("error getting status: %w", err)
+	}
 
 	if status == nil {
 		// Nothing to do.
@@ -441,17 +444,19 @@ func (p *fediAPI) createStatusToRelay(ctx context.Context, fMsg *messages.FromFe
 		"", // No app ID.
 	)
 	if err != nil {
-		return gtserror.Newf("error converting status to boost: %w", err)
+		return gtserror.Newf("error converting status: %w", err)
 	}
 
-	// Announce to relay subscribers.
-	if err := p.federate.PushFromRelay(ctx, boostOut); err != nil {
+	// Announce status to relay subscribers.
+	if err := p.federate.PushFromRelay(ctx,
+		boostOut); err != nil {
 		return gtserror.Newf("error pushing from relay: %w", err)
 	}
 
 	// Handle boost for any local followers of the relay actor.
 	if err := p.storeOutgoingRelayActorBoostForLocalFollowers(ctx,
-		fMsg.Receiving, boostOut,
+		fMsg.Receiving,
+		boostOut,
 	); err != nil {
 		return gtserror.Newf("error handling outgoing boost for local followers: %w", err)
 	}

@@ -313,12 +313,11 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 	bool,
 	error,
 ) {
-	uriStr := status.URI
 
 	// Acquire per-URI deref lock, wraping unlock
 	// to safely defer in case of panic, while still
 	// performing more granular unlocks when needed.
-	unlock := d.state.FedLocks.Lock(uriStr)
+	unlock := d.state.FedLocks.Lock(status.URI)
 	unlock = util.DoOnce(unlock)
 	defer unlock()
 
@@ -336,6 +335,8 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 		if err != nil {
 			return nil, nil, false, gtserror.Newf("error getting up-to-date existing status: %w", err)
 		}
+
+		// TODO: potentially add another up-to-date check here?
 	}
 
 	// Perform status enrichment + storage with passed variables.
@@ -356,7 +357,7 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 	// Remove status if it was an existing one.
 	case code == http.StatusGone && !isNew:
 		if err := d.state.DB.StubStatus(ctx, status, true); err != nil {
-			log.Error(ctx, "error deleting gone status %s: %v", uriStr, err)
+			log.Error(ctx, "error deleting gone status %s: %v", status.URI, err)
 		}
 
 		// Don't return any status.
@@ -371,7 +372,7 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 		// return the model we had stored already.
 		status.FetchedAt = time.Now()
 		if err := d.state.DB.UpdateStatus(ctx, status, "fetched_at"); err != nil {
-			log.Error(ctx, "error updating %s fetched_at: %v", uriStr, err)
+			log.Error(ctx, "error updating %s fetched_at: %v", status.URI, err)
 		}
 
 		// See below.
@@ -388,6 +389,11 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 	// Unlock now
 	// we're done.
 	unlock()
+
+	// TODO: potentially move some more of the relevant
+	// hook handling to here for when err != nil and its
+	// an existing status. instead of the horrible web
+	// of complexities that live in getRelayStatusByURI()
 
 	switch {
 	case err == nil && latest != nil:
@@ -408,7 +414,7 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 		// in a call to db.Put(Status). Look again in DB by URI.
 		latest, err = d.getStatusFromDB(ctx, status.URI)
 		if err != nil {
-			err = gtserror.Newf("error getting status %s from database after race: %w", uriStr, err)
+			err = gtserror.Newf("error getting status %s from database after race: %w", status.URI, err)
 		}
 	}
 
@@ -605,7 +611,7 @@ func (d *Dereferencer) enrichAndStoreStatus(
 		}
 	}
 
-	if isRelevant {
+	if !isRelevant {
 		// Even if an update was stored, don't
 		// return irrelevant statuses to caller.
 		return nil, nil, isNew, nil
