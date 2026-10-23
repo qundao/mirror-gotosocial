@@ -1183,6 +1183,9 @@ func (p *fediAPI) createAnnounceToRelay(ctx context.Context, fMsg *messages.From
 		fMsg.Requesting, // Relaying account.
 		boost,           // Boost wrapper status.
 	)
+	if err != nil {
+		return gtserror.Newf("error getting status: %w", err)
+	}
 
 	if status == nil {
 		// Nothing to do.
