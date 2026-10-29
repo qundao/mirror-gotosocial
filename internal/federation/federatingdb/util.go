@@ -55,8 +55,8 @@ func typeNames(objects []ap.TypeOrIRI) []string {
 }
 
 // isSender returns whether an object with AttributedTo property comes from the given requesting account.
-func isSender(with ap.WithAttributedTo, requester *gtsmodel.Account) bool {
-	uri, _ := ap.GetOneAttributedTo(with)
+func isSender(statusable ap.Statusable, requester *gtsmodel.Account) bool {
+	uri, _ := ap.ExtractStatusableAttributedToActor(statusable)
 	return uri != nil && uri.String() == requester.URI
 }
 

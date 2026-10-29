@@ -163,9 +163,10 @@ func (d *Dereferencer) retrieveStatusable(
 		return nil, nil, nil, gtserror.SetMalformed(err)
 	}
 
-	// We want attributedTo, URI, URL, and
-	// final URI to all share the same host.
-	uris = append(uris, finalURI)
+	// URLs can be prettymuch whatever, but
+	// we definitely want URI, finalURI, and
+	// attributedTo to all share the same host.
+	uris = []*url.URL{jsonldID, finalURI}
 	uris = append(uris, ap.GetAttributedTo(statusable)...)
 	sameHost, err := util.SameHost(uris...)
 	if err != nil {
@@ -197,8 +198,8 @@ func (d *Dereferencer) convertStatusable(
 	statusable ap.Statusable,
 ) (*gtsmodel.Status, error) {
 
-	// Get attributedTo URI from statusable to fetch account.
-	attributedTo, err := ap.GetOneAttributedTo(statusable)
+	// Extract attributedTo actor URI from statusable to fetch account.
+	attributedTo, err := ap.ExtractStatusableAttributedToActor(statusable)
 	if err != nil {
 		return nil, gtserror.SetMalformed(err)
 	}

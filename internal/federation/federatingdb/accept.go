@@ -74,7 +74,7 @@ func (f *DB) Accept(ctx context.Context, accept vocab.ActivityStreamsAccept) err
 	// Ensure requester is the same as the
 	// Actor of the Accept; you can't Accept
 	// something on someone else's behalf.
-	actorURI, err := ap.ExtractActorURI(accept)
+	actorURI, err := ap.GetOneActorIRI(accept)
 	if err != nil {
 		const text = "Accept had empty or invalid actor property"
 		return gtserror.NewErrorBadRequest(errors.New(text), text)

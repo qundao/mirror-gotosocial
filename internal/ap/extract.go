@@ -31,6 +31,7 @@ import (
 
 	"code.superseriousbusiness.org/activity/pub"
 	"code.superseriousbusiness.org/activity/streams/vocab"
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/text"
@@ -1151,23 +1152,73 @@ func ExtractMention(i Mentionable) (*gtsmodel.Mention, error) {
 	}, nil
 }
 
-// ExtractActorURI extracts the first Actor URI
-// it can find from a WithActor interface.
-func ExtractActorURI(withActor WithActor) (*url.URL, error) {
-	actorProp := withActor.GetActivityStreamsActor()
-	if actorProp == nil {
-		return nil, gtserror.New("actor property was nil")
+// ExtractStatusableAttributedToActor extracts a single actor URI from the given statusable,
+// taking account of both `attributedTo` and `audience` properties (if the latter is present).
+//
+// If a single attributedTo actor value cannot be arrived at, it will return an error.
+//
+// This works on "normal" statuses, which are attributed to one actor, but it also works on
+// Peertube videos that have more than attributedTo value, as in the following example:
+//
+//	{
+//	  [...blah blah blah...],
+//	  "attributedTo": [
+//	    {
+//	      "type": "Person",
+//	      "id": "https://spectra.video/accounts/mberos"
+//	    },
+//	    {
+//	      "type": "Group",
+//	      "id": "https://spectra.video/video-channels/rumirum"
+//	    }
+//	  ],
+//	  "audience": "https://spectra.video/video-channels/rumirum",
+//	  [...blah blah blah...],
+//	}
+//
+// In the above case, "https://spectra.video/accounts/mberos" will be returned as the actor URI.
+func ExtractStatusableAttributedToActor(statusable Statusable) (*url.URL, error) {
+	attribTo := GetAttributedTo(statusable)
+
+	switch l := len(attribTo); {
+	case l == 0:
+		// Can't work with this at all.
+		return nil, gtserror.New("empty attributedTo")
+
+	case l == 1:
+		// If there's just one attributedTo
+		// URI, return that. This will be
+		// the case like 99% of the time.
+		return attribTo[0], nil
+
+	case l > 2:
+		// Too many attributedTo URIs, we can't work with this.
+		return nil, gtserror.Newf("too many attributedTo entries: %v", log.Formatted(attribTo))
 	}
 
-	for iter := actorProp.Begin(); iter != actorProp.End(); iter = iter.Next() {
-		id, err := pub.ToId(iter)
-		if err == nil {
-			// Found one we can use.
-			return id, nil
+	// There are two attributedTo URIs.
+	// Cross-check with audience property.
+	audience, err := GetOneAudience(statusable)
+	if err != nil {
+		return nil, gtserror.Newf("multiple attributedTo: %w", err)
+	}
+
+	// If one attributedTo URI matches the
+	// audience value, we can eliminate it.
+	audienceStr := audience.String()
+	for i, uri := range attribTo {
+		if uri.String() == audienceStr {
+			// Matched audience to this URI,
+			// return the other one as the actor.
+			return attribTo[1-i], nil
 		}
 	}
 
-	return nil, gtserror.New("no iri found for actor prop")
+	// No match.
+	return nil, gtserror.Newf(
+		"couldn't extract actor; attributedTo %v, audience %v",
+		log.Formatted(attribTo), log.Formatted(audience),
+	)
 }
 
 // ExtractVisibility extracts the gtsmodel.Visibility

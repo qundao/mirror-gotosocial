@@ -937,16 +937,16 @@ func (c *Converter) getASActorAccount(ctx context.Context, with ap.WithActor) (*
 	return account, nil
 }
 
-func (c *Converter) getASAttributedToAccount(ctx context.Context, with ap.WithAttributedTo) (*gtsmodel.Account, error) {
-	attribTo, err := ap.GetOneAttributedTo(with)
+func (c *Converter) getASAttributedToAccount(ctx context.Context, statusable ap.Statusable) (*gtsmodel.Account, error) {
+	actor, err := ap.ExtractStatusableAttributedToActor(statusable)
 	if err != nil {
 		return nil, gtserror.SetMalformed(err)
 	}
 
-	// Check for account in database with extracted attributedTo URI.
-	account, err := c.state.DB.GetAccountByURI(ctx, attribTo.String())
+	// Check for account in database with extracted URI.
+	account, err := c.state.DB.GetAccountByURI(ctx, actor.String())
 	if err != nil {
-		return nil, gtserror.Newf("error getting actor account from database: %w", err)
+		return nil, gtserror.Newf("error getting attributedTo account from database: %w", err)
 	}
 
 	return account, nil
