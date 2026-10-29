@@ -312,13 +312,19 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	// be a Lemmy Page with Link attachment(s) instead of media.
 	// If valid links are found, append them to status content.
 	if status.ActivityStreamsType == ap.ObjectPage && len(status.Attachments) == 0 {
-		if status.Content != "" {
-			// If existing content, append
-			// some breaks so avoid ugliness.
-			status.Content += "<br/><br/>"
+		if l := len(status.Content); l != 0 && status.Content[l-1] != '>' {
+			// If existing content doesn't seem
+			// to be enclosed inside HTML elements,
+			// using this very ambachtelijk check,
+			// append some breaks to avoid ugliness.
+			//
+			// If we were wrong about the HTML then
+			// worst-case scenario is the status
+			// just looks a bit too gappy.
+			status.Content += "<br><br>"
 		}
 
-		// Append list of sanitized link attachments.
+		// Append unordered list of sanitized link attachments.
 		status.Content += linkAttachmentsToHTML(ctx, statusable, uri)
 	}
 
