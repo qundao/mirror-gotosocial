@@ -33,10 +33,10 @@ import (
 // like object and wrap in a standardised interface in order to iterate its contents.
 func ToCollectionIterator(t vocab.Type) (CollectionIterator, error) {
 	switch name := t.GetTypeName(); name {
-	case ObjectCollection:
+	case TypeCollection:
 		t := t.(vocab.ActivityStreamsCollection)
 		return WrapCollection(t), nil
-	case ObjectOrderedCollection:
+	case TypeOrderedCollection:
 		t := t.(vocab.ActivityStreamsOrderedCollection)
 		return WrapOrderedCollection(t), nil
 	default:
@@ -48,10 +48,10 @@ func ToCollectionIterator(t vocab.Type) (CollectionIterator, error) {
 // like object and wrap in a standardised interface in order to iterate its contents.
 func ToCollectionPageIterator(t vocab.Type) (CollectionPageIterator, error) {
 	switch name := t.GetTypeName(); name {
-	case ObjectCollectionPage:
+	case TypeCollectionPage:
 		t := t.(vocab.ActivityStreamsCollectionPage)
 		return WrapCollectionPage(t), nil
-	case ObjectOrderedCollectionPage:
+	case TypeOrderedCollectionPage:
 		t := t.(vocab.ActivityStreamsOrderedCollectionPage)
 		return WrapOrderedCollectionPage(t), nil
 	default:

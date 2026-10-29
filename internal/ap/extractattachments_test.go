@@ -34,8 +34,8 @@ func (suite *ExtractAttachmentsTestSuite) TestExtractAttachmentMissingURL() {
 	d1 := suite.document1
 	d1.SetActivityStreamsUrl(streams.NewActivityStreamsUrlProperty())
 
-	attachment, err := ap.ExtractAttachment(d1)
-	suite.EqualError(err, "ExtractAttachment: empty attachment URL")
+	attachment, err := ap.ExtractMediaAttachment(d1)
+	suite.EqualError(err, "ExtractMediaAttachment: empty attachment URL")
 	suite.Nil(attachment)
 }
 
@@ -63,12 +63,12 @@ func (suite *ExtractAttachmentsTestSuite) TestExtractDescription() {
 		suite.FailNow(err.Error())
 	}
 
-	attachmentable, ok := t.(ap.Attachmentable)
+	attachmentable, ok := t.(ap.MediaAttachmentable)
 	if !ok {
-		suite.FailNow("type was not Attachmentable")
+		suite.FailNow("type was not MediaAttachmentable")
 	}
 
-	attachment, err := ap.ExtractAttachment(attachmentable)
+	attachment, err := ap.ExtractMediaAttachment(attachmentable)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}

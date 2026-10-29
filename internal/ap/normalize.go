@@ -216,7 +216,7 @@ func NormalizeIncomingAttachments(item WithAttachment, rawJSON map[string]interf
 			continue
 		}
 
-		attachmentable, ok := t.(Attachmentable)
+		attachmentable, ok := t.(MediaAttachmentable)
 		if !ok {
 			continue
 		}

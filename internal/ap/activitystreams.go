@@ -73,22 +73,24 @@ const (
 	ActorPerson       = "Person"       // ActivityStreamsPerson https://www.w3.org/TR/activitystreams-vocabulary/#dfn-person
 	ActorService      = "Service"      // ActivityStreamsService https://www.w3.org/TR/activitystreams-vocabulary/#dfn-service
 
-	ObjectArticle               = "Article"               // ActivityStreamsArticle https://www.w3.org/TR/activitystreams-vocabulary/#dfn-article
-	ObjectAudio                 = "Audio"                 // ActivityStreamsAudio https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audio
-	ObjectDocument              = "Document"              // ActivityStreamsDocument https://www.w3.org/TR/activitystreams-vocabulary/#dfn-document
-	ObjectEvent                 = "Event"                 // ActivityStreamsEvent https://www.w3.org/TR/activitystreams-vocabulary/#dfn-event
-	ObjectImage                 = "Image"                 // ActivityStreamsImage https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image
-	ObjectNote                  = "Note"                  // ActivityStreamsNote https://www.w3.org/TR/activitystreams-vocabulary/#dfn-note
-	ObjectPage                  = "Page"                  // ActivityStreamsPage https://www.w3.org/TR/activitystreams-vocabulary/#dfn-page
-	ObjectPlace                 = "Place"                 // ActivityStreamsPlace https://www.w3.org/TR/activitystreams-vocabulary/#dfn-place
-	ObjectProfile               = "Profile"               // ActivityStreamsProfile https://www.w3.org/TR/activitystreams-vocabulary/#dfn-profile
-	ObjectRelationship          = "Relationship"          // ActivityStreamsRelationship https://www.w3.org/TR/activitystreams-vocabulary/#dfn-relationship
-	ObjectTombstone             = "Tombstone"             // ActivityStreamsTombstone https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
-	ObjectVideo                 = "Video"                 // ActivityStreamsVideo https://www.w3.org/TR/activitystreams-vocabulary/#dfn-video
-	ObjectCollection            = "Collection"            // ActivityStreamsCollection https://www.w3.org/TR/activitystreams-vocabulary/#dfn-collection
-	ObjectCollectionPage        = "CollectionPage"        // ActivityStreamsCollectionPage https://www.w3.org/TR/activitystreams-vocabulary/#dfn-collectionpage
-	ObjectOrderedCollection     = "OrderedCollection"     // ActivityStreamsOrderedCollection https://www.w3.org/TR/activitystreams-vocabulary/#dfn-orderedcollection
-	ObjectOrderedCollectionPage = "OrderedCollectionPage" // ActivityStreamsOrderedCollectionPage https://www.w3.org/TR/activitystreams-vocabulary/#dfn-orderedcollectionPage
+	ObjectArticle      = "Article"      // ActivityStreamsArticle https://www.w3.org/TR/activitystreams-vocabulary/#dfn-article
+	ObjectAudio        = "Audio"        // ActivityStreamsAudio https://www.w3.org/TR/activitystreams-vocabulary/#dfn-audio
+	ObjectDocument     = "Document"     // ActivityStreamsDocument https://www.w3.org/TR/activitystreams-vocabulary/#dfn-document
+	ObjectEvent        = "Event"        // ActivityStreamsEvent https://www.w3.org/TR/activitystreams-vocabulary/#dfn-event
+	ObjectImage        = "Image"        // ActivityStreamsImage https://www.w3.org/TR/activitystreams-vocabulary/#dfn-image
+	ObjectNote         = "Note"         // ActivityStreamsNote https://www.w3.org/TR/activitystreams-vocabulary/#dfn-note
+	ObjectPage         = "Page"         // ActivityStreamsPage https://www.w3.org/TR/activitystreams-vocabulary/#dfn-page
+	ObjectPlace        = "Place"        // ActivityStreamsPlace https://www.w3.org/TR/activitystreams-vocabulary/#dfn-place
+	ObjectProfile      = "Profile"      // ActivityStreamsProfile https://www.w3.org/TR/activitystreams-vocabulary/#dfn-profile
+	ObjectRelationship = "Relationship" // ActivityStreamsRelationship https://www.w3.org/TR/activitystreams-vocabulary/#dfn-relationship
+	ObjectTombstone    = "Tombstone"    // ActivityStreamsTombstone https://www.w3.org/TR/activitystreams-vocabulary/#dfn-tombstone
+	ObjectVideo        = "Video"        // ActivityStreamsVideo https://www.w3.org/TR/activitystreams-vocabulary/#dfn-video
+
+	TypeLink                  = "Link"                  // ActivityStreamsLink https://www.w3.org/TR/activitystreams-vocabulary/#dfn-link
+	TypeCollection            = "Collection"            // ActivityStreamsCollection https://www.w3.org/TR/activitystreams-vocabulary/#dfn-collection
+	TypeCollectionPage        = "CollectionPage"        // ActivityStreamsCollectionPage https://www.w3.org/TR/activitystreams-vocabulary/#dfn-collectionpage
+	TypeOrderedCollection     = "OrderedCollection"     // ActivityStreamsOrderedCollection https://www.w3.org/TR/activitystreams-vocabulary/#dfn-orderedcollection
+	TypeOrderedCollectionPage = "OrderedCollectionPage" // ActivityStreamsOrderedCollectionPage https://www.w3.org/TR/activitystreams-vocabulary/#dfn-orderedcollectionPage
 
 	// Hashtag is not in the AS spec per se, but it tends to get used
 	// as though 'Hashtag' is a named type under the Tag property.

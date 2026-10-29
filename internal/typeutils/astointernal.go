@@ -22,8 +22,10 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"slices"
 	"time"
 
+	"code.superseriousbusiness.org/gopkg/buffers"
 	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gopkg/xslices"
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
@@ -31,6 +33,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/text"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"github.com/miekg/dns"
@@ -272,6 +275,9 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	var status gtsmodel.Status
 	status.URI = uri
 
+	// ActivityStreamsType
+	status.ActivityStreamsType = statusable.GetTypeName()
+
 	// status.URL
 	//
 	// Web URL of this status (optional).
@@ -297,9 +303,23 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	// status.Attachments
 	//
 	// Media attachments for later dereferencing.
-	status.Attachments, err = ap.ExtractAttachments(statusable)
+	status.Attachments, err = ap.ExtractMediaAttachments(statusable)
 	if err != nil {
-		log.Warnf(ctx, "error(s) extracting attachments for %s: %v", uri, err)
+		log.Warnf(ctx, "error(s) extracting media attachments for %s: %v", uri, err)
+	}
+
+	// If there were no media attachments, check if this might
+	// be a Lemmy Page with Link attachment(s) instead of media.
+	// If valid links are found, append them to status content.
+	if status.ActivityStreamsType == ap.ObjectPage && len(status.Attachments) == 0 {
+		if status.Content != "" {
+			// If existing content, append
+			// some breaks so avoid ugliness.
+			status.Content += "<br/><br/>"
+		}
+
+		// Append list of sanitized link attachments.
+		status.Content += linkAttachmentsToHTML(ctx, statusable, uri)
 	}
 
 	// status.Poll
@@ -476,10 +496,63 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	sensitive := ap.ExtractSensitive(statusable)
 	status.Flags.SetSensitive(sensitive)
 
-	// ActivityStreamsType
-	status.ActivityStreamsType = statusable.GetTypeName()
-
 	return &status, nil
+}
+
+// linksAttachmentsToHTML checks the given statusable to see if any Link types
+// are present in attachment. If so, it returns a list of them as sanitized HTML.
+func linkAttachmentsToHTML(ctx context.Context, statusable ap.Statusable, uri string) string {
+	links, err := ap.ExtractLinkAttachments(statusable)
+	if err != nil {
+		// Log but don't return as some links may be OK.
+		log.Warnf(ctx, "error(s) extracting link attachments for %s: %v", uri, err)
+	}
+
+	// Tidy up the links slice.
+	links = slices.DeleteFunc(
+		links,
+		func(u *url.URL) bool {
+			// Punify domain host for
+			// nicer presentation, and
+			// remove if punification fails.
+			u.Host, err = util.DePunify(u.Host)
+			if err != nil {
+				log.Warnf(ctx, "malformed link in attachments: %s", u)
+				return true
+			}
+
+			// Looks good.
+			return false
+		},
+	)
+
+	if len(links) == 0 {
+		// No (more) valid links
+		// remain, nothing to do.
+		return ""
+	}
+
+	// Format links as
+	// list of anchors.
+	buf := buffers.Get1k()
+	buf.B = append(buf.B, "<ul>"...)
+	for _, url := range links {
+		urlStr := url.String()
+		buf.B = append(buf.B, "<li>"...)
+		buf.B = append(buf.B, "<a href=\""+urlStr+"\">"...)
+		buf.B = append(buf.B, urlStr...)
+		buf.B = append(buf.B, "</a>"...)
+		buf.B = append(buf.B, "</li>"...)
+	}
+	buf.B = append(buf.B, "</ul>"...)
+
+	// Finish with the buffer.
+	str := string(buf.B)
+	buffers.Put1k(buf)
+
+	// Run HTML snippet through the
+	// sanitizer to catch devious links.
+	return text.SanitizeHTML(str)
 }
 
 // ASFollowToFollowRequest converts a remote activitystreams `follow` representation into gts model follow request.

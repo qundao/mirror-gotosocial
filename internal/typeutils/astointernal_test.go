@@ -337,6 +337,72 @@ func (suite *ASToInternalTestSuite) TestParseBandwagonAlbum() {
 	suite.NoError(err)
 }
 
+func (suite *ASToInternalTestSuite) TestParseLemmyPost() {
+	authorAccount := suite.testAccounts["remote_account_1"]
+
+	raw := `{
+  "@context": [
+    "https://join-lemmy.org/context.json",
+    "https://www.w3.org/ns/activitystreams"
+  ],
+  "type": "Page",
+  "id": "https://lemmy.ca/post/73053350",
+  "attributedTo": "` + authorAccount.URI + `",
+  "to": [
+    "https://lemmy.world/c/technology",
+    "https://www.w3.org/ns/activitystreams#Public"
+  ],
+  "name": "Valve admits Steam has an AI slop and cloning problem, but says 'we don't want to be gatekeepers telling developers which tools they should or shouldn't use'",
+  "cc": [],
+  "content": "",
+  "mediaType": "text/html",
+  "source": {
+    "content": "",
+    "mediaType": "text/markdown"
+  },
+  "attachment": [
+    {
+      "href": "https://www.pcgamer.com/software/ai/valve-admits-steam-has-an-ai-slop-and-cloning-problem-but-says-we-dont-want-to-be-gatekeepers-telling-developers-which-tools-they-should-or-shouldnt-use/",
+      "mediaType": "text/html; charset=utf-8",
+      "type": "Link"
+    }
+  ],
+  "image": {
+    "type": "Image",
+    "url": "https://lemmy.ca/pictrs/image/57bf1671-db46-4ddc-9b8b-b8a6096855bd.jpeg"
+  },
+  "sensitive": false,
+  "published": "2026-10-29T01:25:42.697362Z",
+  "language": {
+    "identifier": "en",
+    "name": "English"
+  },
+  "audience": "https://lemmy.world/c/technology",
+  "tag": [
+    {
+      "href": "https://lemmy.ca/post/73053350",
+      "name": "#technology",
+      "type": "Hashtag"
+    }
+  ]
+}`
+
+	t := suite.jsonToType(raw)
+	asPage, ok := t.(ap.Statusable)
+	if !ok {
+		suite.FailNow("type not coercible")
+	}
+
+	s, err := suite.typeconverter.ASStatusToStatus(suite.T().Context(), asPage)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Even though the link attachment isn't in the
+	// `content` field, it should be shown in the status.
+	suite.Equal(`<ul><li><a href="https://www.pcgamer.com/software/ai/valve-admits-steam-has-an-ai-slop-and-cloning-problem-but-says-we-dont-want-to-be-gatekeepers-telling-developers-which-tools-they-should-or-shouldnt-use/" rel="nofollow noreferrer noopener" target="_blank">https://www.pcgamer.com/software/ai/valve-admits-steam-has-an-ai-slop-and-cloning-problem-but-says-we-dont-want-to-be-gatekeepers-telling-developers-which-tools-they-should-or-shouldnt-use/</a></li></ul>`, s.Content)
+}
+
 func (suite *ASToInternalTestSuite) TestParseFlag1() {
 	reportedAccount := suite.testAccounts["local_account_1"]
 	reportingAccount := suite.testAccounts["remote_account_1"]
