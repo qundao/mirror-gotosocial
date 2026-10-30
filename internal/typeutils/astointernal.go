@@ -167,15 +167,8 @@ func (c *Converter) ASRepresentationToAccount(
 	indexable := ap.GetIndexable(accountable)
 	acct.Indexable = &indexable
 
-	// Extract the URL property.
-	urls := ap.GetURL(accountable)
-	if len(urls) == 0 {
-		// just use account uri string
-		acct.URL = uri
-	} else {
-		// else use provided URL string
-		acct.URL = urls[0].String()
-	}
+	// Extract the URL property if available.
+	acct.URL = ap.ExtractURLForURI(accountable, uriObj)
 
 	// Extract the inbox IRI property.
 	inboxIRI := ap.GetInbox(accountable)
@@ -275,13 +268,7 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	// status.URL
 	//
 	// Web URL of this status (optional).
-	if statusURL := ap.GetURL(statusable); len(statusURL) != 0 {
-		// Take the first hit.
-		status.URL = statusURL[0].String()
-	} else {
-		// Fall back to the URI.
-		status.URL = status.URI
-	}
+	status.URL = ap.ExtractURLForURI(statusable, uriObj)
 
 	// status.Content
 	// status.Language

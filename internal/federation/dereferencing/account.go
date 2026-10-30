@@ -569,14 +569,6 @@ func (d *Dereferencer) enrichAccount(
 	ap.Accountable,
 	error,
 ) {
-	// If provided, copy initial
-	// URI for later check.
-	var initialURI *url.URL
-	if uri != nil {
-		initialURI = new(url.URL)
-		*initialURI = *uri
-	}
-
 	// Pre-fetch a transport for requesting username, used by later deref procedures.
 	tsport, err := d.transportController.NewTransportForUsername(ctx, accountUsername(requester))
 	if err != nil {
@@ -758,19 +750,11 @@ func (d *Dereferencer) enrichAccount(
 		return nil, nil, err
 	}
 
+	// Extract the json-ld ID, i.e. the
+	// actual ActivityPub URI ID of account.
+	jsonldID := ap.GetJSONLDId(apubAcc)
+
 	if account.Username == "" {
-		var accUsername string
-
-		// Assume the host from the
-		// ActivityPub representation.
-		id := ap.GetJSONLDId(apubAcc)
-		if id == nil {
-			return nil, nil, gtserror.New("no id property found on person, or id was not an iri")
-		}
-
-		// Get IRI host value.
-		accHost := id.Host
-
 		// No username was provided, so no webfinger was attempted earlier.
 		//
 		// Now we have a username we can attempt again, to ensure up-to-date
@@ -781,6 +765,13 @@ func (d *Dereferencer) enrichAccount(
 		// https://example.org/@someone@somewhere.else and we've been redirected
 		// from example.org to somewhere.else: we want to take somewhere.else
 		// as the accountDomain then, not the example.org we were redirected from.
+		var accUsername string
+
+		// Assume webfinger host from
+		// ActivityPub representation.
+		accHost := jsonldID.Host
+
+		// Make the finger call.
 		accUsername, latestAcc.Domain, _, err = d.fingerRemoteAccount(ctx,
 			tsport,
 			latestAcc.Username,
@@ -799,11 +790,12 @@ func (d *Dereferencer) enrichAccount(
 		latestAcc.Username = cmp.Or(latestAcc.Username, accUsername)
 	}
 
-	// Ensure the final parsed account URI matches
-	// the input URI we fetched (or received) it as.
+	// Ensure the final URI we fetched the account
+	// from matches either (one of) the URL(s) or
+	// the ID/URI of the dereferenced accountable.
 	uris := append(
-		ap.GetURL(apubAcc),      // account URL(s)
-		ap.GetJSONLDId(apubAcc), // account URI
+		ap.GetURL(apubAcc), // account URL(s)
+		jsonldID,           // account URI
 	)
 	matches, err := util.URIMatches(uri, uris...)
 	if err != nil {
@@ -820,14 +812,10 @@ func (d *Dereferencer) enrichAccount(
 		)
 	}
 
-	// We want final URI, URL,
-	// and initial URI (if provided)
-	// to all share the same host.
-	uris = append(uris, uri)
-	if initialURI != nil {
-		uris = append(uris, initialURI)
-	}
-
+	// URLs can be prettymuch whatever,
+	// but we definitely want ActivityPub URI
+	// and finalURI to share the same host.
+	uris = []*url.URL{jsonldID, uri}
 	sameHost, err := util.SameHost(uris...)
 	if err != nil {
 		err := gtserror.Newf("error checking uri hosts %s: %w", latestAcc.URI, err)

@@ -163,9 +163,10 @@ func (d *Dereferencer) retrieveStatusable(
 		return nil, nil, nil, gtserror.SetMalformed(err)
 	}
 
-	// URLs can be prettymuch whatever, but
-	// we definitely want URI, finalURI, and
-	// attributedTo to all share the same host.
+	// URLs can be prettymuch whatever,
+	// but we definitely want ActivityPub
+	// URI, finalURI, and attributedTo
+	// to all share the same host.
 	uris = []*url.URL{jsonldID, finalURI}
 	uris = append(uris, ap.GetAttributedTo(statusable)...)
 	sameHost, err := util.SameHost(uris...)
