@@ -3667,7 +3667,7 @@ func NewTestFediPeople() map[string]vocab.ActivityStreamsPerson {
 			"brand_new_person",
 			"Geoff Brando New Personson",
 			"hey I'm a new person, your instance hasn't seen me yet uwu",
-			URLMustParse("https://unknown-instance.com/@brand_new_person"),
+			URLMustParse("https://somewhere-else.com/@brand_new_person"),
 			true,
 			true,
 			URLMustParse("https://unknown-instance.com/users/brand_new_person#main-key"),
