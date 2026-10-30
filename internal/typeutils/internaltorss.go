@@ -18,6 +18,7 @@
 package typeutils
 
 import (
+	"cmp"
 	"context"
 	"strconv"
 	"strings"
@@ -120,14 +121,14 @@ func (c *Converter) StatusToRSSItem(ctx context.Context, status *gtsmodel.Status
 
 		// ID -- A string that uniquely identifies the item.
 		// example: http://inessential.com/2002/09/01.php#a2
-		Id: status.URL,
+		Id: status.URI,
 
 		// Source -- The RSS channel that the item came from.
 		Source: &feeds.Link{Href: status.Account.URL + "/feed.rss"},
 
 		// Link -- The URL of the item.
 		// example: http://nytimes.com/2004/12/07FEST.html
-		Link: &feeds.Link{Href: status.URL},
+		Link: &feeds.Link{Href: cmp.Or(status.URL, status.URI)},
 
 		Title:       title,
 		Description: description,
