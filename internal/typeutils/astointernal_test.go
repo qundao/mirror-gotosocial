@@ -77,7 +77,7 @@ func (suite *ASToInternalTestSuite) TestParsePerson() {
 	suite.Equal("brand_new_person", acct.Username)
 	suite.Equal("Geoff Brando New Personson", acct.DisplayName)
 	suite.Equal("hey I'm a new person, your instance hasn't seen me yet uwu", acct.Note)
-	suite.Equal("https://unknown-instance.com/@brand_new_person", acct.URL)
+	suite.Empty(acct.URL)
 	suite.True(*acct.Discoverable)
 	suite.True(*acct.Indexable)
 	suite.Equal("https://unknown-instance.com/users/brand_new_person#main-key", acct.PublicKeyURI)
@@ -134,9 +134,7 @@ func (suite *ASToInternalTestSuite) TestParsePublicStatusNoURL() {
 
 	suite.Equal("reading: Punishment and Reward in the Corporate University", status.ContentWarning)
 	suite.Equal(`<p>&gt; So we have to examine critical thinking as a signifier, dynamic and ambiguous.  It has a normative definition, a tacit definition, and an ideal definition.  One of the hallmarks of graduate training is learning to comprehend those definitions and applying the correct one as needed for professional success.</p>`, status.Content)
-
-	// on statuses with no URL in them (like ones we get from pleroma sometimes) we should use the AP URI of the status as URL
-	suite.Equal("http://fossbros-anonymous.io/users/foss_satan/statuses/108138763199405167", status.URL)
+	suite.Empty(status.URL)
 }
 
 func (suite *ASToInternalTestSuite) TestParseGargron() {
