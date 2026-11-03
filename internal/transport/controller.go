@@ -37,49 +37,60 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/federation/federatingdb"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/state"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"codeberg.org/gruf/go-byteutil"
-	"codeberg.org/gruf/go-cache/v3"
+	"codeberg.org/gruf/go-cache/v3/simple"
 )
 
-// Controller generates transports for use in making federation requests to other servers.
-type Controller interface {
-	// NewTransport returns an http signature transport with the given public key ID (URL location of pubkey), and the given private key.
-	NewTransport(pubKeyID string, privkey *rsa.PrivateKey) (Transport, error)
-
-	// NewTransportForUsername searches for account with username, and returns result of .NewTransport().
-	NewTransportForUsername(ctx context.Context, username string) (Transport, error)
-}
-
-type controller struct {
+type Controller struct {
 	state     *state.State
 	fedDB     *federatingdb.DB
 	client    pub.HttpClient
-	trspCache cache.TTLCache[string, *transport]
+	cache     *simple.Cache[string, *Transport] // transport cache
+	instance  *Transport                        // single instance-account transport
 	userAgent string
 }
 
-// NewController returns an implementation of the Controller interface for creating new transports
-func NewController(state *state.State, federatingDB *federatingdb.DB, client pub.HttpClient) Controller {
-	var (
-		host    = config.GetHost()
-		proto   = config.GetProtocol()
-		version = config.GetSoftwareVersion()
-	)
-
-	c := &controller{
-		state:     state,
-		fedDB:     federatingDB,
-		client:    client,
-		trspCache: cache.NewTTL[string, *transport](0, 100, 0),
-		userAgent: fmt.Sprintf("gotosocial/%s (+%s://%s)", version, proto, host),
+func NewController(ctx context.Context, state *state.State, federatingDB *federatingdb.DB, client pub.HttpClient) *Controller {
+	c := &Controller{
+		state:    state,
+		fedDB:    federatingDB,
+		client:   client,
+		cache:    simple.New[string, *Transport](0, 100),
+		instance: nil,
+		userAgent: fmt.Sprintf("gotosocial/%s (+%s://%s)",
+			config.GetSoftwareVersion(),
+			config.GetProtocol(),
+			config.GetHost(),
+		),
 	}
+
+	// FIXME: a hacky fix for the testrig database not containing the instance
+	// account at the time of Controller{} instantiation. truly a heinous code crime.
+	instance, _ := ctx.Value("testrig-transport-controller-key").(*gtsmodel.Account) //nolint
+	if instance == nil {
+		var err error
+
+		// Get account associated with this local instance.
+		instance, err = state.DB.GetInstanceAccount(ctx, "")
+		if err != nil {
+			panic(gtserror.Newf("error getting instance account: %w", err))
+		}
+	}
+
+	// Pre-prepare the instance account transport.
+	c.instance = c.GetTransportForAccount(instance)
 
 	return c
 }
 
-func (c *controller) NewTransport(pubKeyID string, privkey *rsa.PrivateKey) (Transport, error) {
+func (c *Controller) NewTransport(pubKeyID string, privkey *rsa.PrivateKey) (*Transport, error) {
+	return c.GetTransport(pubKeyID, privkey), nil
+}
+
+func (c *Controller) GetTransport(pubKeyID string, privkey *rsa.PrivateKey) *Transport {
 	// Generate public key string for cache key
 	//
 	// NOTE: it is safe to use the public key as the cache
@@ -88,58 +99,54 @@ func (c *controller) NewTransport(pubKeyID string, privkey *rsa.PrivateKey) (Tra
 	// provided as argument that would absolutely NOT be safe.
 	pubStr := privkeyToPublicStr(privkey)
 
-	// First check for cached transport
-	transp, ok := c.trspCache.Get(pubStr)
+	// First check for cached transport.
+	transp, ok := c.cache.Get(pubStr)
 	if ok {
-		return transp, nil
+		return transp
 	}
 
-	// Create the transport
-	transp = &transport{
+	// Create transport.
+	transp = &Transport{
 		controller: c,
 		pubKeyID:   pubKeyID,
 		privkey:    privkey,
 	}
 
-	// Cache this transport under pubkey
-	if !c.trspCache.Add(pubStr, transp) {
-		var cached *transport
+	// Cache transport under pubkey
+	if !c.cache.Add(pubStr, transp) {
+		var cached *Transport
 
-		cached, ok = c.trspCache.Get(pubStr)
+		cached, ok = c.cache.Get(pubStr)
 		if !ok {
 			// Some ridiculous race cond.
-			c.trspCache.Set(pubStr, transp)
+			c.cache.Set(pubStr, transp)
 		} else {
 			// Use already cached
 			transp = cached
 		}
 	}
 
-	return transp, nil
+	return transp
 }
 
-func (c *controller) NewTransportForUsername(ctx context.Context, username string) (Transport, error) {
-	// We need an account to use to create a transport for dereferecing something.
-	// If a username has been given, we can fetch the account with that username and use it.
-	// Otherwise, we can take the instance account and use those credentials to make the request.
-	var u string
-	if username == "" {
-		u = config.GetHost()
-	} else {
-		u = username
+// GetTransportForAccount will return the Transport{} instance for given local account.
+// A nil account model will instead return a Transport{} for the local instance account.
+func (c *Controller) GetTransportForAccount(account *gtsmodel.Account) *Transport {
+	if account == nil {
+
+		// nil account indicates this should
+		// go through the instance account
+		// transport, return pre-prepared.
+		return c.instance
 	}
 
-	ourAccount, err := c.state.DB.GetAccountByUsernameDomain(ctx, u, "")
-	if err != nil {
-		return nil, fmt.Errorf("error getting account %s from db: %s", username, err)
+	// Ensure they've provided us a valid local account.
+	if !account.IsLocal() || account.PrivateKey == nil {
+		panic(gtserror.New("cannot create transport for account"))
 	}
 
-	transport, err := c.NewTransport(ourAccount.PublicKeyURI, ourAccount.PrivateKey)
-	if err != nil {
-		return nil, fmt.Errorf("error creating transport for user %s: %s", username, err)
-	}
-
-	return transport, nil
+	// Return a transport for local account's private key + its URI.
+	return c.GetTransport(account.PublicKeyURI, account.PrivateKey)
 }
 
 // dereferenceLocal is a shortcut to try dereferencing
@@ -149,7 +156,7 @@ func (c *controller) NewTransportForUsername(ctx context.Context, username strin
 // the calling transport should continue with an http call anyway.
 //
 // It should only be invoked when the iri.Host == this host.
-func (c *controller) dereferenceLocal(
+func (c *Controller) dereferenceLocal(
 	ctx context.Context,
 	uri *url.URL,
 ) (*http.Response, error) {

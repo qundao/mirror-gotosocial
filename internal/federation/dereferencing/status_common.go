@@ -83,7 +83,7 @@ func (d *Dereferencer) getStatusFromDB(
 // ActivityPub status object's JSON-LD ID.
 func (d *Dereferencer) retrieveStatusable(
 	ctx context.Context,
-	tsport transport.Transport,
+	tsport *transport.Transport,
 	uri *url.URL,
 ) (
 	statusable ap.Statusable,

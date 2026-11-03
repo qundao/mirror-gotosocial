@@ -39,7 +39,7 @@ type Processor struct {
 	converter     *typeutils.Converter
 	federator     *federation.Federator
 	media         *media.Manager
-	transport     transport.Controller
+	transport     *transport.Controller
 	email         email.Sender
 }
 
@@ -52,7 +52,7 @@ func New(
 	federator *federation.Federator,
 	converter *typeutils.Converter,
 	mediaManager *media.Manager,
-	transportController transport.Controller,
+	transportController *transport.Controller,
 	emailSender email.Sender,
 ) Processor {
 	return Processor{

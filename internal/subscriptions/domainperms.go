@@ -117,13 +117,8 @@ func (s *Subscriptions) ProcessDomainPermissionSubscriptions(
 		return
 	}
 
-	// Get a transport using the instance account,
-	// we can reuse this for each HTTP call.
-	tsport, err := s.transportController.NewTransportForUsername(ctx, "")
-	if err != nil {
-		log.Errorf(ctx, "error getting transport for instance account: %v", err)
-		return
-	}
+	// Get transport using the instance account we can reuse.
+	tsport := s.transportController.GetTransportForAccount(nil)
 
 	var skipCache bool
 	for i, permSub := range permSubs {
@@ -198,11 +193,15 @@ func (s *Subscriptions) ProcessDomainPermissionSubscriptions(
 func (s *Subscriptions) ProcessDomainPermissionSubscription(
 	ctx context.Context,
 	permSub *gtsmodel.DomainPermissionSubscription,
-	tsport transport.Transport,
+	tsport *transport.Transport,
 	higherPrios []*gtsmodel.DomainPermissionSubscription,
 	dry bool,
 	skipCache bool,
-) ([]gtsmodel.DomainPermission, bool, error) {
+) (
+	[]gtsmodel.DomainPermission,
+	bool,
+	error,
+) {
 	l := log.
 		WithContext(ctx).
 		WithFields(kv.Fields{

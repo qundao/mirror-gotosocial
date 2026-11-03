@@ -463,13 +463,10 @@ func (d *Dereferencer) enrichAndStoreStatus(
 
 	if statusable == nil {
 		var err error
-		var tsport transport.Transport
+		var tsport *transport.Transport
 
-		// Get transport on behalf of requesting account.
-		ctx, tsport, err = d.getTransport(ctx, requester)
-		if err != nil {
-			return nil, nil, isNew, err
-		}
+		// Get transport for the requesting account.
+		ctx, tsport = d.getTransport(ctx, requester)
 
 		var existing *gtsmodel.Status
 

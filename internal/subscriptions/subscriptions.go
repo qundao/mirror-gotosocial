@@ -25,13 +25,13 @@ import (
 
 type Subscriptions struct {
 	state               *state.State
-	transportController transport.Controller
+	transportController *transport.Controller
 	tc                  *typeutils.Converter
 }
 
 func New(
 	state *state.State,
-	transportController transport.Controller,
+	transportController *transport.Controller,
 	tc *typeutils.Converter,
 ) *Subscriptions {
 	return &Subscriptions{

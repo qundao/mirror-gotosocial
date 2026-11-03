@@ -31,12 +31,9 @@ func (suite *RefetchTestSuite) TestRefetchEmojisNothingToDo() {
 	ctx := suite.T().Context()
 
 	adminAccount := suite.testAccounts["admin_account"]
-	transport, err := suite.transportController.NewTransportForUsername(ctx, adminAccount.Username)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
+	tsport := suite.transportController.GetTransportForAccount(adminAccount)
 
-	refetched, err := suite.manager.RefetchEmojis(ctx, "", transport.DereferenceMedia)
+	refetched, err := suite.manager.RefetchEmojis(ctx, "", tsport.DereferenceMedia)
 	suite.NoError(err)
 	suite.Equal(0, refetched)
 }
@@ -49,12 +46,9 @@ func (suite *RefetchTestSuite) TestRefetchEmojis() {
 	}
 
 	adminAccount := suite.testAccounts["admin_account"]
-	transport, err := suite.transportController.NewTransportForUsername(ctx, adminAccount.Username)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
+	tsport := suite.transportController.GetTransportForAccount(adminAccount)
 
-	refetched, err := suite.manager.RefetchEmojis(ctx, "", transport.DereferenceMedia)
+	refetched, err := suite.manager.RefetchEmojis(ctx, "", tsport.DereferenceMedia)
 	suite.NoError(err)
 	suite.Equal(1, refetched)
 }
@@ -68,12 +62,9 @@ func (suite *RefetchTestSuite) TestRefetchEmojisLocal() {
 	}
 
 	adminAccount := suite.testAccounts["admin_account"]
-	transport, err := suite.transportController.NewTransportForUsername(ctx, adminAccount.Username)
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
+	tsport := suite.transportController.GetTransportForAccount(adminAccount)
 
-	refetched, err := suite.manager.RefetchEmojis(ctx, "", transport.DereferenceMedia)
+	refetched, err := suite.manager.RefetchEmojis(ctx, "", tsport.DereferenceMedia)
 	suite.NoError(err)
 	suite.Equal(0, refetched) // shouldn't refetch anything because local
 }

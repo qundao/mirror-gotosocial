@@ -458,27 +458,18 @@ func (f *Federator) callForPubKey(
 	[]byte,
 	gtserror.WithCode,
 ) {
-	var username string
-	if receiver != nil {
-		username = receiver.Username
-	}
+	// Prepare a transport for receiver for dereferencing.
+	trans := f.transport.GetTransportForAccount(receiver)
 
-	// Use a transport to dereference the remote.
-	trans, err := f.transport.NewTransportForUsername(
+	// The actual http call to the remote server is
+	// made right here by the Dereference function.
+	rsp, err := trans.Dereference(
 
 		// We're on a hot path:
 		// don't retry if req fails.
 		gtscontext.SetFastFail(ctx),
-		username,
+		pubKeyID,
 	)
-	if err != nil {
-		err = gtserror.Newf("error creating transport for %s: %w", username, err)
-		return nil, gtserror.NewErrorInternalError(err)
-	}
-
-	// The actual http call to the remote server is
-	// made right here by the Dereference function.
-	rsp, err := trans.Dereference(ctx, pubKeyID)
 
 	if err == nil {
 		// Got a response from remote.

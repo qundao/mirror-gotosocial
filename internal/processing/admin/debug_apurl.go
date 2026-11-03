@@ -77,12 +77,8 @@ func (p *Processor) DebugAPUrl(
 		return nil, gtserror.NewErrorBadRequest(err, err.Error())
 	}
 
-	// All looks fine. Prepare the transport and (signed) GET request.
-	tsport, err := p.transport.NewTransportForUsername(ctx, adminAcct.Username)
-	if err != nil {
-		err = gtserror.Newf("error creating transport: %w", err)
-		return nil, gtserror.NewErrorInternalError(err, err.Error())
-	}
+	// All looks fine. Prepare transport and (signed) GET request.
+	tsport := p.transport.GetTransportForAccount(adminAcct)
 
 	req, err := http.NewRequestWithContext(
 		// Caller will want a snappy

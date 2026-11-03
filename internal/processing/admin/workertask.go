@@ -27,7 +27,6 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/messages"
-	"code.superseriousbusiness.org/gotosocial/internal/transport"
 	"code.superseriousbusiness.org/gotosocial/internal/transport/delivery"
 )
 
@@ -239,29 +238,19 @@ func (p *Processor) pushDelivery(ctx context.Context, task *gtsmodel.WorkerTask)
 		return gtserror.Newf("error deserializing delivery: %w", err)
 	}
 
-	var tsport transport.Transport
-
+	var account *gtsmodel.Account
 	if uri := dlv.ActorID; uri != "" {
+		var err error
+
 		// Fetch the actor account by provided URI from db.
-		account, err := p.state.DB.GetAccountByURI(ctx, uri)
+		account, err = p.state.DB.GetAccountByURI(ctx, uri)
 		if err != nil {
 			return gtserror.Newf("error getting actor account %s from db: %w", uri, err)
 		}
-
-		// Fetch a transport for request signing for actor's account username.
-		tsport, err = p.transport.NewTransportForUsername(ctx, account.Username)
-		if err != nil {
-			return gtserror.Newf("error getting transport for actor %s: %w", uri, err)
-		}
-	} else {
-		var err error
-
-		// No actor was given, will be signed by instance account.
-		tsport, err = p.transport.NewTransportForUsername(ctx, "")
-		if err != nil {
-			return gtserror.Newf("error getting instance account transport: %w", err)
-		}
 	}
+
+	// Get transport for the signing actor's account.
+	tsport := p.transport.GetTransportForAccount(account)
 
 	// Using transport, add actor signature to delivery.
 	if err := tsport.SignDelivery(dlv); err != nil {

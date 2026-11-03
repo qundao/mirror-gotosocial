@@ -672,11 +672,8 @@ func (d *Dereferencer) isValidAuthURI(
 		return false, nil
 	}
 
-	tsport, err := d.transportController.NewTransportForUsername(ctx, requester.Username)
-	if err != nil {
-		err := gtserror.Newf("error creating transport: %w", err)
-		return false, err
-	}
+	// Get transport for the requesting account.
+	ctx, tsport := d.getTransport(ctx, requester)
 
 	// Make the call to the authIRI.
 	// Log any error encountered here but don't

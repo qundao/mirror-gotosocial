@@ -55,7 +55,7 @@ type TestStructs struct {
 	Federator           *federation.Federator
 	EmailSender         email.Sender
 	WebPushSender       *WebPushMockSender
-	TransportController transport.Controller
+	TransportController *transport.Controller
 	InteractionFilter   *interaction.Filter
 	StatusFilter        *status.Filter
 	Surfacer            *surfacing.Surfacer

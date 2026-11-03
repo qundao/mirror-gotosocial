@@ -19,10 +19,10 @@ package federation
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 
 	"code.superseriousbusiness.org/activity/pub"
+	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
 )
 
@@ -57,18 +57,28 @@ func (f *Federator) NewTransport(ctx context.Context, actorBoxIRI *url.URL, _ st
 	case uris.IsInboxPath(actorBoxIRI):
 		_, username, err = uris.ParseInboxPath(actorBoxIRI)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't parse path %s as an inbox: %s", actorBoxIRI.String(), err)
+			return nil, gtserror.Newf("error parsing inbox path %s: %w", actorBoxIRI, err)
 		}
 
 	case uris.IsOutboxPath(actorBoxIRI):
 		_, username, err = uris.ParseOutboxPath(actorBoxIRI)
 		if err != nil {
-			return nil, fmt.Errorf("couldn't parse path %s as an outbox: %s", actorBoxIRI.String(), err)
+			return nil, gtserror.Newf("error parsing outbox path %s: %w", actorBoxIRI, err)
 		}
 
 	default:
-		return nil, fmt.Errorf("id %s was neither an inbox path nor an outbox path", actorBoxIRI.String())
+		return nil, gtserror.Newf("unexpected iri path type: %s", actorBoxIRI)
 	}
 
-	return f.transport.NewTransportForUsername(ctx, username)
+	// Look for the provided local account by username.
+	account, err := f.db.GetAccountByUsernameDomain(ctx,
+		username,
+		"",
+	)
+	if err != nil {
+		return nil, gtserror.Newf("error getting local account with username %s: %w", username, err)
+	}
+
+	// Return a transport instance for the fetched account.
+	return f.transport.GetTransportForAccount(account), nil
 }

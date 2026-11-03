@@ -19,6 +19,7 @@ package testrig
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"strings"
@@ -52,8 +53,9 @@ const (
 // Unlike the other test interfaces provided in this package, you'll probably want to call this function
 // PER TEST rather than per suite, so that the do function can be set on a test by test (or even more granular)
 // basis.
-func NewTestTransportController(state *state.State, client pub.HttpClient) transport.Controller {
-	return transport.NewController(state, NewTestFederatingDB(state), client)
+func NewTestTransportController(state *state.State, client pub.HttpClient) *transport.Controller {
+	ctx := context.WithValue(context.Background(), "testrig-transport-controller-key", NewTestAccounts()["instance_account"]) //nolint
+	return transport.NewController(ctx, state, NewTestFederatingDB(state), client)
 }
 
 type MockHTTPClient struct {
