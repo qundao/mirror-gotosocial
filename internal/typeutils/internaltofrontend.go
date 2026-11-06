@@ -1346,6 +1346,28 @@ func (c *Converter) baseStatusToFrontend(
 		return nil, gtserror.Newf("error converting interaction policy: %w", err)
 	}
 
+	// status.content
+	content := status.Content
+
+	// If there are out-of-body link attachments
+	// on this status, append them to the end of
+	// status content as HTML unordered list.
+	linkHTML := linksToHTML(ctx, status.LinkAttachments)
+	if linkHTML != "" {
+		if l := len(content); l != 0 && content[l-1] != '>' {
+			// If existing content doesn't seem
+			// to be enclosed inside HTML elements,
+			// using this very ambachtelijk check,
+			// append some breaks to avoid ugliness.
+			//
+			// If we were wrong about the HTML then
+			// worst-case scenario is the status
+			// just looks a bit too gappy.
+			content += "<br><br>"
+		}
+		content += linkHTML
+	}
+
 	apiStatus := &apimodel.Status{
 		ID:                 status.ID,
 		CreatedAt:          util.FormatISO8601(status.CreatedAt),
@@ -1360,7 +1382,7 @@ func (c *Converter) baseStatusToFrontend(
 		RepliesCount:       repliesCount,
 		ReblogsCount:       reblogsCount,
 		FavouritesCount:    favesCount,
-		Content:            status.Content,
+		Content:            content,
 		Reblog:             nil, // Set below.
 		Application:        nil, // Set below.
 		Account:            nil, // Caller must do this.

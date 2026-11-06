@@ -41,8 +41,8 @@ import (
 //   - Any Activityable type:   any 'object's set on an activity will be custom serialized as above.
 func Serialize(t vocab.Type) (map[string]interface{}, error) {
 	switch tn := t.GetTypeName(); {
-	case tn == ObjectOrderedCollection ||
-		tn == ObjectOrderedCollectionPage:
+	case tn == TypeOrderedCollection ||
+		tn == TypeOrderedCollectionPage:
 		return serializeWithOrderedItems(t)
 	case IsAccountable(tn):
 		return serializeAccountable(t, true)

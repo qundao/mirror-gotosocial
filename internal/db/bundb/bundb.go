@@ -54,6 +54,7 @@ type DBService struct {
 	db.Interaction
 	db.Filter
 	db.List
+	db.Link
 	db.Marker
 	db.Media
 	db.Mention
@@ -218,6 +219,10 @@ func NewBunDBService(ctx context.Context, state *state.State) (db.DB, error) {
 			state: state,
 		},
 		List: &listDB{
+			db:    db,
+			state: state,
+		},
+		Link: &linkDB{
 			db:    db,
 			state: state,
 		},

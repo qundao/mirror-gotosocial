@@ -661,8 +661,8 @@ func (c *Converter) StatusToAS(ctx context.Context, s *gtsmodel.Status) (ap.Stat
 	}
 
 	// `attachment` property.
-	if err := c.attachAttachments(ctx, s, statusable); err != nil {
-		return nil, gtserror.Newf("error attaching attachments: %w", err)
+	if err := c.attachMedia(ctx, s, statusable); err != nil {
+		return nil, gtserror.Newf("error attaching media: %w", err)
 	}
 
 	// `replies` collection property.
@@ -958,9 +958,9 @@ func (c *Converter) EmojiToAS(ctx context.Context, e *gtsmodel.Emoji) (vocab.Too
 	return emoji, nil
 }
 
-// attachAttachments converts the attachments on the given status
-// into Attachmentables, and appends them to the given Statusable.
-func (c *Converter) attachAttachments(
+// attachMedia converts the attachments on the given status
+// into MediaAttachmentables, and appends them to the given Statusable.
+func (c *Converter) attachMedia(
 	ctx context.Context,
 	s *gtsmodel.Status,
 	statusable ap.Statusable,
@@ -991,7 +991,7 @@ func (c *Converter) attachAttachments(
 		// Use appropriate vocab.Type and
 		// append function for this attachment.
 		var (
-			attachmentable ap.Attachmentable
+			attachmentable ap.MediaAttachmentable
 			append         func()
 		)
 		switch a.Type {

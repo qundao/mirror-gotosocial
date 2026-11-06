@@ -56,6 +56,10 @@ type Status struct {
 	AttachmentIDs []string           `bun:"attachments,array"`
 	Attachments   []*MediaAttachment `bun:"attached_media,rel:has-many"`
 
+	// Links associated with this status.
+	LinkAttachments []LinkAttachment `bun:"links"`
+	Links           []*Link          `bun:"-"`
+
 	// Database IDs of any tags used in this status, and the
 	// tags corresponding to tagIDs. https://bun.uptrace.dev/guide/relations.html#many-to-many-relation
 	TagIDs []string `bun:"tags,array"`
@@ -184,6 +188,21 @@ func (s *Status) AttachmentsPopulated() bool {
 	}
 	for i, id := range s.AttachmentIDs {
 		if s.Attachments[i].ID != id {
+			return false
+		}
+	}
+	return true
+}
+
+// LinksPopulated returns whether Links are
+// populated according to current LinkAttachments.
+func (s *Status) LinksPopulated() bool {
+	if len(s.LinkAttachments) != len(s.Links) {
+		// this is the quickest indicator.
+		return false
+	}
+	for i, la := range s.LinkAttachments {
+		if s.Links[i].URL != la.URL {
 			return false
 		}
 	}

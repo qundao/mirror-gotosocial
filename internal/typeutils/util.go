@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"strings"
 
+	"code.superseriousbusiness.org/gopkg/buffers"
 	"code.superseriousbusiness.org/gopkg/log"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/config"
@@ -36,6 +37,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/language"
 	"code.superseriousbusiness.org/gotosocial/internal/regexes"
 	"code.superseriousbusiness.org/gotosocial/internal/text"
+	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
 // toAPISize converts a set of media dimensions
@@ -113,6 +115,64 @@ func misskeyReportInlineURLs(content string) []*url.URL {
 		}
 	}
 	return urls
+}
+
+func linksToHTML(ctx context.Context, links []gtsmodel.LinkAttachment) string {
+	// Extract out-of-body URIs from links.
+	uris := make([]*url.URL, 0, len(links))
+	for _, link := range links {
+		if link.InBody {
+			// Link is already in body,
+			// no need to append it.
+			continue
+		}
+
+		// Parse Link href to URI.
+		uri, err := url.Parse(link.URL)
+		if err != nil {
+			log.Warnf(ctx, "malformed link on status: %s", link.URL)
+			continue
+		}
+
+		// Depunify domain host for
+		// nicer presentation, and
+		// remove if punification fails.
+		uri.Host, err = util.DePunify(uri.Host)
+		if err != nil {
+			log.Warnf(ctx, "could not punify link on status: %v", err)
+			continue
+		}
+
+		uris = append(uris, uri)
+	}
+
+	if len(uris) == 0 {
+		// No (more) valid links
+		// remain, nothing to do.
+		return ""
+	}
+
+	// Format links as
+	// list of anchors.
+	buf := buffers.Get1k()
+	buf.B = append(buf.B, "<ul>"...)
+	for _, uri := range uris {
+		urlStr := uri.String()
+		buf.B = append(buf.B, "<li>"...)
+		buf.B = append(buf.B, "<a href=\""+urlStr+"\">"...)
+		buf.B = append(buf.B, urlStr...)
+		buf.B = append(buf.B, "</a>"...)
+		buf.B = append(buf.B, "</li>"...)
+	}
+	buf.B = append(buf.B, "</ul>"...)
+
+	// Finish with the buffer.
+	str := string(buf.B)
+	buffers.Put1k(buf)
+
+	// Run HTML snippet through the
+	// sanitizer to catch devious links.
+	return text.SanitizeHTML(str)
 }
 
 // placeholderAttachments separates any attachments with missing local URL

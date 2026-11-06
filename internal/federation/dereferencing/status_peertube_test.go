@@ -678,7 +678,7 @@ func (suite *StatusPeertubeTestSuite) TestPeertubeVideoDereference() {
 	if err != nil {
 		suite.FailNow(err.Error())
 	}
-	
+
 	suite.Equal("https://spectra.video/videos/watch/4e06b13a-b7bb-4530-a653-c82d47a7bfb8", status.URI)
 	suite.Equal("https://spectra.video/w/aCQ9f8rMn14CW8jBzCTiA9", status.URL)
 	suite.Equal("https://spectra.video/accounts/mberos", status.Account.URI)

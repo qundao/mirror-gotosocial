@@ -297,9 +297,64 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	// status.Attachments
 	//
 	// Media attachments for later dereferencing.
-	status.Attachments, err = ap.ExtractAttachments(statusable)
+	status.Attachments, err = ap.ExtractMediaAttachments(statusable)
 	if err != nil {
-		log.Warnf(ctx, "error(s) extracting attachments for %s: %v", uri, err)
+		log.Warnf(ctx, "error(s) extracting media attachments for %s: %v", uri, err)
+	}
+
+	// status.LinkAttachments
+	//
+	// Extract in-body links from status `content` property.
+	inBodyLinks, err := ap.ExtractLinksFromContent(status.Content)
+	if err != nil {
+		log.Warnf(ctx, "error(s) extracting links from content for %s: %v", uri, err)
+	}
+
+	// Extract attached links from `attachment` property.
+	attachedLinks, err := ap.ExtractLinksFromAttachment(statusable)
+	if err != nil {
+		log.Warnf(ctx, "error(s) extracting link attachments for %s: %v", uri, err)
+	}
+
+	// Compile extracted links into one slice
+	// for easier iteration, marking the index
+	// where the inBodyLinks slice ends so we
+	// know if links were in body or not.
+	inBodyThreshold := len(inBodyLinks) - 1
+	extractedLinks := append(inBodyLinks, attachedLinks...)
+
+	// inBodyLinks are at the
+	// start of the slice so we
+	// begin with inBody = true.
+	inBody := true
+
+	// Deduplicate and set link attachments.
+	seenLinks := make(map[string]struct{})
+	for i, link := range extractedLinks {
+		if inBody && i > inBodyThreshold {
+			// Over this threshold
+			// we're now iterating
+			// over attachedLinks.
+			inBody = false
+		}
+
+		_, seenLink := seenLinks[link.URL]
+		if seenLink {
+			// Already seen,
+			// don't append.
+			continue
+		}
+
+		// Mark link as seen
+		// and append to status.
+		seenLinks[link.URL] = struct{}{}
+		status.LinkAttachments = append(
+			status.LinkAttachments,
+			gtsmodel.LinkAttachment{
+				URL:    link.URL,
+				InBody: inBody,
+			},
+		)
 	}
 
 	// status.Poll

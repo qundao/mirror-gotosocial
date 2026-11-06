@@ -62,6 +62,7 @@ EXPECT=$(cat << "EOF"
     "cache-list-timeline-size": 800,
     "cache-list-timeline-timeout": 7200000000000,
     "cache-listed-ids-mem-ratio": 2,
+    "cache-link-mem-ratio": 0.2,
     "cache-marker-mem-ratio": 0.5,
     "cache-media-mem-ratio": 4,
     "cache-memory-target": "100MiB",

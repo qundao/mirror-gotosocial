@@ -138,6 +138,7 @@ const (
 	CacheInReplyToIDsMemRatioFlag                 = "cache-in-reply-to-ids-mem-ratio"
 	CacheInstanceMemRatioFlag                     = "cache-instance-mem-ratio"
 	CacheInteractionRequestMemRatioFlag           = "cache-interaction-request-mem-ratio"
+	CacheLinkMemRatioFlag                         = "cache-link-mem-ratio"
 	CacheListMemRatioFlag                         = "cache-list-mem-ratio"
 	CacheListIDsMemRatioFlag                      = "cache-list-ids-mem-ratio"
 	CacheListedIDsMemRatioFlag                    = "cache-listed-ids-mem-ratio"
@@ -418,6 +419,7 @@ func (cfg *CacheConfiguration) RegisterFlags(prefix string, flags *pflag.FlagSet
 	flags.Float64(joinFlag(prefix, "in-reply-to-ids-mem-ratio"), cfg.InReplyToIDsMemRatio, "")
 	flags.Float64(joinFlag(prefix, "instance-mem-ratio"), cfg.InstanceMemRatio, "")
 	flags.Float64(joinFlag(prefix, "interaction-request-mem-ratio"), cfg.InteractionRequestMemRatio, "")
+	flags.Float64(joinFlag(prefix, "link-mem-ratio"), cfg.LinkMemRatio, "")
 	flags.Float64(joinFlag(prefix, "list-mem-ratio"), cfg.ListMemRatio, "")
 	flags.Float64(joinFlag(prefix, "list-ids-mem-ratio"), cfg.ListIDsMemRatio, "")
 	flags.Float64(joinFlag(prefix, "listed-ids-mem-ratio"), cfg.ListedIDsMemRatio, "")
@@ -696,6 +698,7 @@ func (cfg *CacheConfiguration) MarshalIntoMap(prefix string, cfgmap map[string]a
 	cfgmap[joinFlag(prefix, "in-reply-to-ids-mem-ratio")] = cfg.InReplyToIDsMemRatio
 	cfgmap[joinFlag(prefix, "instance-mem-ratio")] = cfg.InstanceMemRatio
 	cfgmap[joinFlag(prefix, "interaction-request-mem-ratio")] = cfg.InteractionRequestMemRatio
+	cfgmap[joinFlag(prefix, "link-mem-ratio")] = cfg.LinkMemRatio
 	cfgmap[joinFlag(prefix, "list-mem-ratio")] = cfg.ListMemRatio
 	cfgmap[joinFlag(prefix, "list-ids-mem-ratio")] = cfg.ListIDsMemRatio
 	cfgmap[joinFlag(prefix, "listed-ids-mem-ratio")] = cfg.ListedIDsMemRatio
@@ -738,7 +741,7 @@ func (cfg *CacheConfiguration) MarshalIntoMap(prefix string, cfgmap map[string]a
 }
 
 func (cfg *Configuration) MarshalMap() map[string]any {
-	cfgmap := make(map[string]any, 249)
+	cfgmap := make(map[string]any, 250)
 	cfg.MarshalIntoMap(cfgmap)
 	return cfgmap
 }
@@ -1819,6 +1822,14 @@ func (cfg *CacheConfiguration) UnmarshalMap(prefix string, cfgmap map[string]any
 		cfg.InteractionRequestMemRatio, err = cast.ToFloat64E(ival)
 		if err != nil {
 			return fmt.Errorf("error casting %#v -> %s for '%s': %w", ival, "float64", joinFlag(prefix, "interaction-request-mem-ratio"), err)
+		}
+	}
+
+	if ival, ok := cfgmap[joinFlag(prefix, "link-mem-ratio")]; ok {
+		var err error
+		cfg.LinkMemRatio, err = cast.ToFloat64E(ival)
+		if err != nil {
+			return fmt.Errorf("error casting %#v -> %s for '%s': %w", ival, "float64", joinFlag(prefix, "link-mem-ratio"), err)
 		}
 	}
 
@@ -4862,6 +4873,23 @@ func GetCacheInteractionRequestMemRatio() float64 { return global.GetCacheIntera
 // SetCacheInteractionRequestMemRatio safely sets the value for global configuration 'Cache.InteractionRequestMemRatio' field
 func SetCacheInteractionRequestMemRatio(v float64) { global.SetCacheInteractionRequestMemRatio(v) }
 
+// GetCacheLinkMemRatio safely fetches the Configuration value for state's 'Cache.LinkMemRatio' field
+func (st *ConfigState) GetCacheLinkMemRatio() (v float64) {
+	return st.config.Cache.LinkMemRatio
+}
+
+// SetCacheLinkMemRatio safely sets the Configuration value for state's 'Cache.LinkMemRatio' field
+func (st *ConfigState) SetCacheLinkMemRatio(v float64) {
+	st.config.Cache.LinkMemRatio = v
+	st.reloadToViper()
+}
+
+// GetCacheLinkMemRatio safely fetches the value for global configuration 'Cache.LinkMemRatio' field
+func GetCacheLinkMemRatio() float64 { return global.GetCacheLinkMemRatio() }
+
+// SetCacheLinkMemRatio safely sets the value for global configuration 'Cache.LinkMemRatio' field
+func SetCacheLinkMemRatio(v float64) { global.SetCacheLinkMemRatio(v) }
+
 // GetCacheListMemRatio safely fetches the Configuration value for state's 'Cache.ListMemRatio' field
 func (st *ConfigState) GetCacheListMemRatio() (v float64) {
 	return st.config.Cache.ListMemRatio
@@ -7328,6 +7356,7 @@ func (st *ConfigState) GetTotalOfMemRatios() (total float64) {
 	total += st.config.Cache.InReplyToIDsMemRatio
 	total += st.config.Cache.InstanceMemRatio
 	total += st.config.Cache.InteractionRequestMemRatio
+	total += st.config.Cache.LinkMemRatio
 	total += st.config.Cache.ListMemRatio
 	total += st.config.Cache.ListIDsMemRatio
 	total += st.config.Cache.ListedIDsMemRatio

@@ -321,6 +321,7 @@ type CacheConfiguration struct {
 	InReplyToIDsMemRatio                 float64       `name:"in-reply-to-ids-mem-ratio"`
 	InstanceMemRatio                     float64       `name:"instance-mem-ratio"`
 	InteractionRequestMemRatio           float64       `name:"interaction-request-mem-ratio"`
+	LinkMemRatio                         float64       `name:"link-mem-ratio"`
 	ListMemRatio                         float64       `name:"list-mem-ratio"`
 	ListIDsMemRatio                      float64       `name:"list-ids-mem-ratio"`
 	ListedIDsMemRatio                    float64       `name:"listed-ids-mem-ratio"`

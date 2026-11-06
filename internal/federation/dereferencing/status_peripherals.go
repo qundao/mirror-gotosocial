@@ -37,6 +37,7 @@ type statusChanges struct {
 	mentions bool
 	tags     bool
 	media    bool
+	links    bool
 	emoji    bool
 	policy   bool
 }
@@ -127,6 +128,16 @@ func (d *Dereferencer) handleStatusPeripherals(
 		return statusChanges{}, err
 	}
 
+	// Insert / update any links.
+	linksChanged, err := d.handleStatusLinks(ctx,
+		existing,
+		status,
+	)
+	if err != nil {
+		err := gtserror.Newf("error populating links for status %s: %w", uri, err)
+		return statusChanges{}, err
+	}
+
 	// Populate emoji associated with status, passing
 	// in existing status to reuse old where possible
 	// (especially important here to reduce need to dereference).
@@ -148,6 +159,7 @@ func (d *Dereferencer) handleStatusPeripherals(
 		mentions: mentionsChanged,
 		tags:     tagsChanged,
 		media:    mediaChanged,
+		links:    linksChanged,
 		emoji:    emojiChanged,
 		policy:   policyChanged,
 	}, nil
@@ -436,6 +448,121 @@ func (d *Dereferencer) fetchStatusAttachments(
 	return changed, nil
 }
 
+// handleStatusLinks populates links on 'status',
+// creating new database entries where needed,
+// or using unchanged from 'existing' status.
+func (d *Dereferencer) handleStatusLinks(
+	ctx context.Context,
+	existing *gtsmodel.Status,
+	status *gtsmodel.Status,
+) (
+	changed bool,
+	err error,
+) {
+	status.Links = make([]*gtsmodel.Link, len(status.LinkAttachments))
+	for i := range status.LinkAttachments {
+		linkURL := status.LinkAttachments[i].URL
+		// Look for corresponding
+		// Link on existing status.
+		var link *gtsmodel.Link
+		for _, l := range existing.Links {
+			if l.URL == linkURL {
+				// Gottem
+				// chief.
+				link = l
+				break
+			}
+		}
+
+		if link != nil {
+			// Reuse existing link
+			// from previous status.
+			status.Links[i] = link
+			continue
+		}
+
+		// Link doesn't exist on
+		// previous version of status so
+		// we know for sure it's changed.
+		changed = true
+
+		// Check if we can get link from the db
+		// if some other status caused it to be
+		// created by sharing this url before.
+		link, err = d.state.DB.GetLinkByURL(ctx, linkURL)
+		if err != nil && !errors.Is(err, db.ErrNoEntries) {
+			err = gtserror.Newf("db error getting link: %w", err)
+			return
+		}
+
+		if link != nil {
+			// Got link from
+			// the db, use it.
+			status.Links[i] = link
+			continue
+		}
+
+		// Link not found in the db.
+		// Store a new link entry.
+		link = &gtsmodel.Link{linkURL, nil}
+		switch err = d.state.DB.PutLink(ctx, link); {
+		case err == nil:
+			// All good! Set link.
+			status.Links[i] = link
+
+		case errors.Is(err, db.ErrAlreadyExists):
+			// Race condition, someone else inserted
+			// the link first. Try to get and use it.
+			status.Links[i], err = d.state.DB.GetLinkByURL(ctx, linkURL)
+			if err != nil {
+				err = gtserror.Newf("db error getting link after race: %w", err)
+				return
+			}
+
+		default:
+			// Proper db error.
+			err = gtserror.Newf("db error putting link: %w", err)
+			return
+		}
+	}
+
+	if !changed {
+		// If not marked as changed yet, that just means
+		// no links exist on the new status that didn't exist
+		// on the old. Double check based on length and stuff.
+		if len(status.LinkAttachments) !=
+			len(existing.LinkAttachments) {
+			// If length is different
+			// it's definitely changed.
+			changed = true
+		} else {
+			// Length is the same, check values
+			// are the same and in the same order.
+			for i := range status.LinkAttachments {
+				old := existing.LinkAttachments[i]
+				new := status.LinkAttachments[i]
+
+				if old.URL != new.URL {
+					// URLs not the same or
+					// not in the same order.
+					changed = true
+					break
+				}
+
+				if old.InBody != new.InBody {
+					// Link was in body, now in
+					// attachment, or vice versa.
+					changed = true
+					break
+				}
+			}
+		}
+
+	}
+
+	return changed, nil
+}
+
 // fetchStatusEmojis populates the emojis on 'status', creating new database entries
 // where needed and dereferencing it, or using unchanged from 'existing' status.
 func (d *Dereferencer) fetchStatusEmojis(
@@ -652,6 +779,12 @@ func (d *Dereferencer) handleStatusEdit(
 	if changes.media {
 		// Attached media was changed.
 		cols = append(cols, "attachments") // i.e. AttachmentIDs
+		edited = true
+	}
+
+	if changes.tags {
+		// Links were changed.
+		cols = append(cols, "links") // i.e. LinkAttachments
 		edited = true
 	}
 

@@ -267,6 +267,25 @@ func (s *statusDB) PopulateStatus(ctx context.Context, status *gtsmodel.Status) 
 		}
 	}
 
+	if !status.LinksPopulated() {
+		// Links are out-of-date with
+		// LinkAttachments, repopulate.
+		urls := xslices.Gather(
+			make([]string, 0, len(status.LinkAttachments)),
+			status.LinkAttachments,
+			func(la gtsmodel.LinkAttachment) string {
+				return la.URL
+			},
+		)
+		status.Links, err = s.state.DB.GetLinksByURLs(
+			gtscontext.SetBarebones(ctx),
+			urls,
+		)
+		if err != nil {
+			errs.Appendf("error populating links: %w", err)
+		}
+	}
+
 	if !status.TagsPopulated() {
 		// Status tags are out-of-date with IDs, repopulate.
 		status.Tags, err = s.state.DB.GetTags(
