@@ -52,7 +52,7 @@ type AdminStandardTestSuite struct {
 	mediaManager        *media.Manager
 	oauthServer         oauth.Server
 	fromClientAPIChan   chan messages.FromClientAPI
-	transportController transport.Controller
+	transportController *transport.Controller
 	federator           *federation.Federator
 	emailSender         email.Sender
 	sentEmails          map[string]string

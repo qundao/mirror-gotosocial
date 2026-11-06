@@ -44,7 +44,7 @@ type MediaStandardTestSuite struct {
 	storage             *storage.Driver
 	state               *state.State
 	mediaManager        *media.Manager
-	transportController transport.Controller
+	transportController *transport.Controller
 
 	// standard suite models
 	testTokens            map[string]*gtsmodel.Token

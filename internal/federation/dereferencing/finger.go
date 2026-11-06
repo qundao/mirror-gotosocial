@@ -41,7 +41,7 @@ import (
 // error will be returned instead.
 func (d *Dereferencer) fingerRemoteAccount(
 	ctx context.Context,
-	transport transport.Transport,
+	transport *transport.Transport,
 	username string,
 	host string,
 ) (
@@ -55,23 +55,24 @@ func (d *Dereferencer) fingerRemoteAccount(
 
 	b, err := transport.Finger(ctx, username, host)
 	if err != nil {
-		err = gtserror.Newf("error webfingering %s: %w", target, err)
+		err := gtserror.Newf("error webfingering %s: %w", target, err)
 		return "", "", nil, err
 	}
 
 	var resp apimodel.WellKnownResponse
+
 	if err := json.Unmarshal(b, &resp); err != nil {
-		err = gtserror.Newf("error parsing response as JSON for %s: %w", target, err)
+		err := gtserror.Newf("error parsing response as JSON for %s: %w", target, err)
 		return "", "", nil, err
 	}
 
 	if len(resp.Links) == 0 {
-		err = gtserror.Newf("no links found in response for %s", target)
+		err := gtserror.Newf("no links found in response for %s", target)
 		return "", "", nil, err
 	}
 
 	if resp.Subject == "" {
-		err = gtserror.Newf("no subject found in response for %s", target)
+		err := gtserror.Newf("no subject found in response for %s", target)
 		return "", "", nil, err
 	}
 
@@ -101,20 +102,16 @@ func (d *Dereferencer) fingerRemoteAccount(
 
 		uri, err := url.Parse(link.Href)
 		if err != nil {
-			log.Warnf(ctx,
-				"invalid href for ActivityPub self link %s for %s: %v",
-				link.Href, target, err,
-			)
+			log.Warnf(ctx, "invalid href for ActivityPub self link %s for %s: %v",
+				link.Href, target, err)
 
 			// Funky URL, ignore.
 			continue
 		}
 
 		if uri.Scheme != "http" && uri.Scheme != "https" {
-			log.Warnf(ctx,
-				"invalid href for ActivityPub self link %s for %s: schema must be http or https",
-				link.Href, target,
-			)
+			log.Warnf(ctx, "invalid href for ActivityPub self link %s for %s: schema must be http or https",
+				link.Href, target)
 
 			// Can't handle this
 			// schema, ignore.

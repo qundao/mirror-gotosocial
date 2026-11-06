@@ -30,7 +30,9 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 )
 
-func (t *transport) Dereference(ctx context.Context, iri *url.URL) (*http.Response, error) {
+// Dereference fetches the ActivityStreams object located at this IRI with a GET request.
+func (t *Transport) Dereference(ctx context.Context, iri *url.URL) (*http.Response, error) {
+
 	// If the request is to us, we can try to shortcut
 	// rather than going through the normal request flow.
 	//

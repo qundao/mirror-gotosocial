@@ -83,7 +83,8 @@ func (m *Module) Route(g *httputil.RouteGroup) {
 	// create account
 	g.POST(BasePath, m.AccountCreatePOSTHandler)
 
-	// get account
+	// get account(s)
+	g.GET(BasePath, m.AccountsGETHandler)
 	g.GET(BasePathWithID, m.AccountGETHandler)
 
 	// delete account

@@ -28,7 +28,8 @@ import (
 	"codeberg.org/gruf/go-iotools"
 )
 
-func (t *transport) DereferenceMedia(ctx context.Context, iri *url.URL, maxsz int64) (io.ReadCloser, error) {
+// DereferenceMedia fetches the given media attachment IRI, returning the reader limited to given max.
+func (t *Transport) DereferenceMedia(ctx context.Context, iri *url.URL, maxsz int64) (io.ReadCloser, error) {
 	if maxsz <= 0 {
 		// Max size is zero, just return.
 		return emptyLimitedReader(), nil

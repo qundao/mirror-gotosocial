@@ -19,7 +19,6 @@ package admin
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"code.superseriousbusiness.org/gopkg/log"
@@ -30,25 +29,22 @@ import (
 )
 
 // MediaRefetch forces a refetch of remote emojis.
-func (p *Processor) MediaRefetch(ctx context.Context, requester *gtsmodel.Account, domain string) gtserror.WithCode {
-	transport, err := p.transport.NewTransportForUsername(ctx, requester.Username)
-	if err != nil {
-		err = fmt.Errorf("error getting transport for user %s during media refetch request: %w", requester.Username, err)
-		return gtserror.NewErrorInternalError(err)
-	}
-
+func (p *Processor) MediaRefetch(ctx context.Context, requester *gtsmodel.Account, domain string) {
 	go func() {
+		// Emoji media should always use instance transport.
+		tsport := p.transport.GetTransportForAccount(nil)
+
+		// Prepare background context with values of requester.
 		ctx := gtscontext.WithValues(context.Background(), ctx)
+
 		log.Info(ctx, "starting emoji refetch")
-		refetched, err := p.media.RefetchEmojis(ctx, domain, transport.DereferenceMedia)
+		refetched, err := p.media.RefetchEmojis(ctx, domain, tsport.DereferenceMedia)
 		if err != nil {
 			log.Errorf(ctx, "error refetching emojis: %s", err)
 		} else {
 			log.Infof(ctx, "refetched %d emojis from remote", refetched)
 		}
 	}()
-
-	return nil
 }
 
 // MediaPrune triggers a non-blocking prune of unused media, orphaned, uncaching remote and fixing cache states.

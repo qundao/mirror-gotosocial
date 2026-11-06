@@ -41,12 +41,10 @@ func (d *Dereferencer) dereferenceCollection(
 		return nil, gtserror.Newf("domain %s is blocked", pageIRI.Host)
 	}
 
-	transport, err := d.transportController.NewTransportForUsername(ctx, requester.Username)
-	if err != nil {
-		return nil, gtserror.Newf("error creating transport: %w", err)
-	}
+	// Get transport for the requesting account.
+	ctx, tsport := d.getTransport(ctx, requester)
 
-	rsp, err := transport.Dereference(ctx, pageIRI)
+	rsp, err := tsport.Dereference(ctx, pageIRI)
 	if err != nil {
 		return nil, gtserror.Newf("error dereferencing %s: %w", pageIRI.String(), err)
 	}
@@ -76,12 +74,10 @@ func (d *Dereferencer) dereferenceCollectionPage(
 		return nil, gtserror.Newf("domain %s is blocked", pageIRI.Host)
 	}
 
-	transport, err := d.transportController.NewTransportForUsername(ctx, requester.Username)
-	if err != nil {
-		return nil, gtserror.Newf("error creating transport: %w", err)
-	}
+	// Get transport for the requesting account.
+	ctx, tsport := d.getTransport(ctx, requester)
 
-	rsp, err := transport.Dereference(ctx, pageIRI)
+	rsp, err := tsport.Dereference(ctx, pageIRI)
 	if err != nil {
 		return nil, gtserror.Newf("error deferencing %s: %w", pageIRI.String(), err)
 	}

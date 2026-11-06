@@ -372,13 +372,10 @@ func (d *Dereferencer) getRelayStatusByURI(
 
 			} else {
 				var err error
-				var tsport transport.Transport
+				var tsport *transport.Transport
 
-				// Get transport on behalf of passed relay actor.
-				ctx, tsport, err = d.getTransport(ctx, relayActor)
-				if err != nil {
-					return false, err
-				}
+				// Get transport for the passed relay actor.
+				ctx, tsport = d.getTransport(ctx, relayActor)
 
 				// Parent not yet dereferenced, try to fetch it from remote.
 				inReplyToAccountURI, err = d.retrieveInReplyToAccountURI(ctx,
@@ -489,7 +486,7 @@ func (d *Dereferencer) getRelayStatusByURI(
 // of the given status to retrieve the URI of the account.
 func (d *Dereferencer) retrieveInReplyToAccountURI(
 	ctx context.Context,
-	tsport transport.Transport,
+	tsport *transport.Transport,
 	status *gtsmodel.Status,
 ) (
 	string,

@@ -4615,6 +4615,59 @@ paths:
             tags:
                 - search
     /api/v1/accounts:
+        get:
+            description: |-
+                Accounts that do not exist are omitted from the response.
+                If no IDs are given, an empty array is returned.
+            operationId: accountsGet
+            parameters:
+                - collectionFormat: multi
+                  description: Target account IDs (max 40).
+                  in: query
+                  items:
+                    type: string
+                  name: id[]
+                  required: true
+                  type: array
+            produces:
+                - application/json
+            responses:
+                "200":
+                    description: The requested accounts.
+                    schema:
+                        items:
+                            $ref: '#/definitions/account'
+                        type: array
+                "400":
+                    description: bad request
+                    schema:
+                        $ref: '#/definitions/error'
+                "401":
+                    description: unauthorized
+                    schema:
+                        $ref: '#/definitions/error'
+                "403":
+                    description: forbidden
+                    schema:
+                        $ref: '#/definitions/error'
+                "406":
+                    description: not acceptable
+                    schema:
+                        $ref: '#/definitions/error'
+                "422":
+                    description: unprocessable entity
+                    schema:
+                        $ref: '#/definitions/error'
+                "500":
+                    description: internal server error
+                    schema:
+                        $ref: '#/definitions/error'
+            security:
+                - OAuth2 Bearer:
+                    - read:accounts
+            summary: Get information about multiple accounts with the given IDs.
+            tags:
+                - accounts
         post:
             consumes:
                 - application/json

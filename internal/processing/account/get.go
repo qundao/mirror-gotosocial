@@ -23,6 +23,7 @@ import (
 	"net/url"
 
 	"code.superseriousbusiness.org/gopkg/log"
+	"code.superseriousbusiness.org/gopkg/xslices"
 	apimodel "code.superseriousbusiness.org/gotosocial/internal/api/model"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtscontext"
@@ -96,6 +97,46 @@ func (p *Processor) Get(ctx context.Context, requester *gtsmodel.Account, target
 	}
 
 	return apiAccount, nil
+}
+
+// GetMultiple gets the given accounts with the same visibility semantics
+// as Get, returned in the order of the given IDs. Missing accounts are
+// omitted. Unlike Get, remote accounts are not refreshed.
+func (p *Processor) GetMultiple(ctx context.Context, requester *gtsmodel.Account, targetAccountIDs []string) ([]*apimodel.Account, gtserror.WithCode) {
+	targetAccountIDs = xslices.Deduplicate(targetAccountIDs)
+
+	targetAccounts, err := p.state.DB.GetAccountsByIDs(ctx, targetAccountIDs)
+	if err != nil {
+		err := gtserror.Newf("db error getting account(s): %w", err)
+		return nil, gtserror.NewErrorInternalError(err)
+	}
+
+	apiAccounts := make([]*apimodel.Account, 0, len(targetAccounts))
+	for _, targetAccount := range targetAccounts {
+		blocked, err := p.state.DB.IsEitherBlocked(ctx, requester.ID, targetAccount.ID)
+		if err != nil {
+			err := gtserror.Newf("db error checking blocks: %w", err)
+			return nil, gtserror.NewErrorInternalError(err)
+		}
+
+		var apiAccount *apimodel.Account
+		switch {
+		case blocked:
+			apiAccount, err = p.converter.AccountToAPIAccountBlocked(ctx, targetAccount)
+		case targetAccount.ID == requester.ID:
+			apiAccount, err = p.converter.AccountToAPIAccountSensitive(ctx, targetAccount)
+		default:
+			apiAccount, err = p.converter.AccountToAPIAccountPublic(ctx, targetAccount)
+		}
+		if err != nil {
+			log.Errorf(ctx, "error converting account %s: %v", targetAccount.ID, err)
+			continue
+		}
+
+		apiAccounts = append(apiAccounts, apiAccount)
+	}
+
+	return apiAccounts, nil
 }
 
 // GetWeb returns the web model of a local account by username.

@@ -577,11 +577,8 @@ func (d *Dereferencer) enrichAccount(
 		*initialURI = *uri
 	}
 
-	// Pre-fetch a transport for requesting username, used by later deref procedures.
-	tsport, err := d.transportController.NewTransportForUsername(ctx, accountUsername(requester))
-	if err != nil {
-		return nil, nil, gtserror.Newf("couldn't create transport: %w", err)
-	}
+	// Get transport for the requesting account.
+	ctx, tsport := d.getTransport(ctx, requester)
 
 	if account.Username != "" {
 		// A username was provided so we can attempt to webfinger,
@@ -639,6 +636,8 @@ func (d *Dereferencer) enrichAccount(
 	}
 
 	if uri == nil {
+		var err error
+
 		// No URI provided / found,
 		// must parse from account.
 		uri, err = url.Parse(account.URI)

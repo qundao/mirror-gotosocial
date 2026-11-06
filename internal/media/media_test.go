@@ -36,7 +36,7 @@ type MediaStandardTestSuite struct {
 	storage             *storage.Driver
 	state               *state.State
 	manager             *media.Manager
-	transportController transport.Controller
+	transportController *transport.Controller
 	testAttachments     map[string]*gtsmodel.MediaAttachment
 	testAccounts        map[string]*gtsmodel.Account
 	testEmojis          map[string]*gtsmodel.Emoji

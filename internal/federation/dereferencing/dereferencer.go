@@ -84,7 +84,7 @@ var (
 type Dereferencer struct {
 	state               *state.State
 	converter           *typeutils.Converter
-	transportController transport.Controller
+	transportController *transport.Controller
 	mediaManager        *media.Manager
 	visibility          *visibility.Filter
 	interaction         *interaction.Filter
@@ -135,7 +135,7 @@ type Dereferencer struct {
 func NewDereferencer(
 	state *state.State,
 	converter *typeutils.Converter,
-	transportController transport.Controller,
+	transportController *transport.Controller,
 	visFilter *visibility.Filter,
 	intFilter *interaction.Filter,
 	relayFilter *relay.Filter,

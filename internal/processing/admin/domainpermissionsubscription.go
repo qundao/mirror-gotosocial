@@ -305,7 +305,10 @@ func (p *Processor) DomainPermissionSubscriptionTest(
 	ctx context.Context,
 	acct *gtsmodel.Account,
 	id string,
-) (any, gtserror.WithCode) {
+) (
+	any,
+	gtserror.WithCode,
+) {
 	permSub, err := p.state.DB.GetDomainPermissionSubscriptionByID(ctx, id)
 	if err != nil && !errors.Is(err, db.ErrNoEntries) {
 		err := gtserror.Newf("db error getting domain permission subscription %s: %w", id, err)
@@ -339,11 +342,7 @@ func (p *Processor) DomainPermissionSubscriptionTest(
 	)
 
 	// Get a transport for calling permSub.URI.
-	tsport, err := p.transport.NewTransportForUsername(ctx, acct.Username)
-	if err != nil {
-		err := gtserror.Newf("error getting transport: %w", err)
-		return nil, gtserror.NewErrorInternalError(err)
-	}
+	tsport := p.transport.GetTransportForAccount(acct)
 
 	// Everything *before* the targeted
 	// subscription has a higher priority.

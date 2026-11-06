@@ -73,12 +73,8 @@ func (d *Dereferencer) GetMedia(
 		remoteURL,
 		func() (*media.ProcessingMedia, error) {
 
-			// Fetch transport for the provided request user from controller.
-			tsport, err := d.transportController.NewTransportForUsername(ctx,
-				accountUsername(requester))
-			if err != nil {
-				return nil, gtserror.Newf("failed getting transport for %s: %w", accountUsername(requester), err)
-			}
+			// Get transport for the requesting account.
+			ctx, tsport := d.getTransport(ctx, requester)
 
 			// Get maximum supported remote media size.
 			maxsz := int64(config.GetMediaRemoteMaxSize()) // #nosec G115 -- Already validated.
@@ -164,12 +160,8 @@ func (d *Dereferencer) RefreshMedia(
 				return nil, gtserror.Newf("invalid media remote url %s: %w", attach.RemoteURL, err)
 			}
 
-			// Fetch transport for the provided request user from controller.
-			tsport, err := d.transportController.NewTransportForUsername(ctx,
-				accountUsername(requester))
-			if err != nil {
-				return nil, gtserror.Newf("failed getting transport for %s: %w", accountUsername(requester), err)
-			}
+			// Get transport for the requesting account.
+			ctx, tsport := d.getTransport(ctx, requester)
 
 			// Get maximum supported remote media size.
 			maxsz := int64(config.GetMediaRemoteMaxSize()) // #nosec G115 -- Already validated.

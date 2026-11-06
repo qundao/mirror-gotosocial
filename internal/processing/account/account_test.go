@@ -50,7 +50,7 @@ type AccountStandardTestSuite struct {
 	storage             *storage.Driver
 	state               *state.State
 	mediaManager        *media.Manager
-	transportController transport.Controller
+	transportController *transport.Controller
 	federator           *federation.Federator
 	emailSender         email.Sender
 	sentEmails          map[string]string

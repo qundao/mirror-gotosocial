@@ -37,10 +37,8 @@ func (d *Dereferencer) GetRemoteInstance(
 		return nil, gtserror.Newf("domain %s is blocked", remoteInstanceURI.Host)
 	}
 
-	transport, err := d.transportController.NewTransportForUsername(ctx, accountUsername(requester))
-	if err != nil {
-		return nil, gtserror.Newf("transport err: %w", err)
-	}
+	// Get transport for the requesting account.
+	ctx, tsport := d.getTransport(ctx, requester)
 
-	return transport.DereferenceInstance(ctx, remoteInstanceURI)
+	return tsport.DereferenceInstance(ctx, remoteInstanceURI)
 }

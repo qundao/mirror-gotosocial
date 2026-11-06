@@ -33,7 +33,8 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/transport/delivery"
 )
 
-func (t *transport) BatchDeliver(ctx context.Context, obj map[string]interface{}, recipients []*url.URL) error {
+// BatchDeliver sends an ActivityStreams object to multiple recipients.
+func (t *Transport) BatchDeliver(ctx context.Context, obj map[string]interface{}, recipients []*url.URL) error {
 	var (
 		// accumulated delivery reqs.
 		reqs []*delivery.Delivery
@@ -87,7 +88,9 @@ func (t *transport) BatchDeliver(ctx context.Context, obj map[string]interface{}
 	return errs.Combine()
 }
 
-func (t *transport) Deliver(ctx context.Context, obj map[string]interface{}, to *url.URL) error {
+// Deliver sends an ActivityStreams object.
+func (t *Transport) Deliver(ctx context.Context, obj map[string]interface{}, to *url.URL) error {
+
 	// if 'to' host is our own, skip as we don't need to deliver to ourselves...
 	if to.Host == config.GetHost() || to.Host == config.GetAccountDomain() {
 		return nil
@@ -120,7 +123,7 @@ func (t *transport) Deliver(ctx context.Context, obj map[string]interface{}, to 
 // prepare will prepare a POST http.Request{}
 // to recipient at 'to', wrapping in a queued
 // request object with signing function.
-func (t *transport) prepare(
+func (t *Transport) prepare(
 	ctx context.Context,
 	actorID string,
 	objectID string,
@@ -170,7 +173,9 @@ func (t *transport) prepare(
 	}, nil
 }
 
-func (t *transport) SignDelivery(dlv *delivery.Delivery) error {
+// SignDelivery adds HTTP request signing client "middleware"
+// to the request context within given delivery.Delivery{}.
+func (t *Transport) SignDelivery(dlv *delivery.Delivery) error {
 	if dlv.Request.GetBody == nil {
 		return gtserror.New("delivery request body not rewindable")
 	}

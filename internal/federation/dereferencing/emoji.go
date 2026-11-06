@@ -110,12 +110,8 @@ func (d *Dereferencer) GetEmoji(
 				return nil, nil, err
 			}
 
-			// Acquire new instance account transport for emoji dereferencing.
-			tsport, err := d.transportController.NewTransportForUsername(ctx, "")
-			if err != nil {
-				err := gtserror.Newf("error getting instance transport: %w", err)
-				return nil, nil, err
-			}
+			// Get transport for instance account.
+			ctx, tsport := d.getTransport(ctx, nil)
 
 			// Prepare data function to dereference remote emoji media.
 			data := func(context.Context) (io.ReadCloser, error) {
@@ -202,12 +198,8 @@ func (d *Dereferencer) RefreshEmoji(
 				return nil, emoji, nil
 			}
 
-			// Acquire new instance account transport for emoji dereferencing.
-			tsport, err := d.transportController.NewTransportForUsername(ctx, "")
-			if err != nil {
-				err := gtserror.Newf("error getting instance transport: %w", err)
-				return nil, nil, err
-			}
+			// Get transport for instance account.
+			ctx, tsport := d.getTransport(ctx, nil)
 
 			// Get maximum supported remote emoji size.
 			maxsz := int64(config.GetMediaEmojiRemoteMaxSize()) // #nosec G115 -- Already validated.
@@ -284,12 +276,8 @@ func (d *Dereferencer) RecacheEmoji(
 				return nil, emoji, nil
 			}
 
-			// Acquire new instance account transport for emoji dereferencing.
-			tsport, err := d.transportController.NewTransportForUsername(ctx, "")
-			if err != nil {
-				err := gtserror.Newf("error getting instance transport: %w", err)
-				return nil, nil, err
-			}
+			// Get transport for instance account.
+			ctx, tsport := d.getTransport(ctx, nil)
 
 			// Get maximum supported remote emoji size.
 			maxsz := int64(config.GetMediaEmojiRemoteMaxSize()) // #nosec G115 -- Already validated.
