@@ -18,6 +18,7 @@
 package account
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"time"
@@ -83,6 +84,8 @@ func (p *Processor) GetRSSFeedForUsername(ctx context.Context, username string, 
 		author := "@" + account.Username +
 			"@" + config.GetAccountDomain()
 
+		linkURL := cmp.Or(account.URL, account.URI)
+
 		// Check if account has an avatar media attachment.
 		if id := account.AvatarMediaAttachmentID; id != "" {
 			if account.AvatarMediaAttachment == nil {
@@ -101,7 +104,7 @@ func (p *Processor) GetRSSFeedForUsername(ctx context.Context, username string, 
 				image = &feeds.Image{
 					Title: "Avatar for " + author,
 					Url:   account.AvatarMediaAttachment.Thumbnail.URL,
-					Link:  account.URL,
+					Link:  linkURL,
 				}
 			}
 		}
@@ -117,7 +120,7 @@ func (p *Processor) GetRSSFeedForUsername(ctx context.Context, username string, 
 
 			Title:       "Posts from " + author,
 			Description: "Posts from " + author,
-			Link:        &feeds.Link{Href: account.URL},
+			Link:        &feeds.Link{Href: linkURL},
 			Image:       image,
 		}
 

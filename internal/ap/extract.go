@@ -246,6 +246,27 @@ func ExtractStatusables(arr []TypeOrIRI) ([]Statusable, []TypeOrIRI) {
 	return statuses, arr
 }
 
+// ExtractURLForURI returns the first URL
+// that shares hostname with the given uri.
+func ExtractURLForURI(with WithURL, uri *url.URL) string {
+	urls := GetURL(with)
+	if len(urls) == 0 {
+		return ""
+	}
+
+	// Look for url with
+	// same host as uri.
+	wantHost := uri.Host
+	for _, url := range urls {
+		if url.Host == wantHost {
+			return url.String()
+		}
+	}
+
+	// No matches.
+	return ""
+}
+
 // ExtractPollOptionables extracts PollOptionable objects from a slice TypeOrIRI, returning extracted and remaining TypeOrIRIs.
 func ExtractPollOptionables(arr []TypeOrIRI) ([]PollOptionable, []TypeOrIRI) {
 	var options []PollOptionable

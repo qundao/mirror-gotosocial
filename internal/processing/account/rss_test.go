@@ -44,7 +44,7 @@ func (suite *GetRSSTestSuite) TestGetAccountRSSAdmin() {
       <link>http://localhost:8080/@admin/statuses/01F8MHAAY43M6RJ473VQFCVH37</link>
       <description>@admin@localhost:8080 made a new post: &#34;🐕🐕🐕🐕🐕&#34;</description>
       <content:encoded><![CDATA[<p>🐕🐕🐕🐕🐕</p>]]></content:encoded>
-      <guid isPermaLink="true">http://localhost:8080/@admin/statuses/01F8MHAAY43M6RJ473VQFCVH37</guid>
+      <guid isPermaLink="true">http://localhost:8080/users/admin/statuses/01F8MHAAY43M6RJ473VQFCVH37</guid>
       <pubDate>Wed, 20 Oct 2021 12:36:45 +0000</pubDate>
       <source>http://localhost:8080/@admin/feed.rss</source>
     </item>
@@ -54,7 +54,7 @@ func (suite *GetRSSTestSuite) TestGetAccountRSSAdmin() {
       <description>@admin@localhost:8080 posted 1 attachment: &#34;hello world! #welcome ! first post on the instance :rainbow: !&#34;</description>
       <content:encoded><![CDATA[<p>hello world! <a href="http://localhost:8080/tags/welcome" class="mention hashtag" rel="tag nofollow noreferrer noopener" target="_blank">#<span>welcome</span></a> ! first post on the instance <img src="http://localhost:8080/fileserver/01AY6P665V14JJR0AFVRT7311Y/emoji/original/01F8MH9H8E4VG3KDYJR9EGPXCQ.png" title=":rainbow:" alt=":rainbow:" width="25" height="25" /> !</p>]]></content:encoded>
       <enclosure url="http://localhost:8080/fileserver/01F8MH17FWEB39HZJ76B6VXSKF/attachment/original/01F8MH6NEM8D7527KZAECTCR76.jpg" length="62529" type="image/jpeg"></enclosure>
-      <guid isPermaLink="true">http://localhost:8080/@admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R</guid>
+      <guid isPermaLink="true">http://localhost:8080/users/admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R</guid>
       <pubDate>Wed, 20 Oct 2021 11:36:45 +0000</pubDate>
       <source>http://localhost:8080/@admin/feed.rss</source>
     </item>
@@ -73,7 +73,7 @@ func (suite *GetRSSTestSuite) TestGetAccountAtomAdmin() {
   <entry>
     <title>open to see some &lt;strong&gt;puppies&lt;/strong&gt;</title>
     <updated>2021-10-20T12:36:45Z</updated>
-    <id>http://localhost:8080/@admin/statuses/01F8MHAAY43M6RJ473VQFCVH37</id>
+    <id>http://localhost:8080/users/admin/statuses/01F8MHAAY43M6RJ473VQFCVH37</id>
     <content type="html">&lt;p&gt;🐕🐕🐕🐕🐕&lt;/p&gt;</content>
     <link href="http://localhost:8080/@admin/statuses/01F8MHAAY43M6RJ473VQFCVH37" rel="alternate"></link>
     <summary type="html">@admin@localhost:8080 made a new post: &#34;🐕🐕🐕🐕🐕&#34;</summary>
@@ -81,7 +81,7 @@ func (suite *GetRSSTestSuite) TestGetAccountAtomAdmin() {
   <entry>
     <title>hello world! #welcome ! first post on the instance :rainbow: !</title>
     <updated>2021-10-20T11:36:45Z</updated>
-    <id>http://localhost:8080/@admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R</id>
+    <id>http://localhost:8080/users/admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R</id>
     <content type="html">&lt;p&gt;hello world! &lt;a href=&#34;http://localhost:8080/tags/welcome&#34; class=&#34;mention hashtag&#34; rel=&#34;tag nofollow noreferrer noopener&#34; target=&#34;_blank&#34;&gt;#&lt;span&gt;welcome&lt;/span&gt;&lt;/a&gt; ! first post on the instance &lt;img src=&#34;http://localhost:8080/fileserver/01AY6P665V14JJR0AFVRT7311Y/emoji/original/01F8MH9H8E4VG3KDYJR9EGPXCQ.png&#34; title=&#34;:rainbow:&#34; alt=&#34;:rainbow:&#34; width=&#34;25&#34; height=&#34;25&#34; /&gt; !&lt;/p&gt;</content>
     <link href="http://localhost:8080/@admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R" rel="alternate"></link>
     <link href="http://localhost:8080/fileserver/01F8MH17FWEB39HZJ76B6VXSKF/attachment/original/01F8MH6NEM8D7527KZAECTCR76.jpg" rel="enclosure" type="image/jpeg" length="62529"></link>
@@ -99,7 +99,7 @@ func (suite *GetRSSTestSuite) TestGetAccountJSONAdmin() {
   "description": "Posts from @admin@localhost:8080",
   "items": [
     {
-      "id": "http://localhost:8080/@admin/statuses/01F8MHAAY43M6RJ473VQFCVH37",
+      "id": "http://localhost:8080/users/admin/statuses/01F8MHAAY43M6RJ473VQFCVH37",
       "url": "http://localhost:8080/@admin/statuses/01F8MHAAY43M6RJ473VQFCVH37",
       "external_url": "http://localhost:8080/@admin/feed.rss",
       "title": "open to see some \u003cstrong\u003epuppies\u003c/strong\u003e",
@@ -108,7 +108,7 @@ func (suite *GetRSSTestSuite) TestGetAccountJSONAdmin() {
       "date_published": "2021-10-20T12:36:45Z"
     },
     {
-      "id": "http://localhost:8080/@admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R",
+      "id": "http://localhost:8080/users/admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R",
       "url": "http://localhost:8080/@admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R",
       "external_url": "http://localhost:8080/@admin/feed.rss",
       "title": "hello world! #welcome ! first post on the instance :rainbow: !",
@@ -140,7 +140,7 @@ func (suite *GetRSSTestSuite) TestGetAccountRSSZork() {
       <link>http://localhost:8080/@the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR</link>
       <description>@the_mighty_zork@localhost:8080 made a new post: &#34;this is the latest revision of the status, with a content-warning&#34;</description>
       <content:encoded><![CDATA[<p>this is the latest revision of the status, with a content-warning</p>]]></content:encoded>
-      <guid isPermaLink="true">http://localhost:8080/@the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR</guid>
+      <guid isPermaLink="true">http://localhost:8080/users/the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR</guid>
       <pubDate>Fri, 01 Nov 2024 09:00:00 +0000</pubDate>
       <source>http://localhost:8080/@the_mighty_zork/feed.rss</source>
     </item>
@@ -184,7 +184,7 @@ func (suite *GetRSSTestSuite) TestGetAccountRSSZork() {
     &lt;/div&gt;
 &lt;/section&gt;
 </code></pre><p>There, hope you liked that!</p>]]></content:encoded>
-      <guid isPermaLink="true">http://localhost:8080/@the_mighty_zork/statuses/01HH9KYNQPA416TNJ53NSATP40</guid>
+      <guid isPermaLink="true">http://localhost:8080/users/the_mighty_zork/statuses/01HH9KYNQPA416TNJ53NSATP40</guid>
       <pubDate>Sun, 10 Dec 2023 09:24:00 +0000</pubDate>
       <source>http://localhost:8080/@the_mighty_zork/feed.rss</source>
     </item>
@@ -193,7 +193,7 @@ func (suite *GetRSSTestSuite) TestGetAccountRSSZork() {
       <link>http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY</link>
       <description>@the_mighty_zork@localhost:8080 made a new post: &#34;hello everyone!&#34;</description>
       <content:encoded><![CDATA[<p>hello everyone!</p>]]></content:encoded>
-      <guid isPermaLink="true">http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY</guid>
+      <guid isPermaLink="true">http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY</guid>
       <pubDate>Wed, 20 Oct 2021 10:40:37 +0000</pubDate>
       <source>http://localhost:8080/@the_mighty_zork/feed.rss</source>
     </item>
@@ -220,7 +220,7 @@ func (suite *GetRSSTestSuite) TestGetAccountAtomZork() {
       <link>http://localhost:8080/@the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR</link>
       <description>@the_mighty_zork@localhost:8080 made a new post: &#34;this is the latest revision of the status, with a content-warning&#34;</description>
       <content:encoded><![CDATA[<p>this is the latest revision of the status, with a content-warning</p>]]></content:encoded>
-      <guid isPermaLink="true">http://localhost:8080/@the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR</guid>
+      <guid isPermaLink="true">http://localhost:8080/users/the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR</guid>
       <pubDate>Fri, 01 Nov 2024 09:00:00 +0000</pubDate>
       <source>http://localhost:8080/@the_mighty_zork/feed.rss</source>
     </item>
@@ -264,7 +264,7 @@ func (suite *GetRSSTestSuite) TestGetAccountAtomZork() {
     &lt;/div&gt;
 &lt;/section&gt;
 </code></pre><p>There, hope you liked that!</p>]]></content:encoded>
-      <guid isPermaLink="true">http://localhost:8080/@the_mighty_zork/statuses/01HH9KYNQPA416TNJ53NSATP40</guid>
+      <guid isPermaLink="true">http://localhost:8080/users/the_mighty_zork/statuses/01HH9KYNQPA416TNJ53NSATP40</guid>
       <pubDate>Sun, 10 Dec 2023 09:24:00 +0000</pubDate>
       <source>http://localhost:8080/@the_mighty_zork/feed.rss</source>
     </item>
@@ -273,7 +273,7 @@ func (suite *GetRSSTestSuite) TestGetAccountAtomZork() {
       <link>http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY</link>
       <description>@the_mighty_zork@localhost:8080 made a new post: &#34;hello everyone!&#34;</description>
       <content:encoded><![CDATA[<p>hello everyone!</p>]]></content:encoded>
-      <guid isPermaLink="true">http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY</guid>
+      <guid isPermaLink="true">http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY</guid>
       <pubDate>Wed, 20 Oct 2021 10:40:37 +0000</pubDate>
       <source>http://localhost:8080/@the_mighty_zork/feed.rss</source>
     </item>
@@ -290,7 +290,7 @@ func (suite *GetRSSTestSuite) TestGetAccountJSONZork() {
   "description": "Posts from @the_mighty_zork@localhost:8080",
   "items": [
     {
-      "id": "http://localhost:8080/@the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR",
+      "id": "http://localhost:8080/users/the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR",
       "url": "http://localhost:8080/@the_mighty_zork/statuses/01JDPZC707CKDN8N4QVWM4Z1NR",
       "external_url": "http://localhost:8080/@the_mighty_zork/feed.rss",
       "title": "edited status",
@@ -300,7 +300,7 @@ func (suite *GetRSSTestSuite) TestGetAccountJSONZork() {
       "date_modified": "2024-11-01T09:02:00Z"
     },
     {
-      "id": "http://localhost:8080/@the_mighty_zork/statuses/01HH9KYNQPA416TNJ53NSATP40",
+      "id": "http://localhost:8080/users/the_mighty_zork/statuses/01HH9KYNQPA416TNJ53NSATP40",
       "url": "http://localhost:8080/@the_mighty_zork/statuses/01HH9KYNQPA416TNJ53NSATP40",
       "external_url": "http://localhost:8080/@the_mighty_zork/feed.rss",
       "title": "HTML in post",
@@ -309,7 +309,7 @@ func (suite *GetRSSTestSuite) TestGetAccountJSONZork() {
       "date_published": "2023-12-10T09:24:00Z"
     },
     {
-      "id": "http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
+      "id": "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
       "url": "http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY",
       "external_url": "http://localhost:8080/@the_mighty_zork/feed.rss",
       "title": "introduction post",

@@ -677,6 +677,9 @@ func (suite *StatusCreateTestSuite) TestMentionUnknownAccount() {
 
 	// Status should have a mention of
 	// the now-freshly-looked-up account.
+  //
+  // Since we don't have a url stored for the account,
+  // the account URI will be used in the mention instead.
 	suite.Equal(`{
   "account": "yeah this is my account, what about it punk",
   "application": {
@@ -685,7 +688,7 @@ func (suite *StatusCreateTestSuite) TestMentionUnknownAccount() {
   },
   "bookmarked": false,
   "card": null,
-  "content": "<p>hello <span class=\"h-card\"><a href=\"https://unknown-instance.com/@brand_new_person\" class=\"u-url mention\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">@<span>brand_new_person</span></a></span></p>",
+  "content": "<p>hello <span class=\"h-card\"><a href=\"https://unknown-instance.com/users/brand_new_person\" class=\"u-url mention\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">@<span>brand_new_person</span></a></span></p>",
   "content_type": "text/plain",
   "created_at": "right the hell just now babyee",
   "edited_at": null,
@@ -724,7 +727,7 @@ func (suite *StatusCreateTestSuite) TestMentionUnknownAccount() {
     {
       "acct": "brand_new_person@unknown-instance.com",
       "id": "ZZZZZZZZZZZZZZZZZZZZZZZZZZ",
-      "url": "https://unknown-instance.com/@brand_new_person",
+      "url": "https://unknown-instance.com/users/brand_new_person",
       "username": "brand_new_person"
     }
   ],

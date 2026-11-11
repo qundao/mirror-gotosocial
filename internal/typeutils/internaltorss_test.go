@@ -45,7 +45,7 @@ func (suite *InternalToRSSTestSuite) TestStatusToRSSItem1() {
 	suite.Equal("", item.Source.Rel)
 	suite.Equal("", item.Source.Type)
 	suite.Equal("@the_mighty_zork@localhost:8080 made a new post: \"hello everyone!\"", item.Description)
-	suite.Equal("http://localhost:8080/@the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY", item.Id)
+	suite.Equal("http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY", item.Id)
 	suite.EqualValues(1634726437, item.Created.Unix())
 	suite.Nil(item.Enclosure)
 	suite.Equal("<p>hello everyone!</p>", item.Content)
@@ -66,7 +66,7 @@ func (suite *InternalToRSSTestSuite) TestStatusToRSSItem2() {
 	suite.Equal("", item.Source.Rel)
 	suite.Equal("", item.Source.Type)
 	suite.Equal("@admin@localhost:8080 posted 1 attachment: \"hello world! #welcome ! first post on the instance :rainbow: !\"", item.Description)
-	suite.Equal("http://localhost:8080/@admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R", item.Id)
+	suite.Equal("http://localhost:8080/users/admin/statuses/01F8MH75CBF9JFX4ZAD54N0W0R", item.Id)
 	suite.EqualValues(1634729805, item.Created.Unix())
 	suite.Equal("62529", item.Enclosure.Length)
 	suite.Equal("image/jpeg", item.Enclosure.Type)
@@ -111,7 +111,7 @@ func (suite *InternalToRSSTestSuite) TestStatusToRSSItem3() {
     <Length></Length>
   </Source>
   <Description>@admin@localhost:8080 made a new post</Description>
-  <Id>http://localhost:8080/@admin/statuses/01H7G0VW1ACBZTRHN6RSA4JWVH</Id>
+  <Id>http://localhost:8080/users/admin/statuses/01H7G0VW1ACBZTRHN6RSA4JWVH</Id>
   <IsPermaLink>true</IsPermaLink>
   <Updated>0001-01-01T00:00:00Z</Updated>
   <Created>0001-01-01T00:00:00Z</Created>

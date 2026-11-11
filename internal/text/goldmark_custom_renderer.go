@@ -18,6 +18,7 @@
 package text
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"strings"
@@ -201,7 +202,7 @@ func (cr *customRenderer) handleMention(text string) string {
 	// `<span class="h-card"><a href="https://domain.org/@someone" class="u-url mention">@<span>someone</span></a></span>`
 	var b strings.Builder
 	b.WriteString(`<span class="h-card"><a href="`)
-	b.WriteString(mention.TargetAccount.URL)
+	b.WriteString(cmp.Or(mention.TargetAccount.URL, mention.TargetAccount.URI))
 	b.WriteString(`" class="u-url mention">@<span>`)
 	b.WriteString(mention.TargetAccount.Username)
 	b.WriteString(`</span></a></span>`)

@@ -97,7 +97,7 @@ func (p *Processor) Alias(
 		// Don't let account do anything
 		// daft by aliasing to itself.
 		if newAKA.str == account.URI ||
-			newAKA.str == account.URL {
+			(account.URL != "" && newAKA.str == account.URL) {
 			continue
 		}
 

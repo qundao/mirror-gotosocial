@@ -416,7 +416,7 @@ func (c *Converter) accountToAPIAccountPublic(ctx context.Context, a *gtsmodel.A
 		Bot:               a.ActorType.IsBot(),
 		CreatedAt:         util.FormatISO8601(a.CreatedAt),
 		Note:              a.Note,
-		URL:               a.URL,
+		URL:               cmp.Or(a.URL, a.URI),
 		Avatar:            aviURL,
 		AvatarStatic:      aviURLStatic,
 		AvatarDescription: aviDesc,
@@ -560,7 +560,7 @@ func (c *Converter) AccountToAPIAccountBlocked(ctx context.Context, a *gtsmodel.
 		NoIndex:   true,
 		Bot:       a.ActorType.IsBot(),
 		CreatedAt: util.FormatISO8601(a.CreatedAt),
-		URL:       a.URL,
+		URL:       cmp.Or(a.URL, a.URI),
 		// Empty array (not nillable).
 		Emojis: make([]apimodel.Emoji, 0),
 		// Empty array (not nillable).
@@ -824,7 +824,7 @@ func (c *Converter) MentionToAPIMention(ctx context.Context, mention *gtsmodel.M
 	return apimodel.Mention{
 		ID:       mention.TargetAccount.ID,
 		Username: mention.TargetAccount.Username,
-		URL:      mention.TargetAccount.URL,
+		URL:      cmp.Or(mention.TargetAccount.URL, mention.TargetAccount.URI),
 		Acct:     acct,
 	}, nil
 }
@@ -1379,7 +1379,7 @@ func (c *Converter) baseStatusToFrontend(
 		LocalOnly:          status.LocalOnly(),
 		Language:           nil, // Set below.
 		URI:                status.URI,
-		URL:                status.URL,
+		URL:                cmp.Or(status.URL, status.URI),
 		RepliesCount:       repliesCount,
 		ReblogsCount:       reblogsCount,
 		FavouritesCount:    favesCount,
@@ -3375,7 +3375,7 @@ func toDeletedStatusPlaceholder(status *gtsmodel.Status) *apimodel.Status {
 	apiStatus := &apimodel.Status{
 		ID:                 status.ID,
 		URI:                status.URI,
-		URL:                status.URL,
+		URL:                cmp.Or(status.URL, status.URI),
 		CreatedAt:          util.FormatISO8601(status.CreatedAt),
 		InReplyToID:        util.PtrIf(status.InReplyToID),
 		InReplyToAccountID: util.PtrIf(status.InReplyToAccountID),
