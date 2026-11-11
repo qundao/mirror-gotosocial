@@ -722,7 +722,7 @@ func (cfg *CacheConfiguration) MarshalIntoMap(prefix string, cfgmap map[string]a
 }
 
 func (cfg *Configuration) MarshalMap() map[string]any {
-	cfgmap := make(map[string]any, 239)
+	cfgmap := make(map[string]any, 240)
 	cfg.MarshalIntoMap(cfgmap)
 	return cfgmap
 }
