@@ -44,7 +44,7 @@ type StatusStandardTestSuite struct {
 	suite.Suite
 	db            db.DB
 	typeConverter *typeutils.Converter
-	tc            transport.Controller
+	tc            *transport.Controller
 	storage       *storage.Driver
 	state         *state.State
 	mediaManager  *media.Manager

@@ -57,6 +57,7 @@ EXPECT=$(cat << "EOF"
     "cache-in-reply-to-ids-mem-ratio": 3,
     "cache-instance-mem-ratio": 1,
     "cache-interaction-request-mem-ratio": 1,
+    "cache-link-mem-ratio": 0.2,
     "cache-list-ids-mem-ratio": 2,
     "cache-list-mem-ratio": 1,
     "cache-list-timeline-size": 800,

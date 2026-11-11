@@ -18,6 +18,7 @@
 package federatingdb_test
 
 import (
+	"context"
 	"testing"
 
 	"code.superseriousbusiness.org/gotosocial/testrig"
@@ -29,10 +30,17 @@ type InboxTestSuite struct {
 }
 
 func (suite *InboxTestSuite) TestInboxesForFollowersIRI() {
-	ctx := suite.T().Context()
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	testAccount := suite.testAccounts["local_account_1"]
 
-	inboxIRIs, err := suite.federatingDB.InboxesForIRI(ctx, testrig.URLMustParse(testAccount.FollowersURI))
+	inboxIRIs, err := testStructs.Federator.FederatingDB().InboxesForIRI(ctx, testrig.URLMustParse(testAccount.FollowersURI))
 	suite.NoError(err)
 
 	asStrings := []string{}
@@ -46,10 +54,17 @@ func (suite *InboxTestSuite) TestInboxesForFollowersIRI() {
 }
 
 func (suite *InboxTestSuite) TestInboxesForAccountIRI() {
-	ctx := suite.T().Context()
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	testAccount := suite.testAccounts["local_account_1"]
 
-	inboxIRIs, err := suite.federatingDB.InboxesForIRI(ctx, testrig.URLMustParse(testAccount.URI))
+	inboxIRIs, err := testStructs.Federator.FederatingDB().InboxesForIRI(ctx, testrig.URLMustParse(testAccount.URI))
 	suite.NoError(err)
 
 	asStrings := []string{}
@@ -62,15 +77,22 @@ func (suite *InboxTestSuite) TestInboxesForAccountIRI() {
 }
 
 func (suite *InboxTestSuite) TestInboxesForAccountIRIWithSharedInbox() {
-	ctx := suite.T().Context()
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	testAccount := suite.testAccounts["local_account_1"]
 	sharedInbox := "http://some-inbox-iri/weeeeeeeeeeeee"
 	testAccount.SharedInboxURI = &sharedInbox
-	if err := suite.db.UpdateAccount(ctx, testAccount); err != nil {
+	if err := testStructs.State.DB.UpdateAccount(ctx, testAccount); err != nil {
 		suite.FailNow("error updating account")
 	}
 
-	inboxIRIs, err := suite.federatingDB.InboxesForIRI(ctx, testrig.URLMustParse(testAccount.URI))
+	inboxIRIs, err := testStructs.Federator.FederatingDB().InboxesForIRI(ctx, testrig.URLMustParse(testAccount.URI))
 	suite.NoError(err)
 
 	asStrings := []string{}

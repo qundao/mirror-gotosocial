@@ -38,8 +38,8 @@ func (f *DB) Block(ctx context.Context, blockable vocab.ActivityStreamsBlock) er
 		return nil // Already processed.
 	}
 
-	requesting := activityContext.requestingAcct
-	receiving := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	if requesting.IsMoving() {
 		// A Moving account
@@ -79,8 +79,8 @@ func (f *DB) Block(ctx context.Context, blockable vocab.ActivityStreamsBlock) er
 		APObjectType:   ap.ActivityBlock,
 		APActivityType: ap.ActivityCreate,
 		GTSModel:       block,
-		Receiving:      receiving,
 		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil

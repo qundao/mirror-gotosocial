@@ -105,10 +105,6 @@ func (m *Module) MediaRefetchPOSTHandler(c *httputil.Context) {
 		return
 	}
 
-	if errWithCode := m.processor.Admin().MediaRefetch(c, authed.Account, c.Query(DomainQueryKey)); errWithCode != nil {
-		apiutil.ErrorHandler(c, m.templates, errWithCode)
-		return
-	}
-
-	httputil.Data(c, http.StatusAccepted, apiutil.AppJSON, apiutil.StatusAcceptedJSON)
+	m.processor.Admin().MediaRefetch(c, authed.Account, c.Query(DomainQueryKey))
+	httputil.Data(c, http.StatusOK, apiutil.AppJSON, apiutil.StatusAcceptedJSON)
 }

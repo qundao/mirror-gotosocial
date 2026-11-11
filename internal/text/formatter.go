@@ -52,4 +52,5 @@ type FormatResult struct {
 	Mentions []*gtsmodel.Mention
 	Tags     []*gtsmodel.Tag
 	Emojis   []*gtsmodel.Emoji
+	Links    []*gtsmodel.Link
 }

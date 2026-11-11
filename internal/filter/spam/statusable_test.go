@@ -674,7 +674,7 @@ func (suite *StatusableTestSuite) TestStatusableOK() {
 			suite.FailNow(err.Error())
 		}
 
-		err = suite.filter.StatusableOK(ctx, receiver, requester, statusable)
+		err = suite.filter.StatusableOK(ctx, requester, receiver, statusable)
 		test.check(err)
 	}
 
@@ -748,7 +748,7 @@ func (suite *StatusableTestSuite) TestStatusableOK() {
 			suite.FailNow(err.Error())
 		}
 
-		err = suite.filter.StatusableOK(ctx, receiver, requester, statusable)
+		err = suite.filter.StatusableOK(ctx, requester, receiver, statusable)
 		test.check(err)
 	}
 }

@@ -36,8 +36,8 @@ import (
 // The provided boost wrapper status must have BoostOfURI set.
 func (d *Dereferencer) EnrichAnnounce(
 	ctx context.Context,
+	requester *gtsmodel.Account,
 	boost *gtsmodel.Status,
-	requestUser string,
 ) (
 	*gtsmodel.Status,
 	error,
@@ -47,7 +47,7 @@ func (d *Dereferencer) EnrichAnnounce(
 		return nil, gtserror.Newf("no URI to dereference")
 	}
 
-	// Take relevant URIs.
+	// Extract relevant URIs from boost.
 	targetURIStr := boost.BoostOfURIStr
 	targetURI := boost.BoostOfURI
 
@@ -55,7 +55,7 @@ func (d *Dereferencer) EnrichAnnounce(
 	//
 	// GetStatusByURI accounts for domain blocks and local
 	// statuses, and also updates targetURI in case of redirects.
-	target, _, err := d.GetStatusByURI(ctx, requestUser, targetURI)
+	target, _, err := d.GetStatusByURI(ctx, requester, targetURI)
 	if err != nil {
 		return nil, gtserror.Newf("error fetching boost target %s: %w", targetURIStr, err)
 	}
@@ -85,9 +85,11 @@ func (d *Dereferencer) EnrichAnnounce(
 	boost.Visibility = target.Visibility
 	boost.Flags.SetFederated(target.Flags.Federated())
 
-	// Ensure this Announce is permitted by the Announcee.
-	permit, err := d.isPermittedStatus(ctx, requestUser,
-		nil, boost, true)
+	// Ensure Announce permitted by Announcee.
+	permit, err := d.isPermittedStatus(ctx,
+		requester,
+		boost,
+	)
 	if err != nil {
 		return nil, gtserror.Newf("error checking permitted status %s: %w", boost.URI, err)
 	}

@@ -19,89 +19,84 @@ package dereferencing
 
 import (
 	"net/url"
+
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 )
 
-func (d *Dereferencer) Handshaking(username string, remoteAccountID *url.URL) bool {
-	d.handshakesMu.Lock()
-	defer d.handshakesMu.Unlock()
+func (d *Dereferencer) Handshaking(requester *gtsmodel.Account, remoteAccountID *url.URL) (is bool) {
+	username := accountUsername(requester)
 
-	if d.handshakes == nil {
-		// Handshakes isn't even initialized yet,
-		// so we can't be handshaking with anyone.
-		return false
-	}
+	d.handshakesMu.Lock()
 
 	remoteIDs, ok := d.handshakes[username]
-	if !ok {
-		// Given username isn't
-		// handshaking with anyone.
-		return false
-	}
+	if ok {
 
-	// Calculate remote account ID str once.
-	remoteIDStr := remoteAccountID.String()
+		// Calculate remote account ID str once.
+		remoteIDStr := remoteAccountID.String()
 
-	for _, id := range remoteIDs {
-		if id.String() == remoteIDStr {
-			// We are currently handshaking
-			// with the remote account.
-			return true
+		for _, id := range remoteIDs {
+			if id.String() == remoteIDStr {
+				// We are currently handshaking
+				// with the remote account.
+				is = true
+				break
+			}
 		}
 	}
 
-	// No results: we're not handshaking
-	// with the remote account.
-	return false
+	d.handshakesMu.Unlock()
+	return
 }
 
-func (d *Dereferencer) startHandshake(username string, remoteAccountID *url.URL) {
+func (d *Dereferencer) startHandshake(requester *gtsmodel.Account, remoteAccountID *url.URL) {
+	username := accountUsername(requester)
+
 	d.handshakesMu.Lock()
-	defer d.handshakesMu.Unlock()
 
 	remoteIDs, ok := d.handshakes[username]
 	if !ok {
+
 		// No handshakes were stored yet,
 		// so just add this entry and return.
 		d.handshakes[username] = []*url.URL{remoteAccountID}
-		return
+	} else {
+
+		// Add the remote account ID to the slice.
+		remoteIDs = append(remoteIDs, remoteAccountID)
+		d.handshakes[username] = remoteIDs
 	}
 
-	// Add the remote account ID to the slice.
-	remoteIDs = append(remoteIDs, remoteAccountID)
-	d.handshakes[username] = remoteIDs
+	d.handshakesMu.Unlock()
 }
 
-func (d *Dereferencer) stopHandshake(username string, remoteAccountID *url.URL) {
+func (d *Dereferencer) stopHandshake(requester *gtsmodel.Account, remoteAccountID *url.URL) {
+	username := accountUsername(requester)
+
 	d.handshakesMu.Lock()
-	defer d.handshakesMu.Unlock()
 
 	remoteIDs, ok := d.handshakes[username]
-	if !ok {
-		// No handshake was in progress,
-		// so there's nothing to stop.
-		return
-	}
+	if ok {
 
-	// Generate a new remoteIDs slice that
-	// doesn't contain the removed entry.
-	var (
-		remoteAccountIDStr = remoteAccountID.String()
-		newRemoteIDs       = make([]*url.URL, 0, len(remoteIDs)-1)
-	)
+		// Generate a new remoteIDs slice that
+		// doesn't contain the removed entry.
+		remoteAccountIDStr := remoteAccountID.String()
+		newRemoteIDs := make([]*url.URL, 0, len(remoteIDs)-1)
+		for _, id := range remoteIDs {
+			if id.String() != remoteAccountIDStr {
+				newRemoteIDs = append(newRemoteIDs, id)
+			}
+		}
 
-	for _, id := range remoteIDs {
-		if id.String() != remoteAccountIDStr {
-			newRemoteIDs = append(newRemoteIDs, id)
+		if len(newRemoteIDs) == 0 {
+			// There are no handshakes remaining,
+			// so just remove this username's slice
+			// from the map and save a few bytes.
+			delete(d.handshakes, username)
+		} else {
+			// There are still other handshakes ongoing.
+			d.handshakes[username] = newRemoteIDs
 		}
 	}
 
-	if len(newRemoteIDs) == 0 {
-		// There are no handshakes remaining,
-		// so just remove this username's slice
-		// from the map and save a few bytes.
-		delete(d.handshakes, username)
-	} else {
-		// There are still other handshakes ongoing.
-		d.handshakes[username] = newRemoteIDs
-	}
+	d.handshakesMu.Unlock()
 }

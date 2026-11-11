@@ -34,6 +34,7 @@ type DB interface {
 	Interaction
 	Filter
 	List
+	Link
 	Marker
 	Media
 	Mention

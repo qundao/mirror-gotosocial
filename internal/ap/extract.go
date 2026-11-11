@@ -31,6 +31,7 @@ import (
 
 	"code.superseriousbusiness.org/activity/pub"
 	"code.superseriousbusiness.org/activity/streams/vocab"
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/text"
@@ -724,9 +725,9 @@ func ExtractContent(i WithContent) gtsmodel.Content {
 	return content
 }
 
-// ExtractAttachments attempts to extract barebones
+// ExtractMediaAttachments attempts to extract barebones
 // MediaAttachment objects from given AS interface type.
-func ExtractAttachments(i WithAttachment) ([]*gtsmodel.MediaAttachment, error) {
+func ExtractMediaAttachments(i WithAttachment) ([]*gtsmodel.MediaAttachment, error) {
 	attachmentProp := i.GetActivityStreamsAttachment()
 	if attachmentProp == nil {
 		return nil, nil
@@ -744,15 +745,17 @@ func ExtractAttachments(i WithAttachment) ([]*gtsmodel.MediaAttachment, error) {
 			continue
 		}
 
-		attachmentable, ok := ToAttachmentable(t)
+		attachmentable, ok := ToMediaAttachmentable(t)
 		if !ok {
-			errs.Appendf("could not cast %T to Attachmentable", t)
+			// Not necessarily an error as many statusables
+			// include things like links as attachments,
+			// which we cannot handle as media. Just skip.
 			continue
 		}
 
-		attachment, err := ExtractAttachment(attachmentable)
+		attachment, err := ExtractMediaAttachment(attachmentable)
 		if err != nil {
-			errs.Appendf("error extracting attachment: %w", err)
+			errs.Appendf("error extracting media: %w", err)
 			continue
 		}
 
@@ -762,10 +765,71 @@ func ExtractAttachments(i WithAttachment) ([]*gtsmodel.MediaAttachment, error) {
 	return attachments, errs.Combine()
 }
 
-// ExtractAttachment extracts a minimal gtsmodel.Attachment
+// ExtractLinksFromAttachment extracts any Links from the given AS interface type.
+func ExtractLinksFromAttachment(i WithAttachment) ([]*gtsmodel.Link, error) {
+	attachmentProp := i.GetActivityStreamsAttachment()
+	if attachmentProp == nil {
+		return nil, nil
+	}
+
+	links := make([]*gtsmodel.Link, 0, attachmentProp.Len())
+	var errs gtserror.MultiError
+	for iter := attachmentProp.Begin(); iter != attachmentProp.End(); iter = iter.Next() {
+		t := iter.GetType()
+		if t == nil {
+			continue
+		}
+
+		link, ok := ToLinkable(t)
+		if !ok {
+			// Probably a different type
+			// of attachment than a link
+			// (eg., media). Just skip it.
+			continue
+		}
+
+		var href *url.URL
+		switch hrefProp := link.GetActivityStreamsHref(); {
+		case hrefProp == nil:
+			errs.Append(errors.New("Link type with nil href prop"))
+			continue
+		case hrefProp.IsXMLSchemaAnyURI():
+			href = hrefProp.Get()
+		case hrefProp.IsIRI():
+			href = hrefProp.GetIRI()
+		}
+
+		if href == nil {
+			errs.Append(errors.New("Link type with nil href prop value"))
+			continue
+		}
+
+		// Punify the URL before
+		// potential storage etc.
+		var err error
+		href.Host, err = util.Punify(href.Host)
+		if err != nil {
+			errs.Appendf("error punifying %s: %w", href.Host, err)
+			continue
+		}
+
+		links = append(links, &gtsmodel.Link{
+			URL:       href.String(),
+			URLParsed: href,
+			// This link was discovered
+			// in the attachment property,
+			// so set attached = true.
+			Attached: true,
+		})
+	}
+
+	return links, errs.Combine()
+}
+
+// ExtractMediaAttachment extracts a minimal gtsmodel.MediaAttachment
 // (just remote URL, description, and blurhash) from the given
 // Attachmentable interface, or an error if no remote URL is set.
-func ExtractAttachment(i Attachmentable) (*gtsmodel.MediaAttachment, error) {
+func ExtractMediaAttachment(i MediaAttachmentable) (*gtsmodel.MediaAttachment, error) {
 	// Get the first URL for the attachment file.
 	// If no URL is set, we can't do anything.
 	remoteURL := GetURL(i)
@@ -786,7 +850,7 @@ func ExtractAttachment(i Attachmentable) (*gtsmodel.MediaAttachment, error) {
 // ExtractDescription extracts the image description
 // of an attachmentable, if present. Will try the
 // 'summary' prop first, then fall back to 'name'.
-func ExtractDescription(i Attachmentable) string {
+func ExtractDescription(i MediaAttachmentable) string {
 	if summary := ExtractSummary(i); summary != "" {
 		return summary
 	}
@@ -810,7 +874,7 @@ func ExtractBlurhash(i WithBlurhash) string {
 // `focalPoint` property, if Attachmentable can have `focalPoint`, and
 // `focalPoint` is set to a valid pair of floats. Otherwise, returns a
 // zero gtsmodel.Focus (ie., focus in the centre of the image).
-func ExtractFocus(attachmentable Attachmentable) gtsmodel.Focus {
+func ExtractFocus(attachmentable MediaAttachmentable) gtsmodel.Focus {
 	focus := gtsmodel.Focus{}
 
 	withFocalPoint, ok := attachmentable.(WithFocalPoint)
@@ -1112,23 +1176,73 @@ func ExtractMention(i Mentionable) (*gtsmodel.Mention, error) {
 	}, nil
 }
 
-// ExtractActorURI extracts the first Actor URI
-// it can find from a WithActor interface.
-func ExtractActorURI(withActor WithActor) (*url.URL, error) {
-	actorProp := withActor.GetActivityStreamsActor()
-	if actorProp == nil {
-		return nil, gtserror.New("actor property was nil")
+// ExtractStatusableAttributedToActor extracts a single actor URI from the given statusable,
+// taking account of both `attributedTo` and `audience` properties (if the latter is present).
+//
+// If a single attributedTo actor value cannot be arrived at, it will return an error.
+//
+// This works on "normal" statuses, which are attributed to one actor, but it also works on
+// Peertube videos that have more than attributedTo value, as in the following example:
+//
+//	{
+//	  [...blah blah blah...],
+//	  "attributedTo": [
+//	    {
+//	      "type": "Person",
+//	      "id": "https://spectra.video/accounts/mberos"
+//	    },
+//	    {
+//	      "type": "Group",
+//	      "id": "https://spectra.video/video-channels/rumirum"
+//	    }
+//	  ],
+//	  "audience": "https://spectra.video/video-channels/rumirum",
+//	  [...blah blah blah...],
+//	}
+//
+// In the above case, "https://spectra.video/accounts/mberos" will be returned as the actor URI.
+func ExtractStatusableAttributedToActor(statusable Statusable) (*url.URL, error) {
+	attribTo := GetAttributedTo(statusable)
+
+	switch l := len(attribTo); {
+	case l == 0:
+		// Can't work with this at all.
+		return nil, gtserror.New("empty attributedTo")
+
+	case l == 1:
+		// If there's just one attributedTo
+		// URI, return that. This will be
+		// the case like 99% of the time.
+		return attribTo[0], nil
+
+	case l > 2:
+		// Too many attributedTo URIs, we can't work with this.
+		return nil, gtserror.Newf("too many attributedTo entries: %v", log.Formatted(attribTo))
 	}
 
-	for iter := actorProp.Begin(); iter != actorProp.End(); iter = iter.Next() {
-		id, err := pub.ToId(iter)
-		if err == nil {
-			// Found one we can use.
-			return id, nil
+	// There are two attributedTo URIs.
+	// Cross-check with audience property.
+	audience, err := GetOneAudience(statusable)
+	if err != nil {
+		return nil, gtserror.Newf("multiple attributedTo: %w", err)
+	}
+
+	// If one attributedTo URI matches the
+	// audience value, we can eliminate it.
+	audienceStr := audience.String()
+	for i, uri := range attribTo {
+		if uri.String() == audienceStr {
+			// Matched audience to this URI,
+			// return the other one as the actor.
+			return attribTo[1-i], nil
 		}
 	}
 
-	return nil, gtserror.New("no iri found for actor prop")
+	// No match.
+	return nil, gtserror.Newf(
+		"couldn't extract actor; attributedTo %v, audience %v",
+		log.Formatted(attribTo), log.Formatted(audience),
+	)
 }
 
 // ExtractVisibility extracts the gtsmodel.Visibility

@@ -196,6 +196,10 @@ func (p *Processor) Create(
 		// Set gathered media.
 		AttachmentIDs: form.MediaIDs,
 		Attachments:   media,
+
+		// Set gathered links.
+		LinkIDs: content.LinkIDs,
+		Links:   content.Links,
 	}
 
 	// Set status sensitive value from form.

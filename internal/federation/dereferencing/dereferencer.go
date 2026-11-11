@@ -84,11 +84,11 @@ var (
 type Dereferencer struct {
 	state               *state.State
 	converter           *typeutils.Converter
-	transportController transport.Controller
+	transportController *transport.Controller
 	mediaManager        *media.Manager
-	visFilter           *visibility.Filter
-	intFilter           *interaction.Filter
-	relayFilter         *relay.Filter
+	visibility          *visibility.Filter
+	interaction         *interaction.Filter
+	relaying            *relay.Filter
 
 	// OnAccountDereference is a hook that gets called on dereference of an account model.
 	// It is plumbed-in to the dereferencer but unused. In time it would be nice to add a
@@ -135,7 +135,7 @@ type Dereferencer struct {
 func NewDereferencer(
 	state *state.State,
 	converter *typeutils.Converter,
-	transportController transport.Controller,
+	transportController *transport.Controller,
 	visFilter *visibility.Filter,
 	intFilter *interaction.Filter,
 	relayFilter *relay.Filter,
@@ -146,9 +146,9 @@ func NewDereferencer(
 		converter:           converter,
 		transportController: transportController,
 		mediaManager:        mediaManager,
-		visFilter:           visFilter,
-		intFilter:           intFilter,
-		relayFilter:         relayFilter,
+		visibility:          visFilter,
+		interaction:         intFilter,
+		relaying:            relayFilter,
 		handshakes:          make(map[string][]*url.URL),
 	}
 }

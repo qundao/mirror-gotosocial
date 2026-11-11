@@ -83,7 +83,7 @@ func (d *Dereferencer) getStatusFromDB(
 // ActivityPub status object's JSON-LD ID.
 func (d *Dereferencer) retrieveStatusable(
 	ctx context.Context,
-	tsport transport.Transport,
+	tsport *transport.Transport,
 	uri *url.URL,
 ) (
 	statusable ap.Statusable,
@@ -123,7 +123,6 @@ func (d *Dereferencer) retrieveStatusable(
 	finalURI := rsp.Request.URL
 	finalURIStr := finalURI.String()
 	redirected := finalURIStr != initialURIStr
-
 	if redirected {
 		var err error
 
@@ -164,6 +163,23 @@ func (d *Dereferencer) retrieveStatusable(
 		return nil, nil, nil, gtserror.SetMalformed(err)
 	}
 
+	// URLs can be prettymuch whatever, but
+	// we definitely want URI, finalURI, and
+	// attributedTo to all share the same host.
+	uris = []*url.URL{jsonldID, finalURI}
+	uris = append(uris, ap.GetAttributedTo(statusable)...)
+	sameHost, err := util.SameHost(uris...)
+	if err != nil {
+		err := gtserror.Newf("error checking uri hosts %s: %w", finalURIStr, err)
+		return nil, nil, nil, gtserror.SetMalformed(err)
+	}
+
+	if !sameHost {
+		// Different hosts across URIs. Return malformed error type.
+		err := gtserror.Newf("mismatch status URI hosts: %v", log.Formatted(uris))
+		return nil, nil, nil, gtserror.SetMalformed(err)
+	}
+
 	// For the final returned URI we set
 	// status' canonical JSON-LD URI, as
 	// checks against its URI won't work
@@ -177,27 +193,33 @@ func (d *Dereferencer) retrieveStatusable(
 // The URI is used to check that the status's AP ID/URI matches expectations.
 func (d *Dereferencer) convertStatusable(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	statusURI *url.URL,
 	statusable ap.Statusable,
 ) (*gtsmodel.Status, error) {
 
-	// Get attributedTo URI from statusable to fetch account.
-	attributedTo, err := ap.GetOneAttributedTo(statusable)
+	// Extract attributedTo actor URI from statusable to fetch account.
+	attributedTo, err := ap.ExtractStatusableAttributedToActor(statusable)
 	if err != nil {
 		return nil, gtserror.SetMalformed(err)
 	}
 
 	// The status author, and the status
 	// JSON-LD ID must have the same host.
-	if attributedTo.Host != statusURI.Host {
+	sameHost, err := util.SameHost(attributedTo, statusURI)
+	if err != nil {
+		return nil, gtserror.SetMalformed(err)
+	}
+
+	if !sameHost {
 		err := gtserror.Newf("id and attributedTo hostnames differ: id=%s attributedTo=%s", attributedTo.Host, statusURI.Host)
 		return nil, gtserror.SetMalformed(err)
 	}
 
 	// Ensure we have the author account of the status dereferenced
 	// (and up-to-date); this is needed to convert to our GTS model.
-	if _, _, err := d.getAccountByURI(ctx, requestUser, attributedTo, false); err != nil {
+	if _, _, err := d.getAccountByURI(ctx, requester, attributedTo,
+		false); err != nil {
 
 		// Note that we specifically DO NOT wrap the error, instead collapsing it as string.
 		// Errors fetching an account do not necessarily relate to dereferencing the status.

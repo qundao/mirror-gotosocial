@@ -34,7 +34,7 @@ type Processor struct {
 	converter           *typeutils.Converter
 	federator           *federation.Federator
 	mediaManager        *media.Manager
-	transportController transport.Controller
+	transportController *transport.Controller
 }
 
 // New returns a new media processor.
@@ -44,7 +44,7 @@ func New(
 	converter *typeutils.Converter,
 	federator *federation.Federator,
 	mediaManager *media.Manager,
-	transportController transport.Controller,
+	transportController *transport.Controller,
 ) Processor {
 	return Processor{
 		c:                   common,

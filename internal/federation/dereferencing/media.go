@@ -53,7 +53,7 @@ import (
 // and the scheduled cleaner.Cleaner{} will catch it!
 func (d *Dereferencer) GetMedia(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	accountID string, // media account owner
 	remoteURL string,
 	info media.AdditionalMediaInfo,
@@ -73,13 +73,8 @@ func (d *Dereferencer) GetMedia(
 		remoteURL,
 		func() (*media.ProcessingMedia, error) {
 
-			// Fetch transport for the provided request user from controller.
-			tsport, err := d.transportController.NewTransportForUsername(ctx,
-				requestUser,
-			)
-			if err != nil {
-				return nil, gtserror.Newf("failed getting transport for %s: %w", requestUser, err)
-			}
+			// Get transport for the requesting account.
+			ctx, tsport := d.getTransport(ctx, requester)
 
 			// Get maximum supported remote media size.
 			maxsz := int64(config.GetMediaRemoteMaxSize()) // #nosec G115 -- Already validated.
@@ -123,7 +118,7 @@ func (d *Dereferencer) GetMedia(
 // and the scheduled cleaner.Cleaner{} will catch it!
 func (d *Dereferencer) RefreshMedia(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	attach *gtsmodel.MediaAttachment,
 	info media.AdditionalMediaInfo,
 	force bool,
@@ -165,13 +160,8 @@ func (d *Dereferencer) RefreshMedia(
 				return nil, gtserror.Newf("invalid media remote url %s: %w", attach.RemoteURL, err)
 			}
 
-			// Fetch transport for the provided request user from controller.
-			tsport, err := d.transportController.NewTransportForUsername(ctx,
-				requestUser,
-			)
-			if err != nil {
-				return nil, gtserror.Newf("failed getting transport for %s: %w", requestUser, err)
-			}
+			// Get transport for the requesting account.
+			ctx, tsport := d.getTransport(ctx, requester)
 
 			// Get maximum supported remote media size.
 			maxsz := int64(config.GetMediaRemoteMaxSize()) // #nosec G115 -- Already validated.
@@ -193,10 +183,10 @@ func (d *Dereferencer) RefreshMedia(
 	)
 }
 
-// WaitOnStatusMedia is a utility function to block until all status media have finished loading.
-// TODO: remove this temporary function with ingester{} work is underway, to instead stream status updates.
-func (d *Dereferencer) WaitOnStatusMedia(ctx context.Context, status *gtsmodel.Status) {
+// WaitOnMedia blocks until all given media have finished processing, finally updating the slice model ptrs.
+func (d *Dereferencer) WaitOnMedia(ctx context.Context, medias []*gtsmodel.MediaAttachment) {
 	type uncachedMedia struct {
+
 		// Ptr to currently processing
 		// media to block on, if any.
 		Ptr *media.ProcessingMedia
@@ -208,18 +198,13 @@ func (d *Dereferencer) WaitOnStatusMedia(ctx context.Context, status *gtsmodel.S
 		URL string
 
 		// Index in status
-		// attachment slice.
+		// medias slice.
 		Idx int
 	}
 
-	// Check if anything to be done.
-	if len(status.Attachments) == 0 {
-		return
-	}
-
-	// Append media in status attachments that isn't yet cached.
-	uncached := make([]uncachedMedia, 0, len(status.Attachments))
-	for i, media := range status.Attachments {
+	// Append media in slice that isn't yet cached.
+	uncached := make([]uncachedMedia, 0, len(medias))
+	for i, media := range medias {
 		if !media.Cached() {
 			uncached = append(uncached, uncachedMedia{
 				ID:  media.ID,
@@ -234,8 +219,8 @@ func (d *Dereferencer) WaitOnStatusMedia(ctx context.Context, status *gtsmodel.S
 		return
 	}
 
-	// To minimize mutex locks / unlocks,
-	// acquire all processing media at once.
+	// Acquire processing
+	// medias slice lock.
 	d.derefMediaMu.Lock()
 
 	for i, entry := range uncached {
@@ -256,8 +241,8 @@ func (d *Dereferencer) WaitOnStatusMedia(ctx context.Context, status *gtsmodel.S
 			// and media is always non-nil.
 			media, _ := entry.Ptr.Load(ctx)
 
-			// Set latest attachment on the status.
-			status.Attachments[entry.Idx] = media
+			// Set latest attachment.
+			medias[entry.Idx] = media
 		} else {
 
 			// Media had finished processing, get latest from database.
@@ -267,8 +252,8 @@ func (d *Dereferencer) WaitOnStatusMedia(ctx context.Context, status *gtsmodel.S
 				continue
 			}
 
-			// Set latest attachment on the status.
-			status.Attachments[entry.Idx] = media
+			// Set latest attachment.
+			medias[entry.Idx] = media
 		}
 	}
 }

@@ -43,7 +43,7 @@ const maxIter = 1024
 // each *new* status dereferenced in this way.
 func (d *Dereferencer) dereferenceThread(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
@@ -53,24 +53,24 @@ func (d *Dereferencer) dereferenceThread(
 		// This is a new status that we need the ancestors of in
 		// order to determine visibility. Perform the initial part
 		// of thread dereferencing, i.e. parents, synchronously.
-		err := d.dereferenceStatusAncestors(ctx, requestUser, status)
+		err := d.dereferenceStatusAncestors(ctx, requester, status)
 		if err != nil {
 			log.Error(ctx, err)
 		}
 
 		// Enqueue dereferencing remaining status thread, (children), asychronously .
 		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-			if err := d.dereferenceStatusDescendants(ctx, requestUser, uri, statusable); err != nil {
+			if err := d.dereferenceStatusDescendants(ctx, requester, uri, statusable); err != nil {
 				log.Error(ctx, err)
 			}
 		})
 	} else {
 		// This is an existing status, dereference the WHOLE thread asynchronously.
 		d.state.Workers.Dereference.Queue.Push(func(ctx context.Context) {
-			if err := d.dereferenceStatusAncestors(ctx, requestUser, status); err != nil {
+			if err := d.dereferenceStatusAncestors(ctx, requester, status); err != nil {
 				log.Error(ctx, err)
 			}
-			if err := d.dereferenceStatusDescendants(ctx, requestUser, uri, statusable); err != nil {
+			if err := d.dereferenceStatusDescendants(ctx, requester, uri, statusable); err != nil {
 				log.Error(ctx, err)
 			}
 		})
@@ -85,13 +85,13 @@ func (d *Dereferencer) dereferenceThread(
 // each *new* status dereferenced in this way.
 func (d *Dereferencer) dereferenceStatusAncestors(
 	ctx context.Context,
-	username string,
+	requester *gtsmodel.Account,
 	status *gtsmodel.Status,
 ) error {
 	// Start log entry with fields
 	l := log.WithContext(ctx).
 		WithFields(kv.Fields{
-			{"username", username},
+			{"username", accountUsername(requester)},
 			{"original", status.URI},
 		}...)
 
@@ -132,7 +132,10 @@ func (d *Dereferencer) dereferenceStatusAncestors(
 
 		// Fetch parent status by current's reply URI, this handles
 		// case of existing (updating if necessary) or a new status.
-		parent, _, _, err := d.getStatusByURI(ctx, username, uri)
+		parent, _, _, err := d.getStatusByURI(ctx,
+			requester,
+			uri,
+		)
 
 		// Check for a returned HTTP code via error.
 		switch code := gtserror.StatusCode(err); {
@@ -265,7 +268,7 @@ func (d *Dereferencer) dereferenceStatusAncestors(
 // each *new* status dereferenced in this way.
 func (d *Dereferencer) dereferenceStatusDescendants(
 	ctx context.Context,
-	username string,
+	requester *gtsmodel.Account,
 	statusIRI *url.URL,
 	parent ap.Statusable,
 ) error {
@@ -274,7 +277,7 @@ func (d *Dereferencer) dereferenceStatusDescendants(
 	// Start log entry with fields
 	l := log.WithContext(ctx).
 		WithFields(kv.Fields{
-			{"username", username},
+			{"username", accountUsername(requester)},
 			{"status", statusIRIStr},
 		}...)
 
@@ -291,6 +294,7 @@ func (d *Dereferencer) dereferenceStatusDescendants(
 	// frame represents a single stack frame when
 	// iteratively derefencing status descendants.
 	type frame struct {
+
 		// page is the current activity streams
 		// collection page we are on (as we often
 		// push a frame to stack mid-paging).
@@ -375,7 +379,10 @@ stackLoop:
 				//   - refetching recently fetched statuses (recursion!)
 				//   - remote domain is blocked (will return unretrievable)
 				//   - any http type error for a new status returns unretrievable
-				_, statusable, _, err := d.getStatusByURI(ctx, username, itemIRI)
+				_, statusable, _, err := d.getStatusByURI(ctx,
+					requester,
+					itemIRI,
+				)
 				switch {
 				case err == nil:
 					// No problem!
@@ -450,7 +457,7 @@ stackLoop:
 
 			// Dereference this next collection page by its IRI.
 			collectionPage, err := d.dereferenceCollectionPage(ctx,
-				username,
+				requester,
 				nextURI,
 			)
 			if err != nil {
@@ -489,4 +496,12 @@ func (d *Dereferencer) updateStatusParent(
 		return gtserror.Newf("error updating status %s: %w", status.URI, err)
 	}
 	return nil
+}
+
+// accountUsername returns the username associated with account (if not nil).
+func accountUsername(a *gtsmodel.Account) string {
+	if a != nil {
+		return a.Username
+	}
+	return ""
 }

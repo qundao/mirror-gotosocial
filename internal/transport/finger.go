@@ -32,49 +32,9 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
-// webfingerURLFor returns the URL to try a webfinger request against, as
-// well as if the URL was retrieved from cache. When the URL is retrieved
-// from cache we don't have to try and do host-meta discovery
-func (t *transport) webfingerURLFor(targetDomain string) (string, bool) {
-	url := config.GetHTTPClientOutgoingScheme() + targetDomain + "/.well-known/webfinger"
+// Finger performs a webfinger request with the given username and domain, and returns the bytes from the response body.
+func (t *Transport) Finger(ctx context.Context, targetUsername string, targetDomain string) ([]byte, error) {
 
-	wc := t.controller.state.Caches.Webfinger
-
-	// We're doing the manual locking/unlocking here to be able to
-	// safely call Cache.Get instead of Get, as the latter updates the
-	// item expiry which we don't want to do here
-	wc.Lock()
-	item, ok := wc.Cache.Get(targetDomain)
-	wc.Unlock()
-
-	if ok {
-		url = item.Value
-	}
-
-	return url, ok
-}
-
-func prepWebfingerReq(ctx context.Context, loc, domain, username string) (*http.Request, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, loc, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	value := url.QueryEscape("acct:" + username + "@" + domain)
-	req.URL.RawQuery = "resource=" + value
-
-	// Prefer application/jrd+json, fall back to application/json.
-	// See https://www.rfc-editor.org/rfc/rfc7033#section-10.2.
-	//
-	// Some implementations don't handle multiple accept headers properly,
-	// including Gin itself. So concat the accept header with a comma
-	// instead which seems to work reliably
-	req.Header.Add("Accept", string(apiutil.AppJRDJSON)+","+string(apiutil.AppJSON))
-
-	return req, nil
-}
-
-func (t *transport) Finger(ctx context.Context, targetUsername string, targetDomain string) ([]byte, error) {
 	// Remotes seem to prefer having their punycode
 	// domain used in webfinger requests, so let's oblige.
 	punyDomain, err := util.Punify(targetDomain)
@@ -184,7 +144,49 @@ func (t *transport) Finger(ctx context.Context, targetUsername string, targetDom
 	return io.ReadAll(rsp.Body)
 }
 
-func (t *transport) webfingerFromHostMeta(ctx context.Context, targetDomain string) (string, error) {
+// webfingerURLFor returns the URL to try a webfinger request against, as
+// well as if the URL was retrieved from cache. When the URL is retrieved
+// from cache we don't have to try and do host-meta discovery
+func (t *Transport) webfingerURLFor(targetDomain string) (string, bool) {
+	url := config.GetHTTPClientOutgoingScheme() + targetDomain + "/.well-known/webfinger"
+
+	wc := t.controller.state.Caches.Webfinger
+
+	// We're doing the manual locking/unlocking here to be able to
+	// safely call Cache.Get instead of Get, as the latter updates the
+	// item expiry which we don't want to do here
+	wc.Lock()
+	item, ok := wc.Cache.Get(targetDomain)
+	wc.Unlock()
+
+	if ok {
+		url = item.Value
+	}
+
+	return url, ok
+}
+
+func prepWebfingerReq(ctx context.Context, loc, domain, username string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, loc, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	value := url.QueryEscape("acct:" + username + "@" + domain)
+	req.URL.RawQuery = "resource=" + value
+
+	// Prefer application/jrd+json, fall back to application/json.
+	// See https://www.rfc-editor.org/rfc/rfc7033#section-10.2.
+	//
+	// Some implementations don't handle multiple accept headers properly,
+	// including Gin itself. So concat the accept header with a comma
+	// instead which seems to work reliably
+	req.Header.Add("Accept", string(apiutil.AppJRDJSON)+","+string(apiutil.AppJSON))
+
+	return req, nil
+}
+
+func (t *Transport) webfingerFromHostMeta(ctx context.Context, targetDomain string) (string, error) {
 	// Build the request for the host-meta endpoint
 	hmurl := config.GetHTTPClientOutgoingScheme() + targetDomain + "/.well-known/host-meta"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, hmurl, nil)

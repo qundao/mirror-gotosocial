@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"net/url"
+	"slices"
 	"time"
 
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
@@ -246,6 +247,12 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		return p.createStatusFromRelay(ctx, fMsg)
 	}
 
+	// If we received this status via a relay actor, it
+	// must originate from an account connected to the relay.
+	if fMsg.Receiving.IsRelayActor() {
+		return p.createStatusToRelay(ctx, fMsg)
+	}
+
 	// Non-relay status,
 	// process normally.
 	var (
@@ -277,7 +284,7 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		//
 		// NOTE: dereferencer hook will handle surfacing logic.
 		status, statusable, err = p.federate.RefreshStatus(ctx,
-			fMsg.Receiving.Username,
+			fMsg.Receiving,
 			bareStatus,
 			statusable,
 
@@ -295,7 +302,7 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 		//
 		// NOTE: dereferencer hook will handle surfacing logic.
 		status, statusable, err = p.federate.GetStatusByURI(ctx,
-			fMsg.Receiving.Username,
+			fMsg.Receiving,
 			fMsg.APIRI,
 		)
 		if err != nil {
@@ -402,48 +409,94 @@ func (p *fediAPI) CreateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 }
 
 func (p *fediAPI) createStatusFromRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
-	// Retrieve the relayed status, and store it
-	// if it's matched by a relay subscription.
+	// Retrieve the relayed status, and store it in
+	// the db if it's matched by a relay subscription.
 	//
-	// NOTE: dereferencer hook handles surfacing logic.
-	status, err := p.federate.GetRelayedStatus(ctx,
+	// Surfacing, timelining etc will be done by deref hook.
+	_, err := p.federate.GetStatusFromRelaySubscription(ctx,
 		fMsg.Receiving,  // Our instance account.
 		fMsg.Requesting, // Relaying account.
 		fMsg.APIRI,      // Relayed status ID/URI.
 	)
+	return err
+}
 
-	uriStr := fMsg.APIRI.String()
-	l := log.
-		WithContext(ctx).
-		WithField("uri", uriStr)
-
-	// Check for semi-expected errors
-	// encountered during dereferencing.
-	switch {
-	case err == nil:
-		// No problem.
-
-	case gtserror.IsUnretrievable(err):
-		// Remote domain probably blocked.
-		l.Debugf("status not retrievable: %v", err)
-		return nil
-
-	case gtserror.IsMalformed(err):
-		// Final URI probably borked.
-		l.Debugf("status malformed: %v", err)
-		return nil
-
-	default:
-		// Actual error (db error, transport error, etc).
-		return gtserror.Newf("error dereferencing %s: %w", uriStr, err)
+func (p *fediAPI) createStatusToRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
+	// Retrieve the relayed status.
+	status, err := p.federate.GetStatusForRelaying(ctx,
+		fMsg.Receiving,  // Our relay actor account.
+		fMsg.Requesting, // Relaying account.
+		fMsg.APIRI,      // Relayed status ID/URI.
+	)
+	if err != nil {
+		return gtserror.Newf("error getting status: %w", err)
 	}
 
-	// If status is nil that means it probably
-	// didn't match a relay subscription, or it
-	// wasn't permitted by interaction policy checks.
 	if status == nil {
-		l.Debug("status dropped as not relayable")
+		// Nothing to do.
 		return nil
+	}
+
+	// Wrap target status in boost wrapper to send it out.
+	boostOut, err := p.utils.converter.StatusToBoost(ctx,
+		status,
+		fMsg.Receiving,
+		"", // No app ID.
+	)
+	if err != nil {
+		return gtserror.Newf("error converting status: %w", err)
+	}
+
+	// Announce status to relay subscribers.
+	if err := p.federate.PushFromRelay(ctx,
+		boostOut); err != nil {
+		return gtserror.Newf("error pushing from relay: %w", err)
+	}
+
+	// Handle boost for any local followers of the relay actor.
+	if err := p.storeOutgoingRelayActorBoostForLocalFollowers(ctx,
+		fMsg.Receiving,
+		boostOut,
+	); err != nil {
+		return gtserror.Newf("error handling outgoing boost for local followers: %w", err)
+	}
+
+	return nil
+}
+
+func (p *fediAPI) storeOutgoingRelayActorBoostForLocalFollowers(
+	ctx context.Context,
+	relayActorAcct *gtsmodel.Account,
+	boostOut *gtsmodel.Status,
+) error {
+	// If any local accounts follow the relay apart
+	// from the instance account, store + timeline
+	// the boost locally so it will show in timelines.
+	localFollows, err := p.state.DB.GetAccountLocalFollowers(ctx, relayActorAcct.ID)
+	if err != nil && !errors.Is(err, db.ErrNoEntries) {
+		return gtserror.Newf("db error getting followers: %w", err)
+	}
+	localFollows = slices.DeleteFunc(
+		localFollows,
+		func(f *gtsmodel.Follow) bool {
+			return f.Account.IsInstance()
+		},
+	)
+
+	if len(localFollows) == 0 {
+		// Nothing
+		// to do.
+		return nil
+	}
+
+	// Store the boost wrapper itself in the db.
+	if err := p.state.DB.PutStatus(ctx, boostOut); err != nil {
+		return gtserror.Newf("db error storing boost: %w", err)
+	}
+
+	// Timeline and notify the boost wrapper status.
+	if err := p.surfacer.TimelineAndNotifyStatus(ctx, boostOut); err != nil {
+		return gtserror.Newf("error timelining and notifying status: %w", err)
 	}
 
 	return nil
@@ -465,7 +518,7 @@ func (p *fediAPI) CreateReplyRequest(ctx context.Context, fMsg *messages.FromFed
 	// statusable. This will also check permissions.
 	replyURI := ap.GetJSONLDId(statusable).String()
 	reply, _, err := p.federate.RefreshStatus(ctx,
-		fMsg.Receiving.Username,
+		fMsg.Receiving,
 		&gtsmodel.Status{URI: replyURI},
 		statusable,
 
@@ -972,6 +1025,12 @@ func (p *fediAPI) CreateAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 		return p.createAnnounceFromRelay(ctx, fMsg)
 	}
 
+	// If we received the announce via a relay actor,
+	// it must originate from an account connected to the relay.
+	if fMsg.Receiving.IsRelayActor() {
+		return p.createAnnounceToRelay(ctx, fMsg)
+	}
+
 	// Non-relay announce, process normally.
 	boost, ok := fMsg.GTSModel.(*gtsmodel.Status)
 	if !ok {
@@ -984,8 +1043,8 @@ func (p *fediAPI) CreateAnnounce(ctx context.Context, fMsg *messages.FromFediAPI
 	// the db, and dereferencing the target status
 	// ancestors / descendants where appropriate.
 	boost, err := p.federate.EnrichAnnounce(ctx,
+		fMsg.Receiving,
 		boost,
-		fMsg.Receiving.Username,
 	)
 	if err != nil {
 		if gtserror.IsUnretrievable(err) ||
@@ -1099,53 +1158,60 @@ func (p *fediAPI) createAnnounceFromRelay(ctx context.Context, fMsg *messages.Fr
 
 	// Retrieve the relayed status wrapped in the boost,
 	// and store it if it's matched by a relay subscription.
+	// Surfacing, timelining etc will be done by deref hook.
 	//
 	// Note that this doesn't store the boost wrapper status
 	// itself as we don't really care about it that much.
-	status, err := p.federate.GetRelayedAnnounce(ctx,
+	_, err := p.federate.GetBoostedStatusFromRelaySubscription(ctx,
 		fMsg.Receiving,  // Our instance account.
 		fMsg.Requesting, // Relaying account.
 		boost,           // Boost wrapper status.
 	)
+	return err
+}
 
-	uriStr := boost.BoostOfURIStr
-	l := log.
-		WithContext(ctx).
-		WithField("uri", uriStr)
-
-	// Check for semi-expected errors
-	// encountered during dereferencing.
-	switch {
-	case err == nil:
-		// No problem.
-
-	case gtserror.IsUnretrievable(err):
-		// Remote domain probably blocked.
-		l.Debugf("status not retrievable: %v", err)
-		return nil
-
-	case gtserror.IsMalformed(err):
-		// Final URI probably borked.
-		l.Debugf("status malformed: %v", err)
-		return nil
-
-	case gtserror.IsWrongType(err):
-		// Probably Announce of Announce
-		// or something, we ignore these.
-		l.Debugf("wrong type: %v", err)
-		return nil
-
-	default:
-		// Actual error (db error, transport error, etc).
-		return gtserror.Newf("error dereferencing %s: %w", uriStr, err)
+func (p *fediAPI) createAnnounceToRelay(ctx context.Context, fMsg *messages.FromFediAPI) error {
+	// Unpack the boost wrapper.
+	boost, ok := fMsg.GTSModel.(*gtsmodel.Status)
+	if !ok {
+		return gtserror.Newf("%T not parseable as *gtsmodel.Status", fMsg.GTSModel)
 	}
 
-	// If status is nil that means it probably
-	// didn't match a relay subscription, or it
-	// wasn't permitted by interaction policy checks.
+	// Retrieve the relayed status.
+	status, err := p.federate.GetBoostedStatusForRelaying(ctx,
+		fMsg.Receiving,  // Our relay actor account.
+		fMsg.Requesting, // Relaying account.
+		boost,           // Boost wrapper status.
+	)
+	if err != nil {
+		return gtserror.Newf("error getting status: %w", err)
+	}
+
 	if status == nil {
-		l.Debug("status dropped as not relayable")
+		// Nothing to do.
 		return nil
+	}
+
+	// Wrap target status in boost wrapper to send it out.
+	boostOut, err := p.utils.converter.StatusToBoost(ctx,
+		status,
+		fMsg.Receiving,
+		"", // No app ID.
+	)
+	if err != nil {
+		return gtserror.Newf("error converting status to boost: %w", err)
+	}
+
+	// Announce to relay subscribers.
+	if err := p.federate.PushFromRelay(ctx, boostOut); err != nil {
+		return gtserror.Newf("error pushing from relay: %w", err)
+	}
+
+	// Handle boost for any local followers of the relay actor.
+	if err := p.storeOutgoingRelayActorBoostForLocalFollowers(ctx,
+		fMsg.Receiving, boostOut,
+	); err != nil {
+		return gtserror.Newf("error handling outgoing boost for local followers: %w", err)
 	}
 
 	return nil
@@ -1163,8 +1229,8 @@ func (p *fediAPI) CreateAnnounceRequest(ctx context.Context, fMsg *messages.From
 	// We can check permissions for the announce *and*
 	// put it in the db (if acceptable) by doing Enrich.
 	boost, err := p.federate.EnrichAnnounce(ctx,
+		fMsg.Receiving,
 		req.Announce,
-		fMsg.Receiving.Username,
 	)
 
 	switch {
@@ -1341,9 +1407,8 @@ func (p *fediAPI) UpdateAccount(ctx context.Context, fMsg *messages.FromFediAPI)
 	}
 
 	// Fetch up-to-date bio, avatar, header, etc.
-	_, _, err := p.federate.RefreshAccount(
-		ctx,
-		fMsg.Receiving.Username,
+	_, _, err := p.federate.RefreshAccount(ctx,
+		fMsg.Receiving,
 		account,
 		apubAcc,
 
@@ -1417,7 +1482,7 @@ func (p *fediAPI) AcceptRemoteStatus(ctx context.Context, fMsg *messages.FromFed
 	// This will also check whether the given approvedByURI
 	// actually grants permission for this status.
 	_, _, err := p.federate.RefreshStatus(ctx,
-		fMsg.Receiving.Username,
+		fMsg.Receiving,
 		bareStatus,
 		nil,
 		nil,
@@ -1511,7 +1576,7 @@ func (p *fediAPI) UpdateStatus(ctx context.Context, fMsg *messages.FromFediAPI) 
 	// Fetch up-to-date attach status attachments.
 	// NOTE: dereferencer hook handles surfacing.
 	_, _, err := p.federate.RefreshStatus(ctx,
-		fMsg.Receiving.Username,
+		fMsg.Receiving,
 		existing,
 		apStatus,
 		freshness,

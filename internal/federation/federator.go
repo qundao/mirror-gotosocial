@@ -41,7 +41,7 @@ type Federator struct {
 	federatingDB *federatingdb.DB
 	clock        pub.Clock
 	converter    *typeutils.Converter
-	transport    transport.Controller
+	transport    *transport.Controller
 	mediaManager *media.Manager
 	actor        pub.FederatingActor
 	dereferencing.Dereferencer
@@ -56,7 +56,7 @@ type Federator struct {
 func NewFederator(
 	state *state.State,
 	federatingDB *federatingdb.DB,
-	transportController transport.Controller,
+	transportController *transport.Controller,
 	converter *typeutils.Converter,
 	visFilter *visibility.Filter,
 	intFilter *interaction.Filter,
@@ -123,6 +123,6 @@ func (f *Federator) FederatingDB() *federatingdb.DB {
 }
 
 // TransportController returns the underlying transport controller.
-func (f *Federator) TransportController() transport.Controller {
+func (f *Federator) TransportController() *transport.Controller {
 	return f.transport
 }

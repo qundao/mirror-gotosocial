@@ -21,6 +21,7 @@ import (
 	"net/http"
 
 	"code.superseriousbusiness.org/gopkg/httputil"
+	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
 	"code.superseriousbusiness.org/gotosocial/internal/paging"
 )
@@ -88,7 +89,7 @@ import (
 //				"$ref": "#/definitions/error"
 //			description: not found
 func (m *Module) OutboxGETHandler(c *httputil.Context) {
-	_, username, contentType, errWithCode := m.parseCommon(c)
+	_, username, contentType, errWithCode := activitypub.ParseCommon(c)
 	if errWithCode != nil {
 		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return

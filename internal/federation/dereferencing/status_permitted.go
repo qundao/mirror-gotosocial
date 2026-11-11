@@ -41,9 +41,6 @@ import (
 //   - status passes visibility checks
 //   - status passes interaction policy checks
 //
-// If status is not permitted to be stored, the function
-// will clean up after itself by removing the status.
-//
 // If status is a reply or a boost, and the author of
 // the given status is only permitted to reply or boost
 // pending approval, then "PendingApproval" will be set
@@ -59,10 +56,8 @@ import (
 // if one didn't already exist.
 func (d *Dereferencer) isPermittedStatus(
 	ctx context.Context,
-	requestUser string,
-	existing *gtsmodel.Status,
+	requester *gtsmodel.Account,
 	status *gtsmodel.Status,
-	isNew bool,
 ) (
 	permitted bool, // is permitted?
 	err error,
@@ -70,13 +65,14 @@ func (d *Dereferencer) isPermittedStatus(
 	switch {
 	case status.Account.IsSuspended():
 		// we shouldn't reach this point, log to poke devs to investigate.
-		log.Warnf(ctx, "should not have reached here, author suspended: %s", status.AccountURI)
+		log.Warnf(ctx, "should not have reached here, author suspended: %s",
+			status.AccountURI)
 		permitted = false
 
 	case status.InReplyToURI != "":
 		// Status is a reply, check permissivity.
 		permitted, err = d.isPermittedReply(ctx,
-			requestUser,
+			requester,
 			status,
 		)
 		if err != nil {
@@ -86,7 +82,7 @@ func (d *Dereferencer) isPermittedStatus(
 	case status.BoostOf != nil:
 		// Status is a boost, check permissivity.
 		permitted, err = d.isPermittedBoost(ctx,
-			requestUser,
+			requester,
 			status,
 		)
 		if err != nil {
@@ -99,15 +95,6 @@ func (d *Dereferencer) isPermittedStatus(
 		permitted = true
 	}
 
-	if !permitted && !isNew {
-		log.Infof(ctx, "deleting unpermitted: %s", existing.URI)
-
-		// Delete existing status from database as is no longer permitted.
-		if err := d.state.DB.DeleteStatus(ctx, existing, true); err != nil {
-			log.Errorf(ctx, "error deleting %s after permissivity fail: %v", existing.URI, err)
-		}
-	}
-
 	return
 }
 
@@ -115,10 +102,12 @@ func (d *Dereferencer) isPermittedStatus(
 // is a permitted reply to its referenced inReplyTo.
 func (d *Dereferencer) isPermittedReply(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	reply *gtsmodel.Status,
-) (bool, error) {
-
+) (
+	bool,
+	error,
+) {
 	var (
 		replyURI = reply.URI // Definitely set.
 
@@ -192,7 +181,7 @@ func (d *Dereferencer) isPermittedReply(
 
 	// We have the replied-to status; ensure it's fully populated.
 	if err := d.state.DB.PopulateStatus(ctx, parent); err != nil {
-		return false, gtserror.Newf("error populating status %s: %w", reply.ID, err)
+		return false, gtserror.Newf("error populating status %s: %w", parent.ID, err)
 	}
 
 	// Boost wrapper statuses
@@ -205,7 +194,7 @@ func (d *Dereferencer) isPermittedReply(
 	// If parent is a local status
 	// check visibility to replyer.
 	if parent.Flags.Local() {
-		visible, err := d.visFilter.StatusVisible(ctx,
+		visible, err := d.visibility.StatusVisible(ctx,
 			reply.Account,
 			parent,
 		)
@@ -229,7 +218,7 @@ func (d *Dereferencer) isPermittedReply(
 		return d.isPermittedByAuthURI(
 			ctx,
 			gtsmodel.InteractionReply,
-			requestUser,
+			requester,
 			reply,
 			parent,
 			thisReq,
@@ -240,7 +229,7 @@ func (d *Dereferencer) isPermittedReply(
 	// Status doesn't claim to be approved.
 	// Check interaction policy of inReplyTo
 	// to see what we need to do with it.
-	replyable, err := d.intFilter.StatusReplyable(ctx,
+	replyable, err := d.interaction.StatusReplyable(ctx,
 		reply.Account,
 		parent,
 	)
@@ -396,17 +385,19 @@ func (d *Dereferencer) unpermittedByParent(
 // reflect the approval, if it's not nil.
 func (d *Dereferencer) isPermittedByAuthURI(
 	ctx context.Context,
-	interactionType gtsmodel.InteractionType,
-	requestUser string,
+	itype gtsmodel.InteractionType,
+	requester *gtsmodel.Account,
 	reply *gtsmodel.Status,
 	inReplyTo *gtsmodel.Status,
 	thisReq *gtsmodel.InteractionRequest,
 	approvedByIRI string,
-) (bool, error) {
-	permitted, err := d.isValidAuthURI(
-		ctx,
-		interactionType,
-		requestUser,
+) (
+	bool,
+	error,
+) {
+	permitted, err := d.isValidAuthURI(ctx,
+		itype,
+		requester,
 		approvedByIRI,        // approval iri
 		inReplyTo.AccountURI, // actor
 		reply.URI,            // object
@@ -524,10 +515,12 @@ func (d *Dereferencer) rejectedByPolicy(
 
 func (d *Dereferencer) isPermittedBoost(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	status *gtsmodel.Status,
-) (bool, error) {
-
+) (
+	bool,
+	error,
+) {
 	// Extract boost from status.
 	boostOf := status.BoostOf
 	if boostOf.BoostOfID != "" {
@@ -541,7 +534,7 @@ func (d *Dereferencer) isPermittedBoost(
 	// Check visibility of local
 	// boostOf to boosting account.
 	if boostOf.Flags.Local() {
-		visible, err := d.visFilter.StatusVisible(ctx,
+		visible, err := d.visibility.StatusVisible(ctx,
 			status.Account,
 			boostOf,
 		)
@@ -558,7 +551,7 @@ func (d *Dereferencer) isPermittedBoost(
 	}
 
 	// Check interaction policy of boostOf.
-	boostable, err := d.intFilter.StatusBoostable(ctx,
+	boostable, err := d.interaction.StatusBoostable(ctx,
 		status.Account,
 		boostOf,
 	)
@@ -618,7 +611,7 @@ func (d *Dereferencer) isPermittedBoost(
 	permitted, err := d.isValidAuthURI(
 		ctx,
 		gtsmodel.InteractionAnnounce,
-		requestUser,
+		requester,
 		status.ApprovedByURI, // approval uri
 		boostOf.AccountURI,   // actor
 		status.URI,           // object
@@ -650,20 +643,18 @@ func (d *Dereferencer) isPermittedBoost(
 // if the dereferenced Accept/Approval did not meet expectations.
 func (d *Dereferencer) isValidAuthURI(
 	ctx context.Context,
-	interactionType gtsmodel.InteractionType,
-	requestUser string,
+	itype gtsmodel.InteractionType,
+	requester *gtsmodel.Account,
 	authIRIStr string, // authorization uri Eg., "https://example.org/users/someone/accepts/01J2736AWWJ3411CPR833F6D03"
 	expectActorURIStr string, // actor Eg., "https://example.org/users/someone"
 	expectObjectURIStr string, // object Eg., "https://some.instance.example.org/users/someone_else/statuses/01J27414TWV9F7DC39FN8ABB5R"
 	expectTargetURIStr string, // target Eg., "https://example.org/users/someone/statuses/01JM4REQTJ1BZ1R4BPYP1W4R9E"
 ) (bool, error) {
-	l := log.
-		WithContext(ctx).
+	l := log.WithContext(ctx).
 		WithField("authIRI", authIRIStr)
 
 	authIRI, err := url.Parse(authIRIStr)
 	if err != nil {
-		// Real returnable error.
 		err := gtserror.Newf("error parsing authIRI: %w", err)
 		return false, err
 	}
@@ -672,7 +663,6 @@ func (d *Dereferencer) isValidAuthURI(
 	// domain is blocked, just return false.
 	blocked, err := d.state.DB.IsDomainBlocked(ctx, authIRI.Host)
 	if err != nil {
-		// Real returnable error.
 		err := gtserror.Newf("error checking domain block: %w", err)
 		return false, err
 	}
@@ -682,12 +672,8 @@ func (d *Dereferencer) isValidAuthURI(
 		return false, nil
 	}
 
-	tsport, err := d.transportController.NewTransportForUsername(ctx, requestUser)
-	if err != nil {
-		// Real returnable error.
-		err := gtserror.Newf("error creating transport: %w", err)
-		return false, err
-	}
+	// Get transport for the requesting account.
+	ctx, tsport := d.getTransport(ctx, requester)
 
 	// Make the call to the authIRI.
 	// Log any error encountered here but don't
@@ -742,7 +728,7 @@ func (d *Dereferencer) isValidAuthURI(
 	// First try to parse type as Authorization stamp.
 	if authable, ok := ap.ToAuthorizationable(t); ok {
 		if err := isValidAuthorization(
-			interactionType,
+			itype,
 			authable,
 			authID,
 			expectActorURIStr,  // actor
@@ -770,12 +756,9 @@ func (d *Dereferencer) isValidAuthURI(
 		return true, nil
 	}
 
-	// Type wasn't something we
-	// could do anything with!
-	l.Errorf(
-		"%T at %s not authorization or accept",
-		t, authIRIStr,
-	)
+	// Type wasn't something we could do anything with!
+	l.Errorf("%T at %s not authorization or accept",
+		t, authIRIStr)
 	return false, nil
 }
 

@@ -36,7 +36,7 @@ type InstanceTestSuite struct {
 func (suite *InstanceTestSuite) TestCountInstanceUsers() {
 	count, err := suite.db.CountInstanceAccounts(suite.T().Context())
 	suite.NoError(err)
-	suite.Equal(5, count)
+	suite.Equal(6, count)
 }
 
 func (suite *InstanceTestSuite) TestCountInstanceStatuses() {

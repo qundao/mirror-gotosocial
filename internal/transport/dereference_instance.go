@@ -36,14 +36,16 @@ import (
 	"github.com/temoto/robotstxt"
 )
 
-func (t *transport) DereferenceInstance(ctx context.Context, iri *url.URL) (*gtsmodel.Instance, error) {
+// DereferenceInstance dereferences remote instance information, first by checking /api/v1/instance, and then by checking /.well-known/nodeinfo.
+func (t *Transport) DereferenceInstance(ctx context.Context, iri *url.URL) (*gtsmodel.Instance, error) {
+
 	// Try to fetch robots.txt to check
 	// if we're allowed to try endpoints:
 	//
 	//   - /.well-known/nodeinfo
 	//   - /nodeinfo/2.0|2.1 endpoints
 	//   - /api/v1/instance
-	robotsTxt, err := t.DereferenceRobots(ctx, iri.Scheme, iri.Host)
+	robotsTxt, err := t.GetRobotsTxt(ctx, iri.Scheme, iri.Host)
 	if err != nil {
 		log.Debugf(ctx, "couldn't fetch robots.txt from %s: %v", iri.Host, err)
 	}
@@ -59,6 +61,7 @@ func (t *transport) DereferenceInstance(ctx context.Context, iri *url.URL) (*gts
 		log.Debugf(ctx, "successfully dereferenced instance using /.well-known/nodeinfo")
 		return i, nil
 	}
+
 	log.Debugf(ctx, "couldn't dereference instance using /.well-known/nodeinfo: %s", err)
 
 	// Try to dereference using /api/v1/instance.
@@ -82,7 +85,7 @@ func (t *transport) DereferenceInstance(ctx context.Context, iri *url.URL) (*gts
 	}, nil
 }
 
-func (t *transport) dereferenceByAPIV1Instance(
+func (t *Transport) dereferenceByAPIV1Instance(
 	ctx context.Context,
 	iri *url.URL,
 	robotsTxt *robotstxt.RobotsData,
@@ -162,7 +165,7 @@ func (t *transport) dereferenceByAPIV1Instance(
 	return i, nil
 }
 
-func (t *transport) dereferenceByNodeInfo(
+func (t *Transport) dereferenceByNodeInfo(
 	ctx context.Context,
 	iri *url.URL,
 	robotsTxt *robotstxt.RobotsData,
@@ -189,7 +192,7 @@ func (t *transport) dereferenceByNodeInfo(
 	return i, nil
 }
 
-func (t *transport) callNodeInfoWellKnown(
+func (t *Transport) callNodeInfoWellKnown(
 	ctx context.Context,
 	iri *url.URL,
 	robotsTxt *robotstxt.RobotsData,
@@ -277,7 +280,7 @@ func (t *transport) callNodeInfoWellKnown(
 	return nodeinfoHref, nil
 }
 
-func (t *transport) callNodeInfo(
+func (t *Transport) callNodeInfo(
 	ctx context.Context,
 	iri *url.URL,
 	robotsTxt *robotstxt.RobotsData,

@@ -47,7 +47,15 @@ type DereferenceDomainPermissionsResp struct {
 	LastModified time.Time
 }
 
-func (t *transport) DereferenceDomainPermissions(
+// DereferenceDomainPermissions dereferences the
+// permissions list present at the given permSub's URI.
+//
+// If "skipCache", then If-Modified-Since and If-None-Match
+// headers will *NOT* be sent with the outgoing request.
+//
+// If err == nil and Unmodified == false, then it's up
+// to the caller to close the returned io.ReadCloser.
+func (t *Transport) DereferenceDomainPermissions(
 	ctx context.Context,
 	permSub *gtsmodel.DomainPermissionSubscription,
 	skipCache bool,

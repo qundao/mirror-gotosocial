@@ -592,10 +592,10 @@ func (suite *AccountsGetTestSuite) TestAccountsGetFromTop() {
 func (suite *AccountsGetTestSuite) TestAccountsMinID() {
 	recorder := httptest.NewRecorder()
 
-	path := admin.AccountsV2Path + "?limit=1&min_id=/@the_mighty_zork"
+	path := admin.AccountsV2Path + "?limit=1&min_id=/@admin"
 	c := suite.newContext(recorder, http.MethodGet, nil, path, "application/json")
 
-	c.SetPathValue("min_id", "@the_mighty_zork")
+	c.SetPathValue("min_id", "@admin")
 	c.SetPathValue("limit", "1")
 
 	suite.adminModule.AccountsGETV2Handler(c)
@@ -607,60 +607,57 @@ func (suite *AccountsGetTestSuite) TestAccountsMinID() {
 	}
 
 	link := recorder.Header().Get("Link")
-	suite.Equal(`<http://localhost:8080/api/v2/admin/accounts?limit=1&max_id=%2F%40media_mogul>; rel="next", <http://localhost:8080/api/v2/admin/accounts?limit=1&min_id=%2F%40media_mogul>; rel="prev"`, link)
+	suite.Equal(`<http://localhost:8080/api/v2/admin/accounts?limit=1&max_id=%2F%401happyturtle>; rel="next", <http://localhost:8080/api/v2/admin/accounts?limit=1&min_id=%2F%401happyturtle>; rel="prev"`, link)
 
 	out := testrig.MustJSONStringFromBytes(b)
 	suite.Equal(`[
   {
     "account": {
-      "acct": "media_mogul",
-      "avatar": "http://localhost:8080/fileserver/01JPCMD83Y4WR901094YES3QC5/avatar/original/01JPHQZ0ZHC2AXJK1JQNXRXQZN.jpeg",
-      "avatar_description": "DESCRIPTION_GOES_HERE",
-      "avatar_media_id": "01JPHQZ0ZHC2AXJK1JQNXRXQZN",
-      "avatar_static": "http://localhost:8080/fileserver/01JPCMD83Y4WR901094YES3QC5/avatar/small/01JPHQZ0ZHC2AXJK1JQNXRXQZN.jpeg",
+      "acct": "1happyturtle",
+      "avatar": "",
+      "avatar_static": "",
       "bot": false,
-      "created_at": "2025-03-15T11:08:00.000Z",
+      "created_at": "2022-06-04T13:12:00.000Z",
       "discoverable": false,
-      "display_name": "",
+      "display_name": "happy little turtle :3",
       "emojis": [],
-      "enable_rss": true,
       "fields": [
         {
-          "name": "I'm going to post a lot of",
-          "value": "media!",
+          "name": "should you follow me?",
+          "value": "maybe!",
           "verified_at": null
         },
         {
-          "name": "and there's nothing",
-          "value": "you can do about it",
+          "name": "age",
+          "value": "120",
           "verified_at": null
         }
       ],
-      "followers_count": 0,
-      "following_count": 0,
+      "followers_count": 1,
+      "following_count": 1,
       "group": false,
-      "header": "http://localhost:8080/fileserver/01JPCMD83Y4WR901094YES3QC5/header/original/01JPHRB7F2RXPTEQFRYC85EPD9.png",
-      "header_description": "DESCRIPTION_GOES_HERE",
-      "header_media_id": "01JPHRB7F2RXPTEQFRYC85EPD9",
-      "header_static": "http://localhost:8080/fileserver/01JPCMD83Y4WR901094YES3QC5/header/small/01JPHRB7F2RXPTEQFRYC85EPD9.webp",
-      "id": "01JPCMD83Y4WR901094YES3QC5",
+      "header": "http://localhost:8080/assets/default_header.webp",
+      "header_description": "Flat gray background (default header).",
+      "header_static": "http://localhost:8080/assets/default_header.webp",
+      "hide_collections": true,
+      "id": "01F8MH5NBDF2MV7CTC4Q5128HF",
       "indexable": false,
-      "last_status_at": "2025-03-15",
-      "locked": false,
+      "last_status_at": "2026-01-01",
+      "locked": true,
       "noindex": true,
-      "note": "<p>I'm a test account that posts a shitload of media and I have my account rendered in \"gallery\" mode</p>",
-      "statuses_count": 2,
-      "url": "http://localhost:8080/@media_mogul",
-      "username": "media_mogul"
+      "note": "<p>i post about things that concern me</p>",
+      "statuses_count": 10,
+      "url": "http://localhost:8080/@1happyturtle",
+      "username": "1happyturtle"
     },
     "approved": true,
     "confirmed": true,
-    "created_at": "2025-03-15T11:08:00.000Z",
-    "created_by_application_id": "01HT5P2YHDMPAAD500NDAY8JW1",
+    "created_at": "2022-06-04T13:12:00.000Z",
+    "created_by_application_id": "01F8MGY43H3N2C8EWPR2FPYEXG",
     "disabled": false,
     "domain": null,
-    "email": "media.mogul@example.org",
-    "id": "01JPCMD83Y4WR901094YES3QC5",
+    "email": "tortle.dude@example.org",
+    "id": "01F8MH5NBDF2MV7CTC4Q5128HF",
     "invite_request": null,
     "ip": null,
     "ips": [],
@@ -674,7 +671,7 @@ func (suite *AccountsGetTestSuite) TestAccountsMinID() {
     },
     "silenced": false,
     "suspended": false,
-    "username": "media_mogul"
+    "username": "1happyturtle"
   }
 ]`, out)
 }

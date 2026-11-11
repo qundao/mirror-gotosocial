@@ -53,7 +53,7 @@ type ProcessingStandardTestSuite struct {
 	mediaManager        *media.Manager
 	typeconverter       *typeutils.Converter
 	httpClient          *testrig.MockHTTPClient
-	transportController transport.Controller
+	transportController *transport.Controller
 	federator           *federation.Federator
 	oauthServer         oauth.Server
 	emailSender         email.Sender

@@ -537,7 +537,7 @@ document.querySelectorAll("div#profile-fields dl div.field").forEach((field) => 
 					break;
 				}
 
-				const currentJourney = payload.train;
+				const currentJourney = payload.checkin;
 				if (!currentJourney) {
 					// Can't do anything
 					// with no journeys.
@@ -557,7 +557,7 @@ document.querySelectorAll("div#profile-fields dl div.field").forEach((field) => 
 				const origin = currentJourney.origin.name;
 				const destination = currentJourney.destination.name;
 				if (origin === undefined || destination === undefined) {
-					// Can't display this train.
+					// Can't display a train from nothing to nowhere.
 					continue;
 				}
 
@@ -676,7 +676,7 @@ document.querySelectorAll("div#profile-fields dl div.field").forEach((field) => 
 
 				// Add user's display name to the original link in bold.
 				const displayNameE = document.createElement("b");
-				displayNameE.textContent = `${payload.userDetails.displayName}`;
+				displayNameE.textContent = `${payload.user.displayName}`;
 				a.appendChild(displayNameE);
 				vNew.appendChild(a);
 

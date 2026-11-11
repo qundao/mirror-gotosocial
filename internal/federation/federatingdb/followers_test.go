@@ -18,6 +18,7 @@
 package federatingdb_test
 
 import (
+	"context"
 	"testing"
 
 	"code.superseriousbusiness.org/gotosocial/internal/ap"
@@ -30,9 +31,19 @@ type FollowersTestSuite struct {
 }
 
 func (suite *FollowersTestSuite) TestGetFollowers() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
 	testAccount := suite.testAccounts["local_account_2"]
 
-	f, err := suite.federatingDB.Followers(suite.T().Context(), testrig.URLMustParse(testAccount.URI))
+	f, err := testStructs.Federator.FederatingDB().Followers(
+		ctx, testrig.URLMustParse(testAccount.URI),
+	)
 	if err != nil {
 		suite.FailNow(err.Error())
 	}

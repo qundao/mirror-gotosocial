@@ -1125,6 +1125,45 @@ func (suite *FromFediAPITestSuite) TestCreateReplyRequest() {
 	// }
 }
 
+func (suite *FromFediAPITestSuite) TestCreateToRelayActor() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// Use our relay actor account to deref.
+	relayActorAcct := suite.testAccounts["relay_actor_1"]
+	// Pretend remote_account_1 is relaying a post to us.
+	relayingAcct := suite.testAccounts["remote_account_1"]
+	// Pretend status has been relayed to us.
+	uriStr := "http://fossbros-anonymous.io/users/foss_satan/statuses/106221634728637552"
+	uri := testrig.URLMustParse(uriStr)
+
+	// Process the message.
+	if err := testStructs.Processor.Workers().ProcessFromFediAPI(
+		ctx,
+		&messages.FromFediAPI{
+			APObjectType:   ap.ObjectNote,
+			APActivityType: ap.ActivityCreate,
+			APIRI:          uri,
+			Receiving:      relayActorAcct,
+			Requesting:     relayingAcct,
+		},
+	); err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// There should be a relayedURIs entry for the relayed status now.
+	relayedURI, err := testStructs.State.DB.GetRelayedURI(ctx, relayActorAcct.URI, uriStr)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.NotEmpty(relayedURI.BoostURI)
+}
+
 func TestFromFederatorTestSuite(t *testing.T) {
 	suite.Run(t, &FromFediAPITestSuite{})
 }

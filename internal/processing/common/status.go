@@ -268,7 +268,7 @@ func (p *Processor) getTargetStatusBy(
 		// and there is *authorized* requester to prevent
 		// a possible DOS vector for unauthorized clients.
 		latest, _, err := p.federator.RefreshStatus(ctx,
-			requester.Username,
+			requester,
 			target,
 			nil,
 			window,

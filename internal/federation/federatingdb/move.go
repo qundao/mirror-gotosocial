@@ -47,10 +47,10 @@ func (f *DB) Move(ctx context.Context, move vocab.ActivityStreamsMove) error {
 		return nil
 	}
 
-	requestingAcct := activityContext.requestingAcct
-	receivingAcct := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
-	if requestingAcct.IsLocal() {
+	if requesting.IsLocal() {
 		// We should not be processing
 		// a Move sent from our own
 		// instance in the federatingDB.
@@ -93,10 +93,10 @@ func (f *DB) Move(ctx context.Context, move vocab.ActivityStreamsMove) error {
 	object := objects[0]
 	objectStr := object.String()
 
-	if objectStr != requestingAcct.URI {
+	if objectStr != requesting.URI {
 		err := fmt.Errorf(
 			"Move was signed by %s but object was %s",
-			requestingAcct.URI, objectStr,
+			requesting.URI, objectStr,
 		)
 		return gtserror.SetMalformed(err)
 	}
@@ -110,10 +110,10 @@ func (f *DB) Move(ctx context.Context, move vocab.ActivityStreamsMove) error {
 	actor := actors[0]
 	actorStr := actor.String()
 
-	if actorStr != requestingAcct.URI {
+	if actorStr != requesting.URI {
 		err := fmt.Errorf(
 			"Move was signed by %s but actor was %s",
-			requestingAcct.URI, actorStr,
+			requesting.URI, actorStr,
 		)
 		return gtserror.SetMalformed(err)
 	}
@@ -127,7 +127,7 @@ func (f *DB) Move(ctx context.Context, move vocab.ActivityStreamsMove) error {
 	target := targets[0]
 	targetStr := target.String()
 
-	if targetStr == requestingAcct.URI {
+	if targetStr == requesting.URI {
 		err := fmt.Errorf(
 			"Move target and origin were the same (%s)",
 			targetStr,
@@ -135,13 +135,13 @@ func (f *DB) Move(ctx context.Context, move vocab.ActivityStreamsMove) error {
 		return gtserror.SetMalformed(err)
 	}
 
-	// If movedToURI is set on requestingAcct,
+	// If movedToURI is set on requesting account,
 	// make sure it points to the intended target.
 	//
 	// If it's not set, that's fine, we don't
 	// need it right now. We know by now that the
-	// Move was really sent to us by requestingAcct.
-	movedToURI := receivingAcct.MovedToURI
+	// Move was really sent to us by requester.
+	movedToURI := receiving.MovedToURI
 	if movedToURI != "" &&
 		movedToURI != targetStr {
 		err := fmt.Errorf(
@@ -168,8 +168,8 @@ func (f *DB) Move(ctx context.Context, move vocab.ActivityStreamsMove) error {
 		APObjectType:   ap.ActorPerson,
 		APActivityType: ap.ActivityMove,
 		GTSModel:       stubMove,
-		Requesting:     requestingAcct,
-		Receiving:      receivingAcct,
+		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil

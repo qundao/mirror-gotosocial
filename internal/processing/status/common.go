@@ -105,6 +105,8 @@ type statusContent struct {
 	Emojis         []*gtsmodel.Emoji
 	TagIDs         []string
 	Tags           []*gtsmodel.Tag
+	LinkIDs        []gtsmodel.LinkID
+	Links          []*gtsmodel.Link
 }
 
 // Returns the final content type to use when creating or editing a status.
@@ -221,6 +223,50 @@ func (p *Processor) processContent(
 	status.Emojis = contentRes.Emojis
 	status.Tags = contentRes.Tags
 
+	// Gather and deduplicate links from formatted.
+	seenLinks := make(map[string]struct{})
+	for _, link := range contentRes.Links {
+		// For key, take link URL and make sure
+		// it has a trailing slash so we can
+		// deduplicate eg `https://example.org/`
+		// and `https://example.org` into the
+		// same link. They're technically not,
+		// but good enough for our purposes.
+		key := link.URL
+		if key[len(key)-1] != '/' {
+			key += "/"
+		}
+
+		// Skip if we've seen link already.
+		if _, seen := seenLinks[key]; seen {
+			continue
+		}
+
+		// Haven't seen this
+		// link on this status yet.
+		seenLinks[key] = struct{}{}
+
+		// Store new link / retrieve existing link.
+		link, err := p.state.DB.PutOrGetLink(ctx,
+			&gtsmodel.Link{
+				ID:  id.NewULID(),
+				URL: link.URL,
+			},
+		)
+		if err != nil {
+			err := gtserror.Newf("db error putting/getting link: %w", err)
+			return nil, gtserror.NewErrorInternalError(err)
+		}
+
+		status.Links = append(status.Links, link)
+		status.LinkIDs = append(
+			status.LinkIDs,
+			gtsmodel.LinkID{
+				ID: link.ID,
+			},
+		)
+	}
+
 	// Sanitize content warning and format.
 	cwRes := formatInput(formatCW, contentWarning)
 
@@ -229,23 +275,18 @@ func (p *Processor) processContent(
 	status.Emojis = append(status.Emojis, cwRes.Emojis...)
 
 	if poll != nil {
-		// Pre-allocate slice of poll options of expected length.
-		status.PollOptions = make([]string, len(poll.Options))
-		for i, option := range poll.Options {
-
-			// Strip each poll option and format.
-			//
-			// For polls just use basic formatting.
-			option = text.StripHTMLFromText(option)
-			optionRes := formatInput(p.formatter.FromPlainBasic, option)
-
-			// Gather results of the formatted.
-			status.PollOptions[i] = optionRes.HTML
-			status.Emojis = append(status.Emojis, optionRes.Emojis...)
+		// Purely for the sake of gathering emojis,
+		// format each poll option using basic formatting.
+		for _, option := range poll.Options {
+			res := formatInput(p.formatter.FromPlainBasic, option)
+			status.Emojis = append(status.Emojis, res.Emojis...)
 		}
 
-		// Also update options on the form.
-		poll.Options = status.PollOptions
+		// Set provided poll options on status *without* parsing
+		// them to HTML as 'name' property MUST NOT contain HTML.
+		//
+		// https://www.w3.org/TR/activitystreams-vocabulary/#dfn-name
+		status.PollOptions = poll.Options
 	}
 
 	// We may have received multiple copies of the same emoji, deduplicate these first.

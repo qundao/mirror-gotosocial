@@ -209,9 +209,8 @@ func importFollowingAsyncF(
 			}
 
 			// Get the target account, dereferencing it if necessary.
-			targetAcct, _, err := p.federator.Dereferencer.GetAccountByUsernameDomain(
-				ctx,
-				requester.Username,
+			targetAcct, _, err := p.federator.Dereferencer.GetAccountByUsernameDomain(ctx,
+				requester,
 				username,
 				domain,
 			)
@@ -353,15 +352,16 @@ func importBlocksAsyncF(
 			}
 
 			// Get the target account, dereferencing it if necessary.
-			targetAcct, _, err := p.federator.Dereferencer.GetAccountByUsernameDomain(
-				ctx,
+			targetAcct, _, err := p.federator.Dereferencer.GetAccountByUsernameDomain(ctx,
+
 				// Provide empty request user to use the
 				// instance account to deref the account.
 				//
 				// It's pointless to make lots of calls
 				// to a remote from an account that's about
 				// to block that account.
-				"",
+				nil,
+
 				username,
 				domain,
 			)
@@ -499,15 +499,16 @@ func importMutesAsyncF(
 			}
 
 			// Get the target account, dereferencing it if necessary.
-			targetAcct, _, err := p.federator.Dereferencer.GetAccountByUsernameDomain(
-				ctx,
+			targetAcct, _, err := p.federator.Dereferencer.GetAccountByUsernameDomain(ctx,
+
 				// Provide empty request user to use the
 				// instance account to deref the account.
 				//
 				// It's pointless to make lots of calls
 				// to a remote from an account that's about
 				// to mute that account.
-				"",
+				nil,
+
 				username,
 				domain,
 			)

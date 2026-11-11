@@ -100,4 +100,15 @@ type Relay interface {
 
 	// DeleteRelayMatcher deletes relay matcher with the given ID.
 	DeleteRelayMatcher(ctx context.Context, id string) error
+
+	// PutRelayedURI inserts the given relayedURI into the db, returning
+	// true if it was inserted or false if the relayedURI already existed.
+	PutRelayedURI(ctx context.Context, relayedURI *gtsmodel.RelayedURI) (bool, error)
+
+	// GetRelayedURI gets one relayedURI model by the given relay actor URI and status URI, if it exists.
+	GetRelayedURI(ctx context.Context, relayURI string, statusURI string) (*gtsmodel.RelayedURI, error)
+
+	// TODO: add a function to count relayedURIs per actor,
+	// so that relay account status "created posts" thingy
+	// can be populated, to provide fun stats for admins.
 }

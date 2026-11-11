@@ -303,7 +303,7 @@ func Start(ctx context.Context) error {
 	spamFilter := spam.NewFilter(state)
 	relayFilter := relay.NewFilter(state)
 	federatingDB := federatingdb.New(state, typeConverter, visFilter, intFilter, spamFilter)
-	transportController := transport.NewController(state, federatingDB, client)
+	transportController := transport.NewController(ctx, state, federatingDB, client)
 	federator := federation.NewFederator(
 		state,
 		federatingDB,

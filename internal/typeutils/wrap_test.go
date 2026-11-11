@@ -209,7 +209,7 @@ func (suite *WrapTestSuite) TestWrapAccountableInUpdate() {
     "publicKey": {
       "id": "http://localhost:8080/users/the_mighty_zork/main-key",
       "owner": "http://localhost:8080/users/the_mighty_zork",
-      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqtQQjwFLHPez+7uF9AX7\nuvLFHm3SyNIozhhVmGhxHIs0xdgRnZKmzmZkFdrFuXddBTAglU4C2u3dw10jJO1a\nWIFQF8bGkRHZG7Pd25/XmWWBRPmOJxNLeWBqpj0G+2zTMgnAV72hALSDFY2/QDsx\nUthenKw0Srpj1LUwvRbyVQQ8fGu4v0HACFnlOX2hCQwhfAnGrb0V70Y2IJu++MP7\n6i49md0vR0Mv3WbsEJUNp1fTIUzkgWB31icvfrNmaaAxw5FkAE+KfkkylhRxi5i5\nRR1XQUINWc2Kj2Kro+CJarKG+9zasMyN7+D230gpESi8rXv1SwRu865FR3gANdDS\nMwIDAQAB\n-----END PUBLIC KEY-----\n"
+      "publicKeyPem": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0iLMdE7FAnkh1w2D81Yq\nkcAf8GYQZI+X9DK3PkNMqIFJok3Lm2EHH/8Y/Szr7QKyfvP66K4tI/GhV9e42arR\ncgwyDcoSAk/ouW5NWSj7f7h/x+aBaY7bC/mwqDhfBeAFHhCxMR9HTt7sJfL/Xz2W\ndwGRBo+lAekbtdyzje3yh7fiU+rPYzbVCFKR1A4NhmWL/YCxRgw5vR/dWHq75fMh\nelVmyvu6XFcoZc+cKh0f6jVIslF4Yonvr3oiXPYqQlO0a4jRLnobxddnd60SDiv8\nEbBQBuC8bnyUvEobvFSazgZSs7Ln6ow2bZ2W/Eq02NBIyyabJTH+u80Qw9ZBA6au\nIwIDAQAB\n-----END PUBLIC KEY-----\n"
     },
     "published": "2022-05-20T11:09:18Z",
     "summary": "<p>hey yo this is my profile!</p>",

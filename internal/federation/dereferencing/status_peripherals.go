@@ -32,13 +32,14 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
-type changes struct {
-	pollChanged              bool
-	mentionsChanged          bool
-	tagsChanged              bool
-	mediaChanged             bool
-	emojiChanged             bool
-	interactionPolicyChanged bool
+type statusChanges struct {
+	poll     bool
+	mentions bool
+	tags     bool
+	media    bool
+	links    bool
+	emoji    bool
+	policy   bool
 }
 
 // handleStatusPeripherals handles dereferencing
@@ -52,12 +53,14 @@ type changes struct {
 // of brand new statuses, but it must *not* be nil.
 func (d *Dereferencer) handleStatusPeripherals(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 	existing *gtsmodel.Status,
 	status *gtsmodel.Status,
-) (*changes, error) {
-
+) (
+	statusChanges,
+	error,
+) {
 	// Insert / update any attached status poll.
 	pollChanged, err := d.handleStatusPoll(ctx,
 		existing,
@@ -65,20 +68,20 @@ func (d *Dereferencer) handleStatusPeripherals(
 	)
 	if err != nil {
 		err := gtserror.Newf("error handling poll for status %s: %w", uri, err)
-		return nil, err
+		return statusChanges{}, err
 	}
 
 	// Populate mentions associated with status, passing
 	// in existing status to reuse old where possible.
 	// (especially important here to reduce need to dereference).
 	mentionsChanged, err := d.fetchStatusMentions(ctx,
-		requestUser,
+		requester,
 		existing,
 		status,
 	)
 	if err != nil {
 		err := gtserror.Newf("error populating mentions for status %s: %w", uri, err)
-		return nil, err
+		return statusChanges{}, err
 	}
 
 	// Populate tags associated with status, passing
@@ -89,14 +92,14 @@ func (d *Dereferencer) handleStatusPeripherals(
 	)
 	if err != nil {
 		err := gtserror.Newf("error populating tags for status %s: %w", uri, err)
-		return nil, err
+		return statusChanges{}, err
 	}
 
 	// Check if there's any limits in place for (sub)domain.
 	limit, err := d.state.DB.MatchDomainLimit(ctx, uri.Host)
 	if err != nil {
 		err := gtserror.Newf("error matching domain limit: %w", err)
-		return nil, err
+		return statusChanges{}, err
 	}
 
 	// If domain media is limited, set reject reason,
@@ -115,14 +118,24 @@ func (d *Dereferencer) handleStatusPeripherals(
 	// passing in existing status to reuse old where possible
 	// (especially important here to reduce need to dereference).
 	mediaChanged, err := d.fetchStatusAttachments(ctx,
-		requestUser,
+		requester,
 		existing,
 		status,
 		rejectReason,
 	)
 	if err != nil {
 		err := gtserror.Newf("error populating attachments for status %s: %w", uri, err)
-		return nil, err
+		return statusChanges{}, err
+	}
+
+	// Insert / update any links.
+	linksChanged, err := d.handleStatusLinks(ctx,
+		existing,
+		status,
+	)
+	if err != nil {
+		err := gtserror.Newf("error populating links for status %s: %w", uri, err)
+		return statusChanges{}, err
 	}
 
 	// Populate emoji associated with status, passing
@@ -135,19 +148,20 @@ func (d *Dereferencer) handleStatusPeripherals(
 	)
 	if err != nil {
 		err := gtserror.Newf("error populating emojis for status %s: %w", uri, err)
-		return nil, err
+		return statusChanges{}, err
 	}
 
 	// Check if interaction policy has changed between latest and existing status.
-	interactionPolicyChanged := status.InteractionPolicy.DifferentFrom(existing.InteractionPolicy)
+	policyChanged := status.InteractionPolicy.DifferentFrom(existing.InteractionPolicy)
 
-	return &changes{
-		pollChanged:              pollChanged,
-		mentionsChanged:          mentionsChanged,
-		tagsChanged:              tagsChanged,
-		mediaChanged:             mediaChanged,
-		emojiChanged:             emojiChanged,
-		interactionPolicyChanged: interactionPolicyChanged,
+	return statusChanges{
+		poll:     pollChanged,
+		mentions: mentionsChanged,
+		tags:     tagsChanged,
+		media:    mediaChanged,
+		links:    linksChanged,
+		emoji:    emojiChanged,
+		policy:   policyChanged,
 	}, nil
 }
 
@@ -155,7 +169,7 @@ func (d *Dereferencer) handleStatusPeripherals(
 // new where needed, or using unchanged mentions from 'existing' status.
 func (d *Dereferencer) fetchStatusMentions(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	existing *gtsmodel.Status,
 	status *gtsmodel.Status,
 ) (
@@ -176,7 +190,7 @@ func (d *Dereferencer) fetchStatusMentions(
 		// Search existing status + db for a mention already stored,
 		// else ensure new mention's target account is populated.
 		mention, alreadyExists, err := d.newOrExistingMention(ctx,
-			requestUser,
+			requester,
 			existing,
 			mention,
 		)
@@ -324,7 +338,7 @@ func (d *Dereferencer) fetchStatusTags(
 // entries where needed and dereferencing it, or using unchanged from 'existing' status.
 func (d *Dereferencer) fetchStatusAttachments(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	existing *gtsmodel.Status,
 	status *gtsmodel.Status,
 	rejectReason *gtsmodel.MediaErrorDetails, // optional reason to reject media with
@@ -357,11 +371,10 @@ func (d *Dereferencer) fetchStatusAttachments(
 			// we mark media as changed.
 			changed = changed || diff
 
-			// Store any attachment updates
-			// and ensure media is locally
-			// cached (if appropriate).
+			// Store any attachment updates and
+			// ensure media is locally cached.
 			existing, err := d.RefreshMedia(ctx,
-				requestUser,
+				requester,
 				existing,
 				info,
 				diff,
@@ -388,7 +401,7 @@ func (d *Dereferencer) fetchStatusAttachments(
 
 		// Load this new media attachment.
 		attachment, err := d.GetMedia(ctx,
-			requestUser,
+			requester,
 			status.AccountID,
 			placeholder.RemoteURL,
 			media.AdditionalMediaInfo{
@@ -427,6 +440,72 @@ func (d *Dereferencer) fetchStatusAttachments(
 			copy(status.AttachmentIDs[i:], status.AttachmentIDs[i+1:])
 			status.Attachments = status.Attachments[:len(status.Attachments)-1]
 			status.AttachmentIDs = status.AttachmentIDs[:len(status.AttachmentIDs)-1]
+			continue
+		}
+		i++
+	}
+
+	return changed, nil
+}
+
+// handleStatusLinks populates links on 'status',
+// creating new database entries where needed,
+// or using unchanged from 'existing' status.
+func (d *Dereferencer) handleStatusLinks(
+	ctx context.Context,
+	existing *gtsmodel.Status,
+	status *gtsmodel.Status,
+) (
+	changed bool,
+	err error,
+) {
+	// Allocate new slice to take
+	// the yet-to-be determined link IDs.
+	status.LinkIDs = make([]gtsmodel.LinkID, len(status.Links))
+	for i := range status.Links {
+		link := status.Links[i]
+		attached := link.Attached
+
+		// Look for link in existing status with url.
+		existing, ok := existing.GetLinkByURL(link.URL)
+		if ok && existing.ID != "" {
+			status.Links[i] = existing
+			linkID := gtsmodel.LinkID{ID: existing.ID}
+			linkID.SetAttached(attached)
+			status.LinkIDs[i] = linkID
+			continue
+		}
+
+		// Mark status as
+		// having changed.
+		changed = true
+
+		// Store new link / retrieve existing link.
+		link, err := d.state.DB.PutOrGetLink(ctx,
+			&gtsmodel.Link{
+				ID:  id.NewULID(),
+				URL: link.URL,
+			},
+		)
+		if err != nil {
+			return changed, gtserror.Newf("db error putting/getting link: %w", err)
+		}
+
+		// Set link ID in slice.
+		linkID := gtsmodel.LinkID{ID: link.ID}
+		linkID.SetAttached(attached)
+		status.LinkIDs[i] = linkID
+	}
+
+	// Remove any link we couldn't get or create.
+	for i := 0; i < len(status.LinkIDs); {
+		if status.LinkIDs[i].ID == "" {
+			// This is a failed link population, likely due
+			// to some database peculiarity / race condition.
+			copy(status.Links[i:], status.Links[i+1:])
+			copy(status.LinkIDs[i:], status.LinkIDs[i+1:])
+			status.Links = status.Links[:len(status.Links)-1]
+			status.LinkIDs = status.LinkIDs[:len(status.LinkIDs)-1]
 			continue
 		}
 		i++
@@ -585,12 +664,7 @@ func (d *Dereferencer) handleStatusEdit(
 	ctx context.Context,
 	existing *gtsmodel.Status,
 	status *gtsmodel.Status,
-	pollChanged bool,
-	mentionsChanged bool,
-	tagsChanged bool,
-	mediaChanged bool,
-	emojiChanged bool,
-	interactionPolicyChanged bool,
+	changes statusChanges,
 ) (
 	cols []string,
 	err error,
@@ -631,13 +705,13 @@ func (d *Dereferencer) handleStatusEdit(
 		edited = true
 	}
 
-	if pollChanged {
+	if changes.poll {
 		// Attached poll was changed.
 		cols = append(cols, "poll_id")
 		edited = true
 	}
 
-	if mentionsChanged {
+	if changes.mentions {
 		cols = append(cols, "mentions") // i.e. MentionIDs
 
 		// Mentions changed doesn't necessarily
@@ -645,7 +719,7 @@ func (d *Dereferencer) handleStatusEdit(
 		// been previously populated properly.
 	}
 
-	if tagsChanged {
+	if changes.tags {
 		cols = append(cols, "tags") // i.e. TagIDs
 
 		// Tags changed doesn't necessarily
@@ -653,13 +727,19 @@ func (d *Dereferencer) handleStatusEdit(
 		// been previously populated properly.
 	}
 
-	if mediaChanged {
+	if changes.media {
 		// Attached media was changed.
 		cols = append(cols, "attachments") // i.e. AttachmentIDs
 		edited = true
 	}
 
-	if emojiChanged {
+	if changes.links {
+		// Links were changed.
+		cols = append(cols, "links") // i.e. LinkIDs
+		edited = true
+	}
+
+	if changes.emoji {
 		// Attached emojis changed.
 		cols = append(cols, "emojis") // i.e. EmojiIDs
 
@@ -675,7 +755,7 @@ func (d *Dereferencer) handleStatusEdit(
 		// been previously populated properly.
 	}
 
-	if interactionPolicyChanged {
+	if changes.policy {
 		// Interaction policy changed.
 		cols = append(cols, "interaction_policy")
 
@@ -716,7 +796,7 @@ func (d *Dereferencer) handleStatusEdit(
 			// Poll only set if existing contained them.
 			edit.PollOptions = existing.Poll.Options
 
-			if pollChanged || !*existing.Poll.HideCounts ||
+			if changes.poll || !*existing.Poll.HideCounts ||
 				!existing.Poll.ClosedAt.IsZero() {
 				// If the counts are allowed to be
 				// shown, or poll has changed, then
@@ -772,7 +852,7 @@ func (d *Dereferencer) handleStatusEdit(
 // of `@username@domain`, we try by URI first.
 func (d *Dereferencer) newOrExistingMention(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	existing *gtsmodel.Status,
 	mention *gtsmodel.Mention,
 ) (
@@ -800,15 +880,11 @@ func (d *Dereferencer) newOrExistingMention(
 			return nil, false, err
 		}
 
-		// Ensure we have the account of
-		// the mention target dereferenced.
-		//
-		// Use exact URI match only, not URL,
-		// as we want to be precise here.
+		// Ensure we have account of mention target dereferenced.
 		mention.TargetAccount, _, err = d.getAccountByURI(ctx,
-			requestUser,
+			requester,
 			targetAccountURI,
-			false,
+			false, // tryURL: URI match only here
 		)
 		if err != nil {
 			err := gtserror.Newf("failed to dereference account %s: %w", targetAccountURI, err)
@@ -848,14 +924,11 @@ func (d *Dereferencer) newOrExistingMention(
 			return existingMention, true, nil
 		}
 
-		// Ensure we have the account of
-		// the mention target dereferenced.
+		// Ensure we have account of mention target dereferenced.
 		//
-		// This might fail if the remote does
-		// something silly like only setting
-		// `@username` and not `@username@domain`.
+		// This might fail if remote only sets `@username` (no domain).
 		mention.TargetAccount, _, err = d.getAccountByUsernameDomain(ctx,
-			requestUser,
+			requester,
 			username,
 			domain,
 		)

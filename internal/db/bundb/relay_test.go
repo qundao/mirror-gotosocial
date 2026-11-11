@@ -193,6 +193,33 @@ func (suite *RelayTestSuite) TestCreateGetDeleteRelaySubscription() {
 	}
 }
 
+func (suite *RelayTestSuite) TestPutRelayedURI() {
+	ctx := suite.T().Context()
+	relayedURI := &gtsmodel.RelayedURI{
+		ID:        "01M52CWKYJ3Z1T8V75T0ZDCWJ1",
+		RelayURI:  "http://localhost:8080/relays/some_relay_actor",
+		StatusURI: "https://example.org/statuses/some_status",
+	}
+
+	// Insert relayedURI.
+	inserted, err := suite.state.DB.PutRelayedURI(ctx, relayedURI)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	if !inserted {
+		suite.FailNow("should have been inserted")
+	}
+
+	// Try to insert relayedURI again.
+	inserted, err = suite.state.DB.PutRelayedURI(ctx, relayedURI)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	if inserted {
+		suite.FailNow("should not have been inserted")
+	}
+}
+
 func TestRelayTestSuite(t *testing.T) {
 	suite.Run(t, new(RelayTestSuite))
 }

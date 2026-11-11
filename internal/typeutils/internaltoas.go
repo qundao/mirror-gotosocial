@@ -661,8 +661,8 @@ func (c *Converter) StatusToAS(ctx context.Context, s *gtsmodel.Status) (ap.Stat
 	}
 
 	// `attachment` property.
-	if err := c.attachAttachments(ctx, s, statusable); err != nil {
-		return nil, gtserror.Newf("error attaching attachments: %w", err)
+	if err := c.attachMedia(ctx, s, statusable); err != nil {
+		return nil, gtserror.Newf("error attaching media: %w", err)
 	}
 
 	// `replies` collection property.
@@ -792,47 +792,43 @@ func (c *Converter) FollowToAS(ctx context.Context, f *gtsmodel.Follow) (vocab.A
 		return nil, gtserror.Newf("error populating follow: %w", err)
 	}
 
-	// Parse out the various URIs we need for this
-	// origin account (who's doing the follow).
-	originAccountURI, err := url.Parse(f.Account.URI)
+	// Follow origin account (who's doing the follow).
+	actorURI, err := url.Parse(f.Account.URI)
 	if err != nil {
-		return nil, fmt.Errorf("followtoasfollow: error parsing origin account uri: %s", err)
-	}
-	originActor := streams.NewActivityStreamsActorProperty()
-	originActor.AppendIRI(originAccountURI)
-
-	// target account (who's being followed)
-	targetAccountURI, err := url.Parse(f.TargetAccount.URI)
-	if err != nil {
-		return nil, fmt.Errorf("followtoasfollow: error parsing target account uri: %s", err)
+		return nil, gtserror.Newf("error parsing actor uri: %w", err)
 	}
 
-	// uri of the follow activity itself
-	followURI, err := url.Parse(f.URI)
-	if err != nil {
-		return nil, fmt.Errorf("followtoasfollow: error parsing follow uri: %s", err)
+	// Follow object (who or what is being followed).
+	//
+	// If this is a follow of a relay actor it's
+	// possible that the AP Public URI is the object
+	// of the Follow (Mastodon and *key do this).
+	var objectURI *url.URL
+	if f.Flags.UsePublicURI() {
+		objectURI = ap.PublicIRI()
+	} else {
+		objectURI, err = url.Parse(f.TargetAccount.URI)
+		if err != nil {
+			return nil, gtserror.Newf("error parsing account uri: %w", err)
+		}
 	}
 
-	// start preparing the follow activity
+	// Instantiate Follow.
 	follow := streams.NewActivityStreamsFollow()
 
-	// set the actor
-	follow.SetActivityStreamsActor(originActor)
+	// Set the Follow actor.
+	ap.AppendActorIRIs(follow, actorURI)
 
-	// set the id
-	followIDProp := streams.NewJSONLDIdProperty()
-	followIDProp.SetIRI(followURI)
-	follow.SetJSONLDId(followIDProp)
+	// Set the Follow ID/URI.
+	if err := ap.SetJSONLDIdStr(follow, f.URI); err != nil {
+		return nil, gtserror.Newf("%w", err)
+	}
 
-	// set the object
-	followObjectProp := streams.NewActivityStreamsObjectProperty()
-	followObjectProp.AppendIRI(targetAccountURI)
-	follow.SetActivityStreamsObject(followObjectProp)
+	// Set the Follow object.
+	ap.AppendObjectIRIs(follow, objectURI)
 
-	// set the To property
-	followToProp := streams.NewActivityStreamsToProperty()
-	followToProp.AppendIRI(targetAccountURI)
-	follow.SetActivityStreamsTo(followToProp)
+	// Set the Follow To property.
+	ap.AppendTo(follow, objectURI)
 
 	return follow, nil
 }
@@ -962,9 +958,9 @@ func (c *Converter) EmojiToAS(ctx context.Context, e *gtsmodel.Emoji) (vocab.Too
 	return emoji, nil
 }
 
-// attachAttachments converts the attachments on the given status
-// into Attachmentables, and appends them to the given Statusable.
-func (c *Converter) attachAttachments(
+// attachMedia converts the attachments on the given status
+// into MediaAttachmentables, and appends them to the given Statusable.
+func (c *Converter) attachMedia(
 	ctx context.Context,
 	s *gtsmodel.Status,
 	statusable ap.Statusable,
@@ -995,7 +991,7 @@ func (c *Converter) attachAttachments(
 		// Use appropriate vocab.Type and
 		// append function for this attachment.
 		var (
-			attachmentable ap.Attachmentable
+			attachmentable ap.MediaAttachmentable
 			append         func()
 		)
 		switch a.Type {

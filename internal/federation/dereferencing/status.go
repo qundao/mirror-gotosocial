@@ -31,6 +31,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
 	"code.superseriousbusiness.org/gotosocial/internal/id"
+	"code.superseriousbusiness.org/gotosocial/internal/transport"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 )
 
@@ -50,7 +51,7 @@ import (
 // enqueued for asynchronous fetching, e.g. dereferencing status thread.
 func (d *Dereferencer) GetStatusByURI(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 ) (
 	status *gtsmodel.Status,
@@ -61,7 +62,7 @@ func (d *Dereferencer) GetStatusByURI(
 
 	// Fetch and dereference / update status if necessary.
 	status, statusable, isNew, err = d.getStatusByURI(ctx,
-		requestUser,
+		requester,
 		uri,
 	)
 
@@ -78,7 +79,7 @@ func (d *Dereferencer) GetStatusByURI(
 
 		// Deref parents + children.
 		d.dereferenceThread(ctx,
-			requestUser,
+			requester,
 			uri,
 			status,
 			statusable,
@@ -97,7 +98,7 @@ func (d *Dereferencer) GetStatusByURI(
 // The returned bool indicates whether the status was new (to us).
 func (d *Dereferencer) RefreshStatus(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
 	window *FreshnessWindow,
@@ -123,16 +124,17 @@ func (d *Dereferencer) RefreshStatus(
 
 	// Try to update and dereference the passed status model.
 	latest, latestStatusable, isNew, err = d.enrichAndStoreStatusSafely(ctx,
-		requestUser,
+		requester,
 		uri,
 		status,
 		statusable,
+		nil, // shouldStore func: nil = always yes
 	)
 
 	if latestStatusable != nil {
 		// Deref parents + children.
 		d.dereferenceThread(ctx,
-			requestUser,
+			requester,
 			uri,
 			latest,
 			latestStatusable,
@@ -149,7 +151,7 @@ func (d *Dereferencer) RefreshStatus(
 // synchronously beforehand. This prevents handing spurious tasks to the worker.
 func (d *Dereferencer) RefreshStatusAsync(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
 	window *FreshnessWindow,
@@ -174,10 +176,11 @@ func (d *Dereferencer) RefreshStatusAsync(
 
 		// Try to update and dereference the passed status model.
 		latest, statusable, isNew, err := d.enrichAndStoreStatusSafely(ctx,
-			requestUser,
+			requester,
 			uri,
 			status,
 			statusable,
+			nil, // shouldStore func: nil = always yes
 		)
 		if err != nil {
 			log.Errorf(ctx, "error enriching remote status: %v", err)
@@ -187,7 +190,7 @@ func (d *Dereferencer) RefreshStatusAsync(
 		if statusable != nil {
 			// Deref parents + children.
 			d.dereferenceThread(ctx,
-				requestUser,
+				requester,
 				uri,
 				latest,
 				statusable,
@@ -243,7 +246,7 @@ func statusFresh(
 // an existing status with error on failed re-fetch.
 func (d *Dereferencer) getStatusByURI(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 ) (
 	status *gtsmodel.Status,
@@ -268,8 +271,8 @@ func (d *Dereferencer) getStatusByURI(
 		}
 
 		// Create and pass-through a bare-bones model for deref.
-		return d.enrichAndStoreStatusSafely(ctx, requestUser, uri,
-			&gtsmodel.Status{URI: uriStr}, nil)
+		return d.enrichAndStoreStatusSafely(ctx, requester, uri,
+			&gtsmodel.Status{URI: uriStr}, nil, nil)
 	}
 
 	if statusFresh(status, &DefaultStatusFreshness) {
@@ -285,10 +288,11 @@ func (d *Dereferencer) getStatusByURI(
 	// Status not found in db or not fresh.
 	// Try to deref new or update existing.
 	return d.enrichAndStoreStatusSafely(ctx,
-		requestUser,
+		requester,
 		uri,
 		status,
-		nil,
+		nil, // statusable
+		nil, // shouldStore func: nil = always yes
 	)
 }
 
@@ -298,22 +302,22 @@ func (d *Dereferencer) getStatusByURI(
 // fetched_at on returned HTTP errors.
 func (d *Dereferencer) enrichAndStoreStatusSafely(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
+	relevant func(context.Context, *gtsmodel.Status) (bool, error),
 ) (
 	*gtsmodel.Status,
 	ap.Statusable,
 	bool,
 	error,
 ) {
-	uriStr := status.URI
 
 	// Acquire per-URI deref lock, wraping unlock
 	// to safely defer in case of panic, while still
 	// performing more granular unlocks when needed.
-	unlock := d.state.FedLocks.Lock(uriStr)
+	unlock := d.state.FedLocks.Lock(status.URI)
 	unlock = util.DoOnce(unlock)
 	defer unlock()
 
@@ -331,17 +335,19 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 		if err != nil {
 			return nil, nil, false, gtserror.Newf("error getting up-to-date existing status: %w", err)
 		}
+
+		// TODO: potentially add another up-to-date check here?
 	}
 
-	// Perform status enrichment + storage with passed vars.
+	// Perform status enrichment + storage with passed variables.
 	//
-	// isNew may be true if this status was actually stored
-	// under a different URI than the one we were given.
+	// isNew is returned as we may have it under a different URI.
 	latest, statusable, isNew, err := d.enrichAndStoreStatus(ctx,
-		requestUser,
+		requester,
 		uri,
 		status,
 		statusable,
+		relevant,
 	)
 
 	// Check for a returned HTTP code via error.
@@ -351,7 +357,7 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 	// Remove status if it was an existing one.
 	case code == http.StatusGone && !isNew:
 		if err := d.state.DB.StubStatus(ctx, status, true); err != nil {
-			log.Error(ctx, "error deleting gone status %s: %v", uriStr, err)
+			log.Error(ctx, "error deleting gone status %s: %v", status.URI, err)
 		}
 
 		// Don't return any status.
@@ -366,7 +372,7 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 		// return the model we had stored already.
 		status.FetchedAt = time.Now()
 		if err := d.state.DB.UpdateStatus(ctx, status, "fetched_at"); err != nil {
-			log.Error(ctx, "error updating %s fetched_at: %v", uriStr, err)
+			log.Error(ctx, "error updating %s fetched_at: %v", status.URI, err)
 		}
 
 		// See below.
@@ -384,8 +390,13 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 	// we're done.
 	unlock()
 
+	// TODO: potentially move some more of the relevant
+	// hook handling to here for when err != nil and its
+	// an existing status. instead of the horrible web
+	// of complexities that live in getRelayStatusByURI()
+
 	switch {
-	case err == nil:
+	case err == nil && latest != nil:
 		// Pass status to its dereferencer hook.
 		d.onStatusDereference(ctx, latest, isNew)
 
@@ -403,7 +414,7 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 		// in a call to db.Put(Status). Look again in DB by URI.
 		latest, err = d.getStatusFromDB(ctx, status.URI)
 		if err != nil {
-			err = gtserror.Newf("error getting status %s from database after race: %w", uriStr, err)
+			err = gtserror.Newf("error getting status %s from database after race: %w", status.URI, err)
 		}
 	}
 
@@ -421,10 +432,17 @@ func (d *Dereferencer) enrichAndStoreStatusSafely(
 // under a different URI than the one given, after dereferencing.
 func (d *Dereferencer) enrichAndStoreStatus(
 	ctx context.Context,
-	requestUser string,
+	requester *gtsmodel.Account,
 	uri *url.URL,
 	status *gtsmodel.Status,
 	statusable ap.Statusable,
+
+	// relevant is an optional function that can be passed to check
+	// whether the dereferenced status is relevant to the caller. a
+	// negative result indicates the status should *not* be returned
+	// to the caller, but if !isNew we will still store the updated
+	// version, to prevent wasting spent CPU and network resources.
+	relevant func(context.Context, *gtsmodel.Status) (bool, error),
 ) (
 	*gtsmodel.Status, // latestStatus
 	ap.Statusable, // statusable
@@ -444,11 +462,11 @@ func (d *Dereferencer) enrichAndStoreStatus(
 	}
 
 	if statusable == nil {
-		// Create transport on behalf of requesting username.
-		tsport, err := d.transportController.NewTransportForUsername(ctx, requestUser)
-		if err != nil {
-			return nil, nil, isNew, gtserror.Newf("couldn't create transport: %w", err)
-		}
+		var err error
+		var tsport *transport.Transport
+
+		// Get transport for the requesting account.
+		ctx, tsport = d.getTransport(ctx, requester)
 
 		var existing *gtsmodel.Status
 
@@ -473,7 +491,7 @@ func (d *Dereferencer) enrichAndStoreStatus(
 
 	// ActivityPub model was recently dereferenced, so assume passed status
 	// may contain out-of-date information. Convert AP model to our GTS model.
-	latestStatus, err := d.convertStatusable(ctx, requestUser, uri, statusable)
+	latestStatus, err := d.convertStatusable(ctx, requester, uri, statusable)
 	if err != nil {
 		return nil, nil, isNew, err
 	}
@@ -515,23 +533,49 @@ func (d *Dereferencer) enrichAndStoreStatus(
 	}
 
 	// Check if this is a permitted status we should accept.
-	// Function also sets "PendingApproval" bool as necessary,
-	// and handles removal of existing statuses no longer permitted.
-	permit, err := d.isPermittedStatus(ctx, requestUser, status, latestStatus, isNew)
+	// Function also sets "PendingApproval" flag as necessary.
+	permit, err := d.isPermittedStatus(ctx, requester, latestStatus)
 	if err != nil {
 		return nil, nil, isNew, gtserror.Newf("error checking permissibility for status %s: %w", uri, err)
 	}
 
 	if !permit {
+		if !isNew {
+			// Delete existing status from database
+			// as it no longer permitted after update.
+			log.Infof(ctx, "deleting unpermitted: %s", status.URI)
+			if err := d.state.DB.DeleteStatus(ctx, status, true); err != nil {
+				log.Errorf(ctx, "error deleting %s after permissivity fail: %v", status.URI, err)
+			}
+		}
+
 		// Return a checkable error type that can be ignored.
+		//
+		// TODO: stop using errors to indicate something isn't permitted. in
+		// terms of application and network protocol logic, this isn't an error.
 		err := gtserror.Newf("dropping unpermitted status: %s", uri)
 		return nil, nil, isNew, gtserror.SetNotPermitted(err)
 	}
 
+	isRelevant := true
+	if relevant != nil {
+		// Check if status is relevant to the caller.
+		isRelevant, err = relevant(ctx, latestStatus)
+		if err != nil {
+			return nil, nil, isNew, err
+		}
+
+		// New irrelevant statuses
+		// can simply be dropped here.
+		if !isRelevant && isNew {
+			return nil, nil, isNew, nil
+		}
+	}
+
 	// Handle all peripheral changes / new stuff
 	// for this status: polls, mentions, media, etc.
-	changes, err := d.handleStatusPeripherals(ctx,
-		requestUser,
+	changed, err := d.handleStatusPeripherals(ctx,
+		requester,
 		uri,
 		status,
 		latestStatus,
@@ -541,7 +585,7 @@ func (d *Dereferencer) enrichAndStoreStatus(
 	}
 
 	if isNew {
-		// Simplest case, insert this new remote status into the database.
+		// Simplest case, insert this new remote status into database.
 		if err := d.state.DB.PutStatus(ctx, latestStatus); err != nil {
 			return nil, nil, isNew, gtserror.Newf("error inserting new status %s: %w", uri, err)
 		}
@@ -552,12 +596,7 @@ func (d *Dereferencer) enrichAndStoreStatus(
 		cols, err := d.handleStatusEdit(ctx,
 			status,
 			latestStatus,
-			changes.pollChanged,
-			changes.mentionsChanged,
-			changes.tagsChanged,
-			changes.mediaChanged,
-			changes.emojiChanged,
-			changes.interactionPolicyChanged,
+			changed,
 		)
 		if err != nil {
 			return nil, nil, isNew, gtserror.Newf("error handling edit for status %s: %w", uri, err)
@@ -567,6 +606,12 @@ func (d *Dereferencer) enrichAndStoreStatus(
 		if err := d.state.DB.UpdateStatus(ctx, latestStatus, cols...); err != nil {
 			return nil, nil, isNew, gtserror.Newf("error updating existing status %s: %w", uri, err)
 		}
+	}
+
+	if !isRelevant {
+		// Even if an update was stored, don't
+		// return irrelevant statuses to caller.
+		return nil, nil, isNew, nil
 	}
 
 	return latestStatus, statusable, isNew, nil

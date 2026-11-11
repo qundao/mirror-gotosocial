@@ -42,7 +42,7 @@ export default function RelayActorManageRelationships() {
 						dataQuery={useRelayActorFollowersQuery}
 						queryArg={params.relayActorId}
 						DataForm={RelayActorFollowers}
-						{...{ relayActorId: params.relayActorId }}
+						{...{ collectionOwnerID: params.relayActorId }}
 					/>
 				</div>
 			);
@@ -54,7 +54,7 @@ export default function RelayActorManageRelationships() {
 						dataQuery={useRelayActorFollowRequestsQuery}
 						queryArg={params.relayActorId}
 						DataForm={RelayActorFollowRequests}
-						{...{ relayActorId: params.relayActorId }}
+						{...{ collectionOwnerID: params.relayActorId }}
 					/>
 				</div>
 			);
@@ -66,7 +66,7 @@ export default function RelayActorManageRelationships() {
 						dataQuery={useRelayActorBlocksQuery}
 						queryArg={params.relayActorId}
 						DataForm={RelayActorBlocks}
-						{...{ relayActorId: params.relayActorId }}
+						{...{ collectionOwnerID: params.relayActorId }}
 					/>
 				</div>
 			);

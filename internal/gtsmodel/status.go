@@ -56,6 +56,10 @@ type Status struct {
 	AttachmentIDs []string           `bun:"attachments,array"`
 	Attachments   []*MediaAttachment `bun:"attached_media,rel:has-many"`
 
+	// Links associated with this status.
+	LinkIDs []LinkID `bun:"links"`
+	Links   []*Link  `bun:"-"`
+
 	// Database IDs of any tags used in this status, and the
 	// tags corresponding to tagIDs. https://bun.uptrace.dev/guide/relations.html#many-to-many-relation
 	TagIDs []string `bun:"tags,array"`
@@ -184,6 +188,21 @@ func (s *Status) AttachmentsPopulated() bool {
 	}
 	for i, id := range s.AttachmentIDs {
 		if s.Attachments[i].ID != id {
+			return false
+		}
+	}
+	return true
+}
+
+// LinksPopulated returns whether Links are
+// populated according to current LinkIDs.
+func (s *Status) LinksPopulated() bool {
+	if len(s.LinkIDs) != len(s.Links) {
+		// this is the quickest indicator.
+		return false
+	}
+	for i, l := range s.LinkIDs {
+		if s.Links[i].ID != l.ID {
 			return false
 		}
 	}
@@ -335,6 +354,16 @@ func (s *Status) GetTagByName(name string) (*Tag, bool) {
 	return nil, false
 }
 
+// GetLinkByURL searches status for Link{} with url.
+func (s *Status) GetLinkByURL(url string) (*Link, bool) {
+	for _, link := range s.Links {
+		if link.URL == url {
+			return link, true
+		}
+	}
+	return nil, false
+}
+
 // MentionsAccount returns whether status mentions the given account ID.
 func (s *Status) MentionsAccount(accountID string) bool {
 	for _, mention := range s.Mentions {
@@ -480,6 +509,15 @@ type StatusToEmoji struct {
 	Emoji    *Emoji  `bun:"rel:belongs-to"`
 }
 
+// StatusToLink is an intermediate struct to facilitate the
+// many2many relationship between a status and one or more links.
+type StatusToLink struct {
+	StatusID string  `bun:"type:CHAR(26),unique:statuslink,nullzero,notnull"`
+	Status   *Status `bun:"rel:belongs-to"`
+	LinkID   string  `bun:"type:CHAR(26),unique:statuslink,nullzero,notnull"`
+	Link     *Link   `bun:"rel:belongs-to"`
+}
+
 // Visibility represents the
 // visibility granularity of a status.
 type Visibility enumType
@@ -551,4 +589,33 @@ const (
 type Content struct {
 	Content    string
 	ContentMap map[string]string
+}
+
+// LinkID encapsulates a link ID alongside an
+// indication of whether the link was attached
+// to the status or in the status body.
+type LinkID struct {
+	// ID of a gtsmodel.Link
+	// entry in the database.
+	ID string `json:"id"`
+
+	// 1 if link was included as separate
+	// AP `attachment` rather than being
+	// parsed from the body text, else 0.
+	Attached uint8 `json:"a,omitempty"`
+}
+
+// InBody returns true if link was in body
+// text rather than separate attachment.
+func (l LinkID) InBody() bool {
+	return l.Attached == 0
+}
+
+// SetAttached sets Attached on the link ID.
+func (l *LinkID) SetAttached(a bool) {
+	if a {
+		l.Attached = 1
+	} else {
+		l.Attached = 0
+	}
 }

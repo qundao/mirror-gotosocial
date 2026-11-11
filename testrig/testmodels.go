@@ -480,6 +480,29 @@ func NewTestAccounts() map[string]*gtsmodel.Account {
 			HidesToPublicFromUnauthedWeb: util.Ptr(false),
 			HidesCcPublicFromUnauthedWeb: util.Ptr(false),
 		},
+		"relay_actor_1": {
+			ID:                           "01M02Y85HZ7CRAE1FSVRNN1TQK",
+			Username:                     "relay.test",
+			CreatedAt:                    TimeMustParse("2026-08-15T16:48:00Z"),
+			UpdatedAt:                    TimeMustParse("2026-08-15T16:48:00Z"),
+			Locked:                       util.Ptr(false),
+			Discoverable:                 util.Ptr(true),
+			Indexable:                    util.Ptr(false),
+			URI:                          "http://localhost:8080/relays/test",
+			URL:                          "http://localhost:8080/@relay.test",
+			PublicKeyURI:                 "http://localhost:8080/relays/test#main-key",
+			InboxURI:                     "http://localhost:8080/relays/test/inbox",
+			OutboxURI:                    "http://localhost:8080/relays/test/outbox",
+			FollowersURI:                 "http://localhost:8080/relays/test/followers",
+			FollowingURI:                 "http://localhost:8080/relays/test/following",
+			FeaturedCollectionURI:        "http://localhost:8080/relays/test/collections/featured",
+			ActorType:                    gtsmodel.AccountActorTypeService,
+			PrivateKey:                   &rsa.PrivateKey{},
+			PublicKey:                    &rsa.PublicKey{},
+			Settings:                     nil, // relay actors don't have settings
+			HidesToPublicFromUnauthedWeb: util.Ptr(true),
+			HidesCcPublicFromUnauthedWeb: util.Ptr(true),
+		},
 		"remote_account_1": {
 			ID:                           "01F8MH5ZK5VRH73AKHQM6Y9VNX",
 			Username:                     "foss_satan",
@@ -606,6 +629,7 @@ func NewTestAccounts() map[string]*gtsmodel.Account {
 		"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",
+		"MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDW+pJBFvQNJs6MmwVnuQ4IS0hHs6GfR1Sy2rXrAhxaMqV3v9cAGJhP/10e7jtru44oKiWNvcCXs9jGxqcKFYcdnzw6ZhYf5U2K51tlqg7wGPJqLFvmRzNyejfWgeMv8Fm6AL0U5J+TzPyyYWgokZbbnuQkugjwfg3pPircxWg8MKAPcpqFksZJOoHVnZPFoe621vktk+T3egMm/mDypSS5m5vFUPpVU8LIbvbcGPFl+iPDIfpivQ1F5RNEgXHGzEug2jMTIs5S9HPPTYweSUCBYeEVcxuqgVSVLHgYtTie6YdioJ+6KAtZgoWbnF8e5UWaVkzwWCRKcHjNfJ5Y556nAgMBAAECggEAVoCTygoU4JfdY7la9u4BBfhY2LUgkwkuPRuBONNsGiUn7KPuPLUo0IO18iS1FzfsTyAKZVrVfJVa5Dz56LZZ3GL+5pa+T05CoeJPJfzELvsyy+MWhXXf7y/beP5hrp/9UrlKW/ZUebHxekt0kGJou+1W6qpKv45RRamEsLnkI9dGN2WJow6B6IboJ64uNUVUfKMKa5LeVt1rE7PxrQIy8P7zv4LTpdeFznr0TEpVQE5yerlTfp6SrUbdZqihDaph3Cp9DyiSnoI91Xg27i/t/oQ3bcoCAa1LqtkYHyYTtuIING7nqckfDOvqugn+vr0r6631mdAlJ8NkDpI9I8LVLQKBgQDuVvK7Nm23Glgh5xX7K50E/0/afpL4JOeGzfqv3Tcqti6YhncCAoYqjsKZSLgMTW5jwxW8ZmUxiWWNqxtMPUJeRVnPnqhmDBR/tGAoyG6Xg9s2aVkX1vBTxKLB+zpCOdW3zclWm1idvFg5dRDrk7UfjQKHkkdSLk+L7YATAIIJ3QKBgQDm6H4Tdqd4OK0o2UfmOw1WOzCX8V5JOCNDio7dOwAEQ1BjBfBKpiIjeWSUEDSHn3BfBbRa6mDTU3HQDZdyGtTaE8Wc3ZfWt5CEGCaABd4xJxfGWqObF4NrKY+Zdwwtnj6Mdj7mrSc6LnZiyiTBItH0/X12nDF/YDp/V44IiE9cUwKBgFFbZsIXIz6EhJ8WBb/WNGQ3TqfT2xFPb6TpfPA5QBKZW7B+/fK2r9upHa47T3ALomn1dt73yQUu1HaWeNv+cUBCxhSEIRGsf/bTuJtTR8T6ooKhVWM44JKHpdM3kbx3h4eVfGvO3WICn88FMgBoTER32uwyN5xK6KZoLPbPjpQVAoGBAIjjY3qeaQG4d88zoJA4iduJE3HAQakegqlTxwYYKBZe4ZUSvDVE8BAfsySjxsBwIOn0M8uCDwy490vkAtg+V9lAx3ILXCyKfj4RIyHaWLLC/jE1IrCa6+nnpZ3RGYMhwOr8XqXaGNtBGCXQuKFWxyl57ZsXVbCxl3xOp4EfbgzJAoGBAOMWSD+hL6k/w2VK9XE/t9+ykPxGN5JzHCC1qDAnT8ka7J2REVAYZal+hnfbqgGS3wf8qRHOLJBDLPXupscbygjbTsfpAhsHOnKhPAF376QO10EkadUDHS/GuQWvuuYgjgjd0eouGRphOk6Uvnd5A1xhKP0ieaXJkRKUs0KTrPiT",
 	}
 
 	if diff := len(accountsSorted) - len(preserializedKeys); diff > 0 {
@@ -699,6 +723,26 @@ func NewTestAccountSettings() map[string]*gtsmodel.AccountSettings {
 			HideCollections:  util.Ptr(false),
 			WebLayout:        gtsmodel.WebLayoutGallery,
 			WebIncludeBoosts: util.Ptr(false),
+		},
+	}
+}
+
+func NewTestRelayActors() map[string]*gtsmodel.RelayActor {
+	return map[string]*gtsmodel.RelayActor{
+		"relay_actor_1": {
+			ID:                 "01M04V2R2DM2H31ZGNYCDH5Q7Y",
+			CreatedByAccountID: "01F8MH17FWEB39HZJ76B6VXSKF", // admin account
+			URI:                "http://localhost:8080/relays/test",
+			Flags: func() (flags gtsmodel.RelayFlags) {
+				flags.SetPublic(true)
+				flags.SetUnlisted(true)
+				flags.SetMatchByDefault(true)
+				return
+			}(),
+			ActorAccountFlags: func() (flags gtsmodel.RelayActorAccountFlags) {
+				flags.SetWebShowFollowers(true)
+				return
+			}(),
 		},
 	}
 }

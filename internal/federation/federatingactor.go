@@ -315,7 +315,7 @@ func (f *federatingActor) PostInboxScheme(ctx context.Context, w http.ResponseWr
 
 			// Include the activity in logging context for useful info.
 			l = l.WithField("activity", federatingdb.Serialize{activity})
-			l.Warn(ctx, "ignored unhandleable Activity posted to inbox")
+			l.Warn("ignored unhandleable Activity posted to inbox")
 			return false, nil
 
 		// Check for error "object [blah] not in activity origin" from

@@ -112,8 +112,8 @@ func (f *DB) parseInteractionRequest(ctx context.Context, intRequest ap.Interact
 		return nil, nil
 	}
 
-	requesting := activityContext.requestingAcct
-	receiving := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	if requesting.IsMoving() {
 		// A Moving account
@@ -349,8 +349,8 @@ func (f *DB) ReplyRequest(ctx context.Context, replyReq vocab.GoToSocialReplyReq
 	// Check for spam / relevance.
 	ok, err = f.statusableOK(
 		ctx,
-		partial.receiving,
 		partial.requesting,
+		partial.receiving,
 		statusable,
 	)
 	if err != nil {

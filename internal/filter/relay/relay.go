@@ -22,6 +22,7 @@ import (
 	"errors"
 	"net/url"
 
+	"code.superseriousbusiness.org/gopkg/log"
 	"code.superseriousbusiness.org/gopkg/xslices"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/filter"
@@ -38,6 +39,42 @@ type Filter struct {
 
 func NewFilter(state *state.State) *Filter {
 	return &Filter{state}
+}
+
+// MatchedByActor checks whether the given
+// status is matched by the given relay actor,
+// including checks of that actor's relay flags
+// and relay matchers against the status text.
+func (f *Filter) MatchedByActor(
+	ctx context.Context,
+	relayActor *gtsmodel.RelayActor,
+	status *gtsmodel.Status,
+	inReplyToAccountURI string,
+) bool {
+	// Check status
+	// against flags.
+	if !flagsOK(
+		status,
+		inReplyToAccountURI,
+		relayActor.Flags,
+	) {
+		log.Trace(ctx, "flags not OK")
+		return false
+	}
+
+	// Convert text to filterable fields,
+	// check that against matchers.
+	fields := filter.GetFilterableFields(status)
+	if !matchersOK(
+		fields,
+		relayActor.Flags,
+		relayActor.Matchers,
+	) {
+		log.Trace(ctx, "matchers not OK")
+		return false
+	}
+
+	return true
 }
 
 // MatchedBySubscription checks whether the given status is
@@ -156,15 +193,44 @@ func (f *Filter) FilteredPushActorURIs(
 	return pushActorURIs, nil
 }
 
+// matchedByConnection checks flags
+// and matchers for the given relay
+// connection (push or subscription).
 func matchedByConnection(
 	status *gtsmodel.Status,
 	inReplyToAccountURI string,
 	rc gtsmodel.RelayConnection,
 	fields []string,
 ) bool {
-	// Check against various flags.
+	// Check status
+	// against flags.
 	flags := rc.GetFlags()
+	if !flagsOK(
+		status,
+		inReplyToAccountURI,
+		flags,
+	) {
+		return false
+	}
 
+	// Check fields
+	// against matchers.
+	matchers := rc.GetMatchers()
+	return matchersOK(
+		fields,
+		flags,
+		matchers,
+	)
+}
+
+// flagsOK returns true if the given flags
+// do not forbid relaying the given status
+// with the given inReplyToAccountURI.
+func flagsOK(
+	status *gtsmodel.Status,
+	inReplyToAccountURI string,
+	flags gtsmodel.RelayFlags,
+) bool {
 	// Ensure valid visibility.
 	switch vis := status.Visibility; vis {
 	case gtsmodel.VisibilityPublic:
@@ -209,9 +275,22 @@ func matchedByConnection(
 		return false
 	}
 
+	// None of the flags
+	// prevent relaying
+	// so must be OK.
+	return true
+}
+
+// matchersOK returns true if the given
+// matchers permit matching the given
+// status, for the given relayFlags.
+func matchersOK(
+	fields []string,
+	flags gtsmodel.RelayFlags,
+	matchers []*gtsmodel.RelayMatcher,
+) bool {
 	// Check exclude matchers first, as an exclude
 	// match means we don't need to check anything else.
-	matchers := rc.GetMatchers()
 	matchersLen := len(matchers)
 
 	excludeMatchers := make([]*gtsmodel.RelayMatcher, 0, matchersLen)
@@ -265,6 +344,7 @@ func matchedByConnection(
 
 	// No matching include matcher
 	// and we've exhausted all other
-	// ways of matching this status.
+	// ways of matching this status,
+	// so there's no match.
 	return false
 }

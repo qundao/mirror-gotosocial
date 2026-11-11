@@ -61,7 +61,7 @@
     {{- range $index, $pollOption := .PollOptions }}
         <li class="poll-option">
             <span class="sr-only">Option {{ increment $index }},</span>
-            <span lang="{{- .LanguageTag.TagStr -}}">{{ emojify .Emojis (noescape $pollOption.Title) }}</span>
+            <span lang="{{- .LanguageTag.TagStr -}}">{{ emojify .Emojis (escape $pollOption.Title) }}</span>
             <meter aria-hidden="true" min="0" max="100" value="{{- $pollOption.VoteShare -}}"></meter>
             <div class="poll-vote-summary">
                 {{- if isNil $pollOption.VotesCount }}

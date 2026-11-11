@@ -29,7 +29,7 @@ import (
 	"github.com/temoto/robotstxt"
 )
 
-func (t *transport) DereferenceRobots(ctx context.Context, protocol string, host string) (*robotstxt.RobotsData, error) {
+func (t *Transport) GetRobotsTxt(ctx context.Context, protocol string, host string) (*robotstxt.RobotsData, error) {
 	robotsIRI := &url.URL{
 		Scheme: protocol,
 		Host:   host,
@@ -40,7 +40,8 @@ func (t *transport) DereferenceRobots(ctx context.Context, protocol string, host
 	iriStr := robotsIRI.String()
 
 	// Prepare new HTTP request to endpoint
-	req, err := http.NewRequestWithContext(ctx, "GET", iriStr, nil)
+	req, err := http.NewRequestWithContext(ctx,
+		"GET", iriStr, nil)
 	if err != nil {
 		return nil, err
 	}

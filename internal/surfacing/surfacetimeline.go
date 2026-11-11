@@ -667,9 +667,17 @@ func (s *Surfacer) prepareStatusForTimeline(
 		return nil, false, nil
 	}
 
-	// Ensure status media has finished loading, as caller
-	// to surfacer will have fetched from the dereferencer.
-	s.federator.Dereferencer.WaitOnStatusMedia(ctx, status)
+	if len(status.Attachments) > 0 {
+		// Block until attachments have finished loading, as caller
+		// to the Surfacer{} will be coming straight from dereferencer.
+		s.federator.Dereferencer.WaitOnMedia(ctx, status.Attachments)
+	}
+
+	if len(status.Emojis) > 0 {
+		// Block until emojis have finished loading, as caller
+		// to the Surfacer{} will be coming straight from dereferencer.
+		s.federator.Dereferencer.WaitOnEmoji(ctx, status.Emojis)
+	}
 
 	// Attempt to convert status to frontend API model.
 	apiStatus, err = s.converter.StatusToAPIStatus(ctx,

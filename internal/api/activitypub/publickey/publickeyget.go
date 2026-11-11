@@ -18,34 +18,22 @@
 package publickey
 
 import (
-	"errors"
 	"net/http"
-	"strings"
 
 	"code.superseriousbusiness.org/gopkg/httputil"
+	"code.superseriousbusiness.org/gotosocial/internal/api/activitypub"
 	apiutil "code.superseriousbusiness.org/gotosocial/internal/api/util"
-	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 )
 
-// PublicKeyGETHandler should be served at eg https://example.org/users/:username/main-key.
+// PublicKeyGETHandler should be served at eg https://example.org/{users|relays}/:username/main-key.
 //
 // The goal here is to return a MINIMAL activitypub representation of an account
 // in the form of a vocab.ActivityStreamsPerson. The account will only contain the id,
 // public key, username, and type of the account.
 func (m *Module) PublicKeyGETHandler(c *httputil.Context) {
-
-	// usernames on our instance are always lowercase
-	username := c.PathValue(apiutil.UsernameKey)
-	username = strings.ToLower(username)
-	if username == "" {
-		err := errors.New("no username specified in request")
-		apiutil.ErrorHandler(c, m.templates, gtserror.NewErrorBadRequest(err, err.Error()))
-		return
-	}
-
-	contentType, err := apiutil.NegotiateAccept(c, apiutil.ActivityPubOrHTMLHeaders...)
-	if err != nil {
-		apiutil.ErrorHandler(c, m.templates, gtserror.NewErrorNotAcceptable(err, err.Error()))
+	_, username, contentType, errWithCode := activitypub.ParseCommon(c)
+	if errWithCode != nil {
+		apiutil.ErrorHandler(c, m.templates, errWithCode)
 		return
 	}
 

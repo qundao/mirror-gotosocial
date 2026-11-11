@@ -36,6 +36,16 @@ type RelayConnection interface {
 	GetMatchers() []*RelayMatcher
 }
 
+// Small table to keep track of which relay actors
+// have relayed which posts, using which announce
+// wrapper URIs (if relayed using an Announce).
+type RelayedURI struct {
+	ID        string `bun:"type:CHAR(26),pk,nullzero,notnull,unique"`
+	RelayURI  string `bun:",notnull,nullzero,unique:relayed_uris_relay_uri_status_uri_uniq"`
+	StatusURI string `bun:",notnull,nullzero,unique:relayed_uris_relay_uri_status_uri_uniq"`
+	BoostURI  string `bun:",nullzero"`
+}
+
 // RelayPush represents a user-level push
 // connection targeting a remote relay actor.
 type RelayPush struct {

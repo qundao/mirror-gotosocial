@@ -323,6 +323,17 @@ func AppendTargetIRIs(with WithTarget, target ...*url.URL) {
 	}, target...)
 }
 
+// GetOneAudience extracts a single audience URI from 'with', else returns error.
+// Note: it is an error for the passed type to return any count other than 1 audience value.
+func GetOneAudience(with WithAudience) (*url.URL, error) {
+	audienceProp := with.GetActivityStreamsAudience()
+	audiences := extractIRIs(audienceProp)
+	if len(audiences) != 1 {
+		return nil, gtserror.NewfAt(3, "expected single audience, received: %v", log.Formatted(audiences))
+	}
+	return audiences[0], nil
+}
+
 // GetOneAttributedTo extracts a single attributedTo property from 'with', else returns error.
 // Note: it is an error for the passed type to return any count other than 1 attributedTo value.
 func GetOneAttributedTo(with WithAttributedTo) (*url.URL, error) {
@@ -332,10 +343,6 @@ func GetOneAttributedTo(with WithAttributedTo) (*url.URL, error) {
 	}
 	return attribTo[0], nil
 }
-
-// If > 1 is accepted, but only first wanted, use:
-//
-// func GetFirstAttributedTo(...) (*url.URL, error) {}
 
 // GetAttributedTo returns the IRIs contained in the AttributedTo property of 'with'.
 func GetAttributedTo(with WithAttributedTo) []*url.URL {

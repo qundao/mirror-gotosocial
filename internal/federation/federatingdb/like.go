@@ -43,8 +43,8 @@ func (f *DB) Like(ctx context.Context, likeable vocab.ActivityStreamsLike) error
 		return nil // Already processed.
 	}
 
-	requesting := activityContext.requestingAcct
-	receiving := activityContext.receivingAcct
+	requesting := activityContext.requesting
+	receiving := activityContext.receiving
 
 	if requesting.IsMoving() {
 		// A Moving account
@@ -155,8 +155,8 @@ func (f *DB) Like(ctx context.Context, likeable vocab.ActivityStreamsLike) error
 		APObjectType:   ap.ActivityLike,
 		APActivityType: ap.ActivityCreate,
 		GTSModel:       fave,
-		Receiving:      receiving,
 		Requesting:     requesting,
+		Receiving:      receiving,
 	})
 
 	return nil

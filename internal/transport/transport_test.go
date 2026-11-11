@@ -18,8 +18,6 @@
 package transport_test
 
 import (
-	"context"
-
 	"code.superseriousbusiness.org/gotosocial/internal/admin"
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/email"
@@ -53,7 +51,7 @@ type TransportTestSuite struct {
 	testAccounts     map[string]*gtsmodel.Account
 	testStatuses     map[string]*gtsmodel.Status
 
-	transport transport.Transport
+	transport *transport.Transport
 }
 
 func (suite *TransportTestSuite) SetupSuite() {
@@ -92,10 +90,7 @@ func (suite *TransportTestSuite) SetupTest() {
 	testrig.StandardDBSetup(suite.db, nil)
 	testrig.StandardStorageSetup(suite.storage, "../../testrig/media")
 
-	ts, err := suite.federator.TransportController().NewTransportForUsername(context.TODO(), "")
-	if err != nil {
-		suite.FailNow(err.Error())
-	}
+	ts := suite.federator.TransportController().GetTransportForAccount(nil)
 	suite.transport = ts
 }
 
