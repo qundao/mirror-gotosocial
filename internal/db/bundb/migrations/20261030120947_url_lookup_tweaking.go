@@ -234,9 +234,5 @@ func migrateUrls(
 	}
 
 	// Merge WAL file to try minimize its size.
-	if err := doWALCheckpoint(ctx, db); err != nil {
-		return err
-	}
-
-	return nil
+	return doWALCheckpoint(ctx, db)
 }
