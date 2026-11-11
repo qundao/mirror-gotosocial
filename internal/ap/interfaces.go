@@ -165,9 +165,9 @@ func ToAuthorizationable(t vocab.Type) (Authorizationable, bool) {
 	return authable, true
 }
 
-// IsAttachmentable returns whether AS vocab type name
+// IsMediaAttachmentable returns whether AS vocab type name
 // is something that can be cast to Attachmentable.
-func IsAttachmentable(typeName string) bool {
+func IsMediaAttachmentable(typeName string) bool {
 	switch typeName {
 	case ObjectAudio,
 		ObjectDocument,
@@ -179,13 +179,29 @@ func IsAttachmentable(typeName string) bool {
 	}
 }
 
-// ToAttachmentable safely tries to cast vocab.Type as Attachmentable.
-func ToAttachmentable(t vocab.Type) (Attachmentable, bool) {
-	attachmentable, ok := t.(Attachmentable)
-	if !ok || !IsAttachmentable(t.GetTypeName()) {
+// ToMediaAttachmentable safely tries to cast vocab.Type as MediaAttachmentable.
+func ToMediaAttachmentable(t vocab.Type) (MediaAttachmentable, bool) {
+	ma, ok := t.(MediaAttachmentable)
+	if !ok || !IsMediaAttachmentable(t.GetTypeName()) {
 		return nil, false
 	}
-	return attachmentable, true
+	return ma, true
+}
+
+// IsLinkable returns whether AS vocab type name
+// is something that can be cast to Linkable.
+func IsLinkable(typeName string) bool {
+	// TODO: add more types here?
+	return typeName == TypeLink
+}
+
+// ToLinkable safely tries to cast vocab.Type as Linkable.
+func ToLinkable(t vocab.Type) (Linkable, bool) {
+	ma, ok := t.(Linkable)
+	if !ok || !IsLinkable(t.GetTypeName()) {
+		return nil, false
+	}
+	return ma, true
 }
 
 // IsAnnounceable returns whether AS vocab type name
@@ -337,15 +353,27 @@ type Authorizationable interface {
 	WithInteractionTarget
 }
 
-// Attachmentable represents the minimum activitypub interface for representing a 'mediaAttachment'. (see: IsAttachmentable).
+// MediaAttachmentable represents the minimum activitypub interface
+// for representing a 'mediaAttachment'. (see: IsMediaAttachmentable).
+//
 // This interface is fulfilled by: Audio, Document, Image, Video
-type Attachmentable interface {
+type MediaAttachmentable interface {
 	WithTypeName
 	WithMediaType
 	WithURL
 	WithName
 	WithSummary
 	WithBlurhash
+}
+
+// Linkable represents the minimum activitypub
+// interface for representing a link to another resource.
+//
+// See https://www.w3.org/TR/activitystreams-vocabulary/#dfn-link
+type Linkable interface {
+	WithTypeName
+	WithMediaType
+	WithHref
 }
 
 // Hashtaggable represents the minimum activitypub interface for representing a 'hashtag' tag.

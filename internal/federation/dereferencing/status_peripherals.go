@@ -37,6 +37,7 @@ type statusChanges struct {
 	mentions bool
 	tags     bool
 	media    bool
+	links    bool
 	emoji    bool
 	policy   bool
 }
@@ -127,6 +128,16 @@ func (d *Dereferencer) handleStatusPeripherals(
 		return statusChanges{}, err
 	}
 
+	// Insert / update any links.
+	linksChanged, err := d.handleStatusLinks(ctx,
+		existing,
+		status,
+	)
+	if err != nil {
+		err := gtserror.Newf("error populating links for status %s: %w", uri, err)
+		return statusChanges{}, err
+	}
+
 	// Populate emoji associated with status, passing
 	// in existing status to reuse old where possible
 	// (especially important here to reduce need to dereference).
@@ -148,6 +159,7 @@ func (d *Dereferencer) handleStatusPeripherals(
 		mentions: mentionsChanged,
 		tags:     tagsChanged,
 		media:    mediaChanged,
+		links:    linksChanged,
 		emoji:    emojiChanged,
 		policy:   policyChanged,
 	}, nil
@@ -436,6 +448,72 @@ func (d *Dereferencer) fetchStatusAttachments(
 	return changed, nil
 }
 
+// handleStatusLinks populates links on 'status',
+// creating new database entries where needed,
+// or using unchanged from 'existing' status.
+func (d *Dereferencer) handleStatusLinks(
+	ctx context.Context,
+	existing *gtsmodel.Status,
+	status *gtsmodel.Status,
+) (
+	changed bool,
+	err error,
+) {
+	// Allocate new slice to take
+	// the yet-to-be determined link IDs.
+	status.LinkIDs = make([]gtsmodel.LinkID, len(status.Links))
+	for i := range status.Links {
+		link := status.Links[i]
+		attached := link.Attached
+
+		// Look for link in existing status with url.
+		existing, ok := existing.GetLinkByURL(link.URL)
+		if ok && existing.ID != "" {
+			status.Links[i] = existing
+			linkID := gtsmodel.LinkID{ID: existing.ID}
+			linkID.SetAttached(attached)
+			status.LinkIDs[i] = linkID
+			continue
+		}
+
+		// Mark status as
+		// having changed.
+		changed = true
+
+		// Store new link / retrieve existing link.
+		link, err := d.state.DB.PutOrGetLink(ctx,
+			&gtsmodel.Link{
+				ID:  id.NewULID(),
+				URL: link.URL,
+			},
+		)
+		if err != nil {
+			return changed, gtserror.Newf("db error putting/getting link: %w", err)
+		}
+
+		// Set link ID in slice.
+		linkID := gtsmodel.LinkID{ID: link.ID}
+		linkID.SetAttached(attached)
+		status.LinkIDs[i] = linkID
+	}
+
+	// Remove any link we couldn't get or create.
+	for i := 0; i < len(status.LinkIDs); {
+		if status.LinkIDs[i].ID == "" {
+			// This is a failed link population, likely due
+			// to some database peculiarity / race condition.
+			copy(status.Links[i:], status.Links[i+1:])
+			copy(status.LinkIDs[i:], status.LinkIDs[i+1:])
+			status.Links = status.Links[:len(status.Links)-1]
+			status.LinkIDs = status.LinkIDs[:len(status.LinkIDs)-1]
+			continue
+		}
+		i++
+	}
+
+	return changed, nil
+}
+
 // fetchStatusEmojis populates the emojis on 'status', creating new database entries
 // where needed and dereferencing it, or using unchanged from 'existing' status.
 func (d *Dereferencer) fetchStatusEmojis(
@@ -652,6 +730,12 @@ func (d *Dereferencer) handleStatusEdit(
 	if changes.media {
 		// Attached media was changed.
 		cols = append(cols, "attachments") // i.e. AttachmentIDs
+		edited = true
+	}
+
+	if changes.links {
+		// Links were changed.
+		cols = append(cols, "links") // i.e. LinkIDs
 		edited = true
 	}
 

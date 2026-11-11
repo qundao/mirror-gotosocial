@@ -104,6 +104,7 @@ func (c *Caches) Init() {
 	c.initInReplyToIDs()
 	c.initInstance()
 	c.initInteractionRequest()
+	c.initLink()
 	c.initList()
 	c.initListIDs()
 	c.initListedIDs()

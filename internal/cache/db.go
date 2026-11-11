@@ -177,6 +177,9 @@ type DBCaches struct {
 	// InReplyToIDs provides access to the status in reply to IDs list database cache.
 	InReplyToIDs SliceCache[string]
 
+	// Link provides access to the gtsmodel Link database cache.
+	Link StructCache[*gtsmodel.Link]
+
 	// List provides access to the gtsmodel List database cache.
 	List StructCache[*gtsmodel.List]
 
@@ -1065,6 +1068,38 @@ func (c *Caches) initInteractionRequest() {
 			{Fields: "InteractionRequestURI"},
 			{Fields: "ResponseURI"},
 			{Fields: "AuthorizationURI"},
+		},
+		MaxSize:   cap,
+		IgnoreErr: ignoreErrors,
+		Copy:      copyF,
+	})
+}
+
+func (c *Caches) initLink() {
+	// Calculate maximum cache size.
+	cap := calculateResultCacheMax(
+		sizeofLink(), // model in-mem size.
+		config.GetCacheLinkMemRatio(),
+	)
+
+	log.Infof(nil, "cache size = %d", cap)
+
+	copyF := func(l1 *gtsmodel.Link) *gtsmodel.Link {
+		l2 := new(gtsmodel.Link)
+		*l2 = *l1
+
+		// Don't include ptr fields that
+		// will be populated separately.
+		// See internal/db/bundb/list.go.
+		l2.URLParsed = nil
+
+		return l2
+	}
+
+	c.DB.Link.Init(structr.CacheConfig[*gtsmodel.Link]{
+		Indices: []structr.IndexConfig{
+			{Fields: "ID"},
+			{Fields: "URL"},
 		},
 		MaxSize:   cap,
 		IgnoreErr: ignoreErrors,

@@ -1611,6 +1611,35 @@ func (suite *InternalToFrontendTestSuite) TestStatusToAPIStatusPendingApproval()
 }`, out)
 }
 
+func (suite *InternalToFrontendTestSuite) TestStatusWithLinkToFrontend() {
+	testStatus := new(gtsmodel.Status)
+	*testStatus = *suite.testStatuses["admin_account_status_1"]
+	requester := suite.testAccounts["local_account_1"]
+
+	const linkID = "01M72NKK3GXCS5VSS3TQC6BNSD"
+	const linkStr = "https://example.com/boobs"
+
+	// Append link ID.
+	l := gtsmodel.LinkID{ID: linkID}
+	l.SetAttached(true)
+	testStatus.LinkIDs = append(testStatus.LinkIDs, l)
+
+	// Append corresponding link.
+	link := &gtsmodel.Link{ID: linkID, URL: linkStr}
+	testStatus.Links = append(testStatus.Links, link)
+
+	apiStatus, err := suite.typeconverter.StatusToAPIStatus(suite.T().Context(), testStatus, requester)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Content should have the out-of-body link appended.
+	const want = `<ul><li><a href="` + linkStr + `" rel="nofollow noreferrer noopener" target="_blank">` + linkStr + `</a></li></ul>`
+	if !strings.HasSuffix(apiStatus.Content, want) {
+		suite.Failf("link not appended to status", "want suffix: %s\ngot status: %s", want, apiStatus.Content)
+	}
+}
+
 func (suite *InternalToFrontendTestSuite) TestVideoAttachmentToFrontend() {
 	testAttachment := suite.testAttachments["local_account_1_status_4_attachment_2"]
 	apiAttachment := typeutils.AttachmentToAPIAttachment(testAttachment)

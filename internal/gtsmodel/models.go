@@ -30,6 +30,7 @@ func AllModels() []any {
 		&ConversationToStatus{},
 		&StatusToEmoji{},
 		&StatusToTag{},
+		&StatusToLink{},
 
 		&Account{},
 		&AccountNote{},
@@ -62,6 +63,7 @@ func AllModels() []any {
 		&Instance{},
 		&InstanceSettings{},
 		&InteractionRequest{},
+		&Link{},
 		&List{},
 		&ListEntry{},
 		&Marker{},

@@ -267,6 +267,25 @@ func (s *statusDB) PopulateStatus(ctx context.Context, status *gtsmodel.Status) 
 		}
 	}
 
+	if !status.LinksPopulated() {
+		// Links are out-of-date
+		// with linkIDs, repopulate.
+		ids := xslices.Gather(
+			make([]string, 0, len(status.LinkIDs)),
+			status.LinkIDs,
+			func(l gtsmodel.LinkID) string {
+				return l.ID
+			},
+		)
+		status.Links, err = s.state.DB.GetLinksByIDs(
+			gtscontext.SetBarebones(ctx),
+			ids,
+		)
+		if err != nil {
+			errs.Appendf("error populating links: %w", err)
+		}
+	}
+
 	if !status.TagsPopulated() {
 		// Status tags are out-of-date with IDs, repopulate.
 		status.Tags, err = s.state.DB.GetTags(
@@ -558,6 +577,20 @@ func insertStatus(ctx context.Context, tx bun.Tx, status *gtsmodel.Status) error
 		}
 	}
 
+	// create links between this
+	// status and any links it uses
+	for _, l := range status.LinkIDs {
+		if _, err := tx.
+			NewInsert().
+			Model(&gtsmodel.StatusToLink{
+				StatusID: status.ID,
+				LinkID:   l.ID,
+			}).
+			Exec(ctx); err != nil {
+			return gtserror.Newf("error inserting status_to_link: %w", err)
+		}
+	}
+
 	// change the status ID of the media
 	// attachments to the current status
 	for _, a := range status.Attachments {
@@ -619,6 +652,21 @@ func (s *statusDB) UpdateStatus(ctx context.Context, status *gtsmodel.Status, co
 						TagID:    id,
 					}).
 					On("CONFLICT (?, ?) DO NOTHING", bun.Ident("status_id"), bun.Ident("tag_id")).
+					Exec(ctx); err != nil {
+					return err
+				}
+			}
+
+			// create links between this
+			// status and any links it uses
+			for _, l := range status.LinkIDs {
+				if _, err := tx.
+					NewInsert().
+					Model(&gtsmodel.StatusToLink{
+						StatusID: status.ID,
+						LinkID:   l.ID,
+					}).
+					On("CONFLICT (?, ?) DO NOTHING", bun.Ident("status_id"), bun.Ident("link_id")).
 					Exec(ctx); err != nil {
 					return err
 				}
@@ -877,6 +925,15 @@ func (s *statusDB) onStatusDelete(
 		Where("? = ?", bun.Ident("status_id"), status.ID).
 		Exec(ctx); err != nil {
 		return gtserror.Newf("error deleting tag links: %w", err)
+	}
+
+	// delete links between this
+	// status and any links it uses
+	if _, err := tx.NewDelete().
+		Table("status_to_links").
+		Where("? = ?", bun.Ident("status_id"), status.ID).
+		Exec(ctx); err != nil {
+		return gtserror.Newf("error deleting link links: %w", err)
 	}
 
 	// decrement status author statistics.

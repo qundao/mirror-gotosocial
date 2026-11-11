@@ -77,9 +77,9 @@ const (
 	mdWithAsciiHeartExpected           = "<p>hello &lt;3 old friend &lt;3 i loved u &lt;/3 :(( you stole my heart</p>"
 	mdWithStrikethrough                = "I have ~~mdae~~ made an error"
 	mdWithStrikethroughExpected        = "<p>I have <del>mdae</del> made an error</p>"
-	mdWithLink                         = "Check out this code, i heard it was written by a sloth https://codeberg.org/superseriousbusiness/gotosocial"
-	mdWithLinkExpected                 = "<p>Check out this code, i heard it was written by a sloth <a href=\"https://codeberg.org/superseriousbusiness/gotosocial\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">https://codeberg.org/superseriousbusiness/gotosocial</a></p>"
-	mdWithLinkBasicExpected            = "Check out this code, i heard it was written by a sloth <a href=\"https://codeberg.org/superseriousbusiness/gotosocial\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">https://codeberg.org/superseriousbusiness/gotosocial</a>"
+	mdWithLinks                        = `[link1](https://example.org/link1), https://example.org/link2, <a href="https://example.org/link3">link3</a>`
+	mdWithLinksExpected                = `<p><a href="https://example.org/link1" rel="nofollow noreferrer noopener" target="_blank">link1</a>, <a href="https://example.org/link2" rel="nofollow noreferrer noopener" target="_blank">https://example.org/link2</a>, <a href="https://example.org/link3" rel="nofollow noreferrer noopener" target="_blank">link3</a></p>`
+	mdWithLinksBasicExpected           = `<a href="https://example.org/link1" rel="nofollow noreferrer noopener" target="_blank">link1</a>, <a href="https://example.org/link2" rel="nofollow noreferrer noopener" target="_blank">https://example.org/link2</a>, link3`
 	mdObjectInCodeBlock                = "@foss_satan@fossbros-anonymous.io this is how to mention a user\n```\n@the_mighty_zork hey bud! nice #ObjectOrientedProgramming software you've been writing lately! :rainbow:\n```\nhope that helps"
 	mdObjectInCodeBlockExpected        = "<p><span class=\"h-card\"><a href=\"http://fossbros-anonymous.io/@foss_satan\" class=\"u-url mention\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">@<span>foss_satan</span></a></span> this is how to mention a user</p><pre><code>@the_mighty_zork hey bud! nice #ObjectOrientedProgramming software you&#39;ve been writing lately! :rainbow:\n</code></pre><p>hope that helps</p>"
 	// Hashtags can be italicized but only with *, not _.
@@ -214,13 +214,21 @@ func (suite *MarkdownTestSuite) TestParseStrikethrough() {
 }
 
 func (suite *MarkdownTestSuite) TestParseLink() {
-	formatted := suite.FromMarkdown(mdWithLink)
-	suite.Equal(mdWithLinkExpected, formatted.HTML)
+	formatted := suite.FromMarkdown(mdWithLinks)
+	suite.Equal(mdWithLinksExpected, formatted.HTML)
+	suite.Len(formatted.Links, 3)
+	suite.Equal("https://example.org/link1", formatted.Links[0].URL)
+	suite.Equal("https://example.org/link2", formatted.Links[1].URL)
+	suite.Equal("https://example.org/link3", formatted.Links[2].URL)
 }
 
 func (suite *MarkdownTestSuite) TestParseLinkBasic() {
-	formatted := suite.FromMarkdownBasic(mdWithLink)
-	suite.Equal(mdWithLinkBasicExpected, formatted.HTML)
+	formatted := suite.FromMarkdownBasic(mdWithLinks)
+	suite.Equal(mdWithLinksBasicExpected, formatted.HTML)
+	suite.Len(formatted.Links, 3)
+	suite.Equal("https://example.org/link1", formatted.Links[0].URL)
+	suite.Equal("https://example.org/link2", formatted.Links[1].URL)
+	suite.Equal("https://example.org/link3", formatted.Links[2].URL)
 }
 
 func (suite *MarkdownTestSuite) TestParseObjectInCodeBlock() {

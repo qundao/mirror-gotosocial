@@ -31,6 +31,7 @@ import (
 	"code.superseriousbusiness.org/gotosocial/internal/db"
 	"code.superseriousbusiness.org/gotosocial/internal/gtserror"
 	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/text"
 	"code.superseriousbusiness.org/gotosocial/internal/uris"
 	"code.superseriousbusiness.org/gotosocial/internal/util"
 	"github.com/miekg/dns"
@@ -297,9 +298,46 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	// status.Attachments
 	//
 	// Media attachments for later dereferencing.
-	status.Attachments, err = ap.ExtractAttachments(statusable)
+	status.Attachments, err = ap.ExtractMediaAttachments(statusable)
 	if err != nil {
-		log.Warnf(ctx, "error(s) extracting attachments for %s: %v", uri, err)
+		log.Warnf(ctx, "error(s) extracting media attachments for %s: %v", uri, err)
+	}
+
+	// status.Links
+	//
+	// Extract in-body links from status `content` property.
+	inBodyLinks, err := text.ParseLinksFromContent(status.Content)
+	if err != nil {
+		log.Warnf(ctx, "error(s) extracting links from content for %s: %v", uri, err)
+	}
+
+	// Extract attached links from `attachment` property.
+	attachedLinks, err := ap.ExtractLinksFromAttachment(statusable)
+	if err != nil {
+		log.Warnf(ctx, "error(s) extracting link attachments for %s: %v", uri, err)
+	}
+
+	// Deduplicate and set link attachments.
+	seenLinks := make(map[string]struct{})
+	for _, link := range append(inBodyLinks, attachedLinks...) { // nolint:gocritic
+		// For key, take link URL and make sure
+		// it has a trailing slash so we can
+		// deduplicate eg `https://example.org/`
+		// and `https://example.org` into the
+		// same link. They're technically not,
+		// but good enough for our purposes.
+		key := link.URL
+		if key[len(key)-1] != '/' {
+			key += "/"
+		}
+
+		_, seenLink := seenLinks[key]
+		if !seenLink {
+			// Mark link as seen
+			// and append to status.
+			seenLinks[key] = struct{}{}
+			status.Links = append(status.Links, link)
+		}
 	}
 
 	// status.Poll

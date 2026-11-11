@@ -93,6 +93,8 @@ func (suite *PlainTestSuite) TestParseMoreComplex() {
 func (suite *PlainTestSuite) TestWithUTF8Link() {
 	formatted := suite.FromPlain(withUTF8Link)
 	suite.Equal(withUTF8LinkExpected, formatted.HTML)
+	suite.Len(formatted.Links, 1)
+	suite.Equal("https://example.org/s%C3%B6me_url", formatted.Links[0].URL)
 }
 
 func (suite *PlainTestSuite) TestLinkNoMention() {

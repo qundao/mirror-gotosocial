@@ -725,9 +725,9 @@ func ExtractContent(i WithContent) gtsmodel.Content {
 	return content
 }
 
-// ExtractAttachments attempts to extract barebones
+// ExtractMediaAttachments attempts to extract barebones
 // MediaAttachment objects from given AS interface type.
-func ExtractAttachments(i WithAttachment) ([]*gtsmodel.MediaAttachment, error) {
+func ExtractMediaAttachments(i WithAttachment) ([]*gtsmodel.MediaAttachment, error) {
 	attachmentProp := i.GetActivityStreamsAttachment()
 	if attachmentProp == nil {
 		return nil, nil
@@ -745,15 +745,17 @@ func ExtractAttachments(i WithAttachment) ([]*gtsmodel.MediaAttachment, error) {
 			continue
 		}
 
-		attachmentable, ok := ToAttachmentable(t)
+		attachmentable, ok := ToMediaAttachmentable(t)
 		if !ok {
-			errs.Appendf("could not cast %T to Attachmentable", t)
+			// Not necessarily an error as many statusables
+			// include things like links as attachments,
+			// which we cannot handle as media. Just skip.
 			continue
 		}
 
-		attachment, err := ExtractAttachment(attachmentable)
+		attachment, err := ExtractMediaAttachment(attachmentable)
 		if err != nil {
-			errs.Appendf("error extracting attachment: %w", err)
+			errs.Appendf("error extracting media: %w", err)
 			continue
 		}
 
@@ -763,10 +765,71 @@ func ExtractAttachments(i WithAttachment) ([]*gtsmodel.MediaAttachment, error) {
 	return attachments, errs.Combine()
 }
 
-// ExtractAttachment extracts a minimal gtsmodel.Attachment
+// ExtractLinksFromAttachment extracts any Links from the given AS interface type.
+func ExtractLinksFromAttachment(i WithAttachment) ([]*gtsmodel.Link, error) {
+	attachmentProp := i.GetActivityStreamsAttachment()
+	if attachmentProp == nil {
+		return nil, nil
+	}
+
+	links := make([]*gtsmodel.Link, 0, attachmentProp.Len())
+	var errs gtserror.MultiError
+	for iter := attachmentProp.Begin(); iter != attachmentProp.End(); iter = iter.Next() {
+		t := iter.GetType()
+		if t == nil {
+			continue
+		}
+
+		link, ok := ToLinkable(t)
+		if !ok {
+			// Probably a different type
+			// of attachment than a link
+			// (eg., media). Just skip it.
+			continue
+		}
+
+		var href *url.URL
+		switch hrefProp := link.GetActivityStreamsHref(); {
+		case hrefProp == nil:
+			errs.Append(errors.New("Link type with nil href prop"))
+			continue
+		case hrefProp.IsXMLSchemaAnyURI():
+			href = hrefProp.Get()
+		case hrefProp.IsIRI():
+			href = hrefProp.GetIRI()
+		}
+
+		if href == nil {
+			errs.Append(errors.New("Link type with nil href prop value"))
+			continue
+		}
+
+		// Punify the URL before
+		// potential storage etc.
+		var err error
+		href.Host, err = util.Punify(href.Host)
+		if err != nil {
+			errs.Appendf("error punifying %s: %w", href.Host, err)
+			continue
+		}
+
+		links = append(links, &gtsmodel.Link{
+			URL:       href.String(),
+			URLParsed: href,
+			// This link was discovered
+			// in the attachment property,
+			// so set attached = true.
+			Attached: true,
+		})
+	}
+
+	return links, errs.Combine()
+}
+
+// ExtractMediaAttachment extracts a minimal gtsmodel.MediaAttachment
 // (just remote URL, description, and blurhash) from the given
 // Attachmentable interface, or an error if no remote URL is set.
-func ExtractAttachment(i Attachmentable) (*gtsmodel.MediaAttachment, error) {
+func ExtractMediaAttachment(i MediaAttachmentable) (*gtsmodel.MediaAttachment, error) {
 	// Get the first URL for the attachment file.
 	// If no URL is set, we can't do anything.
 	remoteURL := GetURL(i)
@@ -787,7 +850,7 @@ func ExtractAttachment(i Attachmentable) (*gtsmodel.MediaAttachment, error) {
 // ExtractDescription extracts the image description
 // of an attachmentable, if present. Will try the
 // 'summary' prop first, then fall back to 'name'.
-func ExtractDescription(i Attachmentable) string {
+func ExtractDescription(i MediaAttachmentable) string {
 	if summary := ExtractSummary(i); summary != "" {
 		return summary
 	}
@@ -811,7 +874,7 @@ func ExtractBlurhash(i WithBlurhash) string {
 // `focalPoint` property, if Attachmentable can have `focalPoint`, and
 // `focalPoint` is set to a valid pair of floats. Otherwise, returns a
 // zero gtsmodel.Focus (ie., focus in the centre of the image).
-func ExtractFocus(attachmentable Attachmentable) gtsmodel.Focus {
+func ExtractFocus(attachmentable MediaAttachmentable) gtsmodel.Focus {
 	focus := gtsmodel.Focus{}
 
 	withFocalPoint, ok := attachmentable.(WithFocalPoint)

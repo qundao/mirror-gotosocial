@@ -19,6 +19,7 @@ package text
 
 import (
 	"context"
+
 	"strings"
 
 	"code.superseriousbusiness.org/gopkg/log"
@@ -30,6 +31,7 @@ import (
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/renderer"
 	"github.com/yuin/goldmark/renderer/html"
+	"github.com/yuin/goldmark/text"
 )
 
 // FromMarkdown fulfils FormatFunc by parsing
@@ -159,14 +161,25 @@ func (f *Formatter) fromMarkdown(
 		),
 	)
 
+	// Convert input string to bytes once.
+	source := byteutil.S2B(input)
+
+	// Parse input into AST document.
+	doc := md.Parser().Parse(text.NewReader(source))
+
+	// Extract any links by
+	// walking the document.
+	var err error
+	result.Links, err = parseLinksFromDoc(doc, source)
+	if err != nil {
+		log.Errorf(ctx, "error(s) parsing links from doc: %v", err)
+	}
+
 	// Get byte buffer.
 	buf := bufpool.Get()
 
-	// Parse input into HTML.
-	if err := md.Convert(
-		byteutil.S2B(input),
-		buf,
-	); err != nil {
+	// Render document to HTML.
+	if err := md.Renderer().Render(buf, source, doc); err != nil {
 		log.Errorf(ctx, "error formatting markdown input to HTML: %s", err)
 		buf.B = buf.B[:0] // reset buffer
 	}

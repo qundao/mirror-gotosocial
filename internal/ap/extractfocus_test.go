@@ -103,7 +103,7 @@ func (suite *ExtractFocusTestSuite) TestExtractFocus() {
 		}
 
 		// Convert to attachmentable.
-		attachmentable, ok := t.(ap.Attachmentable)
+		attachmentable, ok := t.(ap.MediaAttachmentable)
 		if !ok {
 			suite.FailNow("", "%T was not Attachmentable", t)
 		}

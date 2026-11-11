@@ -505,6 +505,45 @@ func (suite *StatusTestSuite) TestDereferencerRefreshStatusRace() {
 	suite.Equal(afterEdit.EditIDs, afterBodge.EditIDs)
 }
 
+func (suite *StatusTestSuite) TestDereferenceStatusWithLinks() {
+	// Set up our test structs + tear down on finish.
+	testStructs := testrig.SetupTestStructs(rMediaPath, rTemplatePath)
+	defer testrig.TearDownTestStructs(testStructs)
+
+	// Clean up test context when done.
+	ctx, cncl := context.WithCancel(suite.T().Context())
+	defer cncl()
+
+	// Account to dereference on behalf of.
+	fetchingAccount := suite.testAccounts["local_account_1"]
+
+	// Test status with link.
+	testURIStr := "http://fossbros-anonymous.io/users/foss_satan/statuses/106221634728637552"
+	testURI := testrig.URLMustParse(testURIStr)
+
+	// Fetch status.
+	status, _, err := testStructs.Federator.Dereferencer.GetStatusByURI(ctx,
+		fetchingAccount,
+		testURI,
+	)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// We should have one in-body
+	// link extracted from the status.
+	const linkStr = "http://localhost:8080/users/the_mighty_zork/statuses/01F8MHAMCHF6Y650WCRSCP4WMY/activity"
+	suite.Len(status.LinkIDs, 1)
+	suite.True(status.LinkIDs[0].InBody())
+	linkID := status.LinkIDs[0].ID
+	dbLink, err := testStructs.State.DB.GetLinkByID(ctx, linkID)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+	suite.Equal(linkStr, status.Links[0].URL)
+	suite.Equal(linkStr, dbLink.URL)
+}
+
 // editStatusable updates the given statusable attributes.
 // note that this acts on the original object, no copying.
 func (suite *StatusTestSuite) editStatusable(

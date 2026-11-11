@@ -143,7 +143,7 @@ func (p *Processor) Edit(
 	pollChanged := (poll != status.Poll)
 
 	// Determine whether there were any changes possibly
-	// causing a change to embedded mentions, tags, emojis.
+	// causing a change to embedded mentions, tags, emojis, links.
 	contentChanged := (status.Content != content.Content)
 	warningChanged := (status.ContentWarning != content.ContentWarning)
 	languageChanged := (status.Language != content.Language)
@@ -235,6 +235,19 @@ func (p *Processor) Edit(
 			cols = append(cols, "tags")
 			status.TagIDs = content.TagIDs
 			status.Tags = content.Tags
+		}
+
+		if !slices.EqualFunc(
+			status.LinkIDs,
+			content.LinkIDs,
+			func(l1, l2 gtsmodel.LinkID) bool {
+				return l1.InBody() == l2.InBody() && l1.ID == l2.ID
+			},
+		) {
+			// Update attached links.
+			cols = append(cols, "links")
+			status.LinkIDs = content.LinkIDs
+			status.Links = content.Links
 		}
 
 		if !slices.Equal(status.EmojiIDs, content.EmojiIDs) {

@@ -440,6 +440,12 @@ func sizeofInteractionRequest() uintptr {
 	}))
 }
 
+func sizeofLink() uintptr {
+	return uintptr(size.Of(&gtsmodel.Link{
+		URL: exampleURI,
+	}))
+}
+
 func sizeofList() uintptr {
 	return uintptr(size.Of(&gtsmodel.List{
 		ID:            exampleID,

@@ -247,6 +247,7 @@ var Defaults = Configuration{
 		InstanceMemRatio:                     1,
 		InteractionRequestMemRatio:           1,
 		ListMemRatio:                         1,
+		LinkMemRatio:                         0.2,
 		ListIDsMemRatio:                      2,
 		ListedIDsMemRatio:                    2,
 		MarkerMemRatio:                       0.5,

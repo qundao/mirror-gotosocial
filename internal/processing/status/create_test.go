@@ -311,6 +311,66 @@ func (suite *StatusCreateTestSuite) TestProcessPollOptions() {
 	suite.Equal("boobs <", dbPoll.Options[4])
 }
 
+func (suite *StatusCreateTestSuite) TestProcessWithLinks() {
+	ctx := suite.T().Context()
+	creatingAccount := suite.testAccounts["local_account_1"]
+	creatingApplication := suite.testApplications["application_1"]
+
+	const (
+		link1 = "https://example.org/link1"
+		link2 = "https://example.org/link2"
+		link3 = "https://example.org/link3"
+	)
+
+	statusCreateForm := &apimodel.StatusCreateRequest{
+		Status:      "here's a markdown status with three links:\n\n- <a href=\"" + link1 + "\">link1</a>\n- [link2](" + link2 + ")\n- link3: " + link3,
+		Visibility:  apimodel.VisibilityPublic,
+		ContentType: apimodel.StatusContentTypeMarkdown,
+	}
+
+	apiStatusAny, errWithCode := suite.status.Create(ctx, creatingAccount, creatingApplication, statusCreateForm, nil)
+	if errWithCode != nil {
+		suite.FailNow(errWithCode.Error())
+	}
+
+	apiStatus := apiStatusAny.(*apimodel.Status)
+	suite.Equal("<p>here's a markdown status with three links:</p><ul><li><a href=\""+link1+"\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">link1</a></li><li><a href=\""+link2+"\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">link2</a></li><li>link3: <a href=\""+link3+"\" rel=\"nofollow noreferrer noopener\" target=\"_blank\">"+link3+"</a></li></ul>", apiStatus.Content)
+
+	// New links should be created in the DB.
+	links := []string{link1, link2, link3}
+	for _, url := range links {
+		link, err := suite.state.DB.GetLinkByURL(ctx, url)
+		if err != nil {
+			suite.FailNow(err.Error())
+		}
+		suite.Equal(url, link.URL)
+		suite.NotNil(link.URLParsed)
+	}
+
+	// If we get the status, both links and
+	// link attachments should be populated.
+	status, err := suite.state.DB.GetStatusByID(ctx, apiStatus.ID)
+	if err != nil {
+		suite.FailNow(err.Error())
+	}
+
+	// Check links.
+	suite.Len(status.Links, 3)
+	for i, link := range status.Links {
+		suite.Equal(links[i], link.URL)
+	}
+
+	// Check link attachments.
+	suite.Len(status.LinkIDs, 3)
+	for _, l := range status.LinkIDs {
+		link, err := suite.state.DB.GetLinkByID(ctx, l.ID)
+		if err != nil {
+			suite.FailNow(err.Error())
+		}
+		suite.Equal(link.ID, l.ID)
+	}
+}
+
 func TestStatusCreateTestSuite(t *testing.T) {
 	suite.Run(t, new(StatusCreateTestSuite))
 }

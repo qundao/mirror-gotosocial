@@ -105,6 +105,8 @@ type statusContent struct {
 	Emojis         []*gtsmodel.Emoji
 	TagIDs         []string
 	Tags           []*gtsmodel.Tag
+	LinkIDs        []gtsmodel.LinkID
+	Links          []*gtsmodel.Link
 }
 
 // Returns the final content type to use when creating or editing a status.
@@ -220,6 +222,50 @@ func (p *Processor) processContent(
 	status.Mentions = contentRes.Mentions
 	status.Emojis = contentRes.Emojis
 	status.Tags = contentRes.Tags
+
+	// Gather and deduplicate links from formatted.
+	seenLinks := make(map[string]struct{})
+	for _, link := range contentRes.Links {
+		// For key, take link URL and make sure
+		// it has a trailing slash so we can
+		// deduplicate eg `https://example.org/`
+		// and `https://example.org` into the
+		// same link. They're technically not,
+		// but good enough for our purposes.
+		key := link.URL
+		if key[len(key)-1] != '/' {
+			key += "/"
+		}
+
+		// Skip if we've seen link already.
+		if _, seen := seenLinks[key]; seen {
+			continue
+		}
+
+		// Haven't seen this
+		// link on this status yet.
+		seenLinks[key] = struct{}{}
+
+		// Store new link / retrieve existing link.
+		link, err := p.state.DB.PutOrGetLink(ctx,
+			&gtsmodel.Link{
+				ID:  id.NewULID(),
+				URL: link.URL,
+			},
+		)
+		if err != nil {
+			err := gtserror.Newf("db error putting/getting link: %w", err)
+			return nil, gtserror.NewErrorInternalError(err)
+		}
+
+		status.Links = append(status.Links, link)
+		status.LinkIDs = append(
+			status.LinkIDs,
+			gtsmodel.LinkID{
+				ID: link.ID,
+			},
+		)
+	}
 
 	// Sanitize content warning and format.
 	cwRes := formatInput(formatCW, contentWarning)
