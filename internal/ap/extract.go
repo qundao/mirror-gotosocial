@@ -706,6 +706,11 @@ func ExtractContent(i WithContent) gtsmodel.Content {
 		return content
 	}
 
+	// Get media type if possible.
+	if mtProp := i.GetActivityStreamsMediaType(); mtProp != nil {
+		content.MediaType = mtProp.Get()
+	}
+
 	for iter := contentProp.Begin(); iter != contentProp.End(); iter = iter.Next() {
 		switch {
 		case iter.IsRDFLangString() &&

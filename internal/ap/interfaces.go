@@ -698,6 +698,8 @@ type WithSensitive interface {
 
 // WithContent represents an activity with ActivityStreamsContentProperty
 type WithContent interface {
+	GetActivityStreamsMediaType() vocab.ActivityStreamsMediaTypeProperty
+	SetActivityStreamsMediaType(vocab.ActivityStreamsMediaTypeProperty)
 	GetActivityStreamsContent() vocab.ActivityStreamsContentProperty
 	SetActivityStreamsContent(vocab.ActivityStreamsContentProperty)
 }

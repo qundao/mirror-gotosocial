@@ -290,7 +290,7 @@ func (c *Converter) ASStatusToStatus(ctx context.Context, statusable ap.Statusab
 	// Many implementations set both content
 	// and contentMap; we can use these to
 	// infer the language of the status.
-	status.Content, status.Language = ContentToContentLanguage(
+	status.Content, status.Language = text.ContentToContentLanguage(
 		ctx,
 		ap.ExtractContent(statusable),
 	)

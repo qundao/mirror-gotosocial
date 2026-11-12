@@ -18,9 +18,19 @@
 package text
 
 import (
+	"context"
 	"unicode"
 
 	"code.superseriousbusiness.org/gopkg/buffers"
+	"code.superseriousbusiness.org/gopkg/log"
+	"code.superseriousbusiness.org/gotosocial/internal/config"
+	"code.superseriousbusiness.org/gotosocial/internal/gtsmodel"
+	"code.superseriousbusiness.org/gotosocial/internal/language"
+	"code.superseriousbusiness.org/gotosocial/internal/regexes"
+	"codeberg.org/gruf/go-byteutil"
+	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
 // bufpool is a memory pool
@@ -79,4 +89,145 @@ func isHashtagBoundary(r rune) bool {
 func isMentionBoundary(r rune) bool {
 	return unicode.IsSpace(r) ||
 		unicode.IsPunct(r)
+}
+
+// ContentToContentLanguage tries to
+// extract a content string and language
+// tag string from the given intermediary
+// content.
+//
+// Either/both of the returned strings may
+// be empty, depending on how things go.
+//
+// If content.MediaType = "text/markdown",
+// the content will be converted to HTML
+// using a basic parser, before return.
+func ContentToContentLanguage(
+	ctx context.Context,
+	content gtsmodel.Content,
+) (
+	contentStr string, // content
+	langTagStr string, // language
+) {
+	switch contentMap := content.ContentMap; {
+	// Simplest case: no `contentMap`.
+	// Take `content`, even if empty.
+	case contentMap == nil:
+		contentStr = content.Content
+
+	// `content` and `contentMap` set.
+	// Try to infer "primary" language.
+	case content.Content != "":
+		// Assume `content` is intended
+		// primary content, and look for
+		// corresponding language tag.
+		contentStr = content.Content
+
+		for t, c := range contentMap {
+			if contentStr == c {
+				langTagStr = t
+				break
+			}
+		}
+
+	// `content` not set; `contentMap`
+	// is set with only one value.
+	// This must be the "primary" lang.
+	case len(contentMap) == 1:
+		// Use an empty loop to
+		// get the values we want.
+		// nolint:revive
+		for langTagStr, contentStr = range contentMap {
+		}
+
+	// Only `contentMap` is set, with more
+	// than one value. Map order is not
+	// guaranteed so we can't know the
+	// "primary" language.
+	//
+	// Try to select content using our
+	// instance's configured languages.
+	//
+	// In case of no hits, just take the
+	// first tag and content in the map.
+	default:
+		instanceLangs := config.GetInstanceLanguages()
+		for _, langTagStr = range instanceLangs.TagStrs() {
+			if contentStr = contentMap[langTagStr]; contentStr != "" {
+				// Hit!
+				break
+			}
+		}
+
+		// If nothing found, just take
+		// the first entry we can get by
+		// breaking after the first iter.
+		if contentStr == "" {
+			for langTagStr, contentStr = range contentMap {
+				break
+			}
+		}
+	}
+
+	if langTagStr != "" {
+		// Found a lang tag for this content,
+		// make sure it's valid / parseable.
+		lang, err := language.Parse(langTagStr)
+		if err != nil {
+			log.Warnf(
+				ctx,
+				"could not parse %s as BCP47 language tag in status contentMap: %v",
+				langTagStr, err,
+			)
+		} else {
+			// Inferred the language!
+			// Use normalized version.
+			langTagStr = lang.TagStr
+		}
+	}
+
+	// If content type is text/markdown instead of
+	// implicit HTML, convert it before returning.
+	if contentStr != "" && content.MediaType == "text/markdown" {
+		// Take a very basic
+		// renderer for this.
+		md := goldmark.New(
+			goldmark.WithRendererOptions(
+				html.WithXHTML(),
+				html.WithHardWraps(),
+			),
+			goldmark.WithExtensions(
+				// Allow turning
+				// URLs into links.
+				extension.NewLinkify(
+					extension.WithLinkifyURLRegexp(regexes.URLLike),
+				),
+				extension.Strikethrough,
+			),
+		)
+
+		// Convert input string to bytes.
+		source := byteutil.S2B(contentStr)
+
+		// Get byte buffer.
+		buf := bufpool.Get()
+
+		// Convert markdown to HTML.
+		if err := md.Convert(source, buf); err != nil {
+			log.Errorf(ctx, "error formatting markdown input to HTML: %v", err)
+			buf.B = buf.B[:0] // reset buffer
+		} else {
+			// Copy data.
+			contentStr = string(buf.B)
+
+			// Clean and shrink HTML.
+			contentStr = SanitizeHTML(contentStr)
+			contentStr = MinifyHTML(contentStr)
+		}
+
+		// Release buffer.
+		bufpool.Put(buf)
+	}
+
+	return contentStr, langTagStr
 }

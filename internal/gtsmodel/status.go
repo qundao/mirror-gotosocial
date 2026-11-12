@@ -580,13 +580,13 @@ const (
 	StatusContentTypeDefault                    = StatusContentTypePlain
 )
 
-// Content models the simple string content
-// of a status along with its ContentMap,
-// which contains content entries keyed by
-// BCP47 language tag.
+// Content models the simple string content of a status
+// along with its media type (if present), and contentMap,
+// which contains content entries keyed by BCP47 language tag.
 //
-// Content and/or ContentMap may be zero/nil.
+// Any of these fields may be zero/nil.
 type Content struct {
+	MediaType  string
 	Content    string
 	ContentMap map[string]string
 }
